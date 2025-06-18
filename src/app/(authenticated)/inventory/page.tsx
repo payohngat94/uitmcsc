@@ -1,6 +1,7 @@
 
 "use client";
 
+import * as React from "react"; // Added this import
 import { useState, useEffect, useMemo } from "react";
 import { InventoryItemRow } from "@/components/inventory/inventory-item-row";
 import { InventoryItemDetailDialog } from "@/components/inventory/inventory-item-detail-dialog";
@@ -8,7 +9,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, ListFilter, Archive, Building, Package } from "lucide-react"; // Added Building, Package
+import { Search, PlusCircle, ListFilter, Archive, Building, Package } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -290,3 +291,4 @@ export default function InventoryPage() {
     </div>
   );
 }
+
