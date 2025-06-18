@@ -1,5 +1,5 @@
 
-import type { Timestamp } from 'firebase/firestore'; // Added Timestamp import
+import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'admin' | 'student';
 
@@ -53,11 +53,13 @@ export type InventoryItem = {
 };
 
 export type Announcement = {
-  id: string;
+  id: string; // Firestore document ID
   title: string;
   content: string;
-  author: string;
-  createdAt: Date;
+  authorId: string; // UID of the user who created it
+  authorName: string; // Display name of the user
+  createdAt: Timestamp | Date; // Firestore Timestamp or JS Date after conversion
+  updatedAt?: Timestamp | Date; // Firestore Timestamp or JS Date after conversion
   isPinned?: boolean;
-  audience?: UserRole[];
+  audience?: UserRole[]; // 'admin' | 'student'
 };

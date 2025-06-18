@@ -1,10 +1,9 @@
 
 import type { LearningMaterial, Booking, InventoryItem, Announcement } from './types';
-import { Timestamp } from 'firebase/firestore'; // For mock data consistency with type
+import { Timestamp } from 'firebase/firestore';
 
 
 // Mock learning materials are now illustrative, actual data will come from Firestore.
-// You can remove this array or keep it for reference, but it's no longer directly used by the LearningMaterialsPage.
 export const mockLearningMaterials: LearningMaterial[] = [
   {
     id: 'lm1',
@@ -15,10 +14,9 @@ export const mockLearningMaterials: LearningMaterial[] = [
     thumbnailUrl: 'https://i.ytimg.com/vi/RwkKXCCA_0k/maxresdefault.jpg',
     description: 'A comprehensive overview of basic physical examination techniques.',
     specialties: ['Internal Medicine', 'General Practice'],
-    createdAt: Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() - 2))).toDate(), // Example date
-    updatedAt: Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() - 1))).toDate(), // Example date
+    createdAt: Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() - 2))).toDate(),
+    updatedAt: Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() - 1))).toDate(),
   },
-  // ... other mock materials if needed for other parts of the app or testing.
 ];
 
 
@@ -80,13 +78,16 @@ export const mockInventoryItems: InventoryItem[] = [
   },
 ];
 
+// Mock announcements are now illustrative. The page fetches from Firestore.
 export const mockAnnouncements: Announcement[] = [
   {
     id: 'an1',
     title: 'New OSCE Schedule Released',
     content: 'The schedule for the upcoming OSCE has been released. Please check your emails and the portal for your assigned slots.',
-    author: 'Dr. Eva Curricula',
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 1)),
+    authorId: 'adminUser001',
+    authorName: 'Dr. Eva Curricula',
+    createdAt: Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() - 1))).toDate(),
+    updatedAt: Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() - 1))).toDate(),
     isPinned: true,
     audience: ['student']
   },
@@ -94,16 +95,11 @@ export const mockAnnouncements: Announcement[] = [
     id: 'an2',
     title: 'Sim Lab Maintenance Notice',
     content: 'Sim Lab B will be closed for maintenance on Friday from 2 PM to 5 PM. Please plan your bookings accordingly.',
-    author: 'Lab Coordinator Team',
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 3)),
+    authorId: 'adminUser002',
+    authorName: 'Lab Coordinator Team',
+    createdAt: Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() - 3))).toDate(),
+    updatedAt: Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() - 3))).toDate(),
+    isPinned: false,
     audience: ['student', 'admin']
-  },
-  {
-    id: 'an3',
-    title: 'Guest Lecture on Advanced Diagnostics',
-    content: 'Join us for a guest lecture by Dr. Insight on Wed, 3 PM in Auditorium Hall. Topic: Advanced Diagnostic Techniques.',
-    author: 'Admin Office',
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 5)),
-    audience: ['student']
   },
 ];
