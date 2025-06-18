@@ -35,8 +35,7 @@ export default function AboutUsPage() {
     addressLine4: "Selangor, MALAYSIA",
     phone: "+60-3 6126 5000 ext 7101",
     email: "dmemedic@uitm.edu.my",
-    // IMPORTANT: Replace this with your actual Google Maps embed URL
-    mapEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3983.525799899979!2d101.57684007594084!3d3.219016752120588!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc4f69b0934279%3A0xfe2f3171f5673505!2sDepartment%20of%20Medical%20Education%2C%20UiTM%20Sungai%20Buloh%20Campus!5e0!3m2!1sen!2smy!4v1700000000000!5m2!1sen!2smy"
+    mapEmbedUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3983.5155365848323!2d101.59170257674494!3d3.2209535527034014!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc456bb5245795%3A0x7f4d1f56553af082!2sUiTM%20Clinical%20Simulation%20Centre%20(UiTM%20Sg%20Buloh%20Campus)!5e0!3m2!1sen!2smy!4v1750234496886!5m2!1sen!2smy"
   };
 
 
@@ -151,11 +150,11 @@ export default function AboutUsPage() {
               allowFullScreen={false}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              title="Location of Department of Medical Education"
-              aria-label="Location of Department of Medical Education"
+              title="Location of UiTM Clinical Simulation Centre"
+              aria-label="Location of UiTM Clinical Simulation Centre"
             ></iframe>
              <p className="mt-2 text-xs text-muted-foreground text-center">
-                To get your specific embed link: Open Google Maps &rarr; Search for location &rarr; Click "Share" &rarr; Go to "Embed a map" tab &rarr; Copy HTML and use the `src` URL from the iframe.
+                If the map above doesn't show the correct location, ensure the embed URL in the code is accurate.
               </p>
           </div>
         </CardContent>
