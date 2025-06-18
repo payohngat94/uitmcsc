@@ -45,16 +45,18 @@ export default function AnnouncementsPage() {
 
 
   const fetchAnnouncements = async () => {
+    console.log("AnnouncementsPage: fetchAnnouncements called");
     setIsLoading(true);
     try {
       const fetchedAnnouncements = await getAnnouncements();
+      console.log("AnnouncementsPage: fetchedAnnouncements successfully", fetchedAnnouncements.length);
       setAnnouncements(fetchedAnnouncements);
     } catch (error) {
       console.error("Error in fetchAnnouncements on page:", error);
       toast({
         variant: "destructive",
         title: "Error fetching announcements",
-        description: (error instanceof Error && error.message) || "Could not load announcements. Check browser console for details from Firebase.",
+        description: (error instanceof Error && error.message) || "Could not load announcements. Check browser console and server logs for details from Firebase.",
       });
     } finally {
       setIsLoading(false);
@@ -190,7 +192,7 @@ export default function AnnouncementsPage() {
             title: announcementToEdit.title,
             content: announcementToEdit.content,
             isPinned: announcementToEdit.isPinned,
-            audience: announcementToEdit.audience || ['student', 'admin'], // Ensure audience has a default
+            audience: announcementToEdit.audience || ['student', 'admin'], 
           } : undefined}
           onSave={handleSaveAnnouncement}
         />
