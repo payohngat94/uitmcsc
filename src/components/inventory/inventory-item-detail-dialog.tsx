@@ -15,7 +15,7 @@ interface InventoryItemDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   item: InventoryItem | null;
   isAdmin?: boolean;
-  onDeleteItem?: () => void;
+  onDeleteItem?: (itemId: string) => void; // Changed to accept itemId
 }
 
 const statusColors: Record<InventoryItemStatus, string> = {
@@ -49,12 +49,12 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
   useEffect(() => {
     const newSrc = srcProp?.trim() || DIALOG_IMAGE_PLACEHOLDER;
     setCurrentSrc(newSrc);
-  }, [srcProp, alt, itemName]); // Added alt and itemName to dependency array
+  }, [srcProp, alt, itemName]);
 
   return (
-    <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0">
+    <div className="relative w-[240px] sm:w-[300px] aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0">
       <Image
-        key={currentSrc} // Key added previously
+        key={currentSrc}
         src={currentSrc}
         alt={alt}
         fill
@@ -63,9 +63,9 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
         unoptimized={true}
         onError={() => {
           console.warn(
-            `[ItemImageDisplay] next/image failed to load image for "${itemName}" (alt: "${alt}"). ` +
-            `Attempted src: "${srcProp}". This may be due to external server policies (e.g., CORS, hotlinking protection) or an invalid URL. ` +
-            `Falling back to error placeholder.`
+            `[ItemImageDisplay] Error loading image for "${itemName}" (alt: "${alt}"). ` +
+            `This may be due to external server policies (e.g., CORS, hotlinking protection) or an invalid URL. ` +
+            `Attempted src: "${srcProp}". Falling back to error placeholder.`
           );
           if (currentSrc !== DIALOG_IMAGE_ERROR_PLACEHOLDER) {
             setCurrentSrc(DIALOG_IMAGE_ERROR_PLACEHOLDER);
@@ -83,14 +83,14 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
   const formattedStatus = item.status.charAt(0).toUpperCase() + item.status.slice(1).replace(/-/g, ' ');
   
   const handleDeleteClick = () => {
-    if (onDeleteItem) {
-      onDeleteItem();
+    if (onDeleteItem && item) {
+      onDeleteItem(item.id);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-7xl max-h-[90vh] flex flex-col">
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="text-2xl flex items-center">
             <Package className="h-7 w-7 mr-3 text-primary" />
@@ -98,7 +98,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow py-4 pr-2 -mr-2">
+        <ScrollArea className="flex-grow py-4 pr-2 -mr-2"> {/* This ScrollArea is for the whole dialog content if it overflows vertically */}
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center">
@@ -132,17 +132,16 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
             <div className="space-y-2">
               <h4 className="font-medium">Images:</h4>
               {item.imageUrls && item.imageUrls.length > 0 ? (
-                <ScrollArea className="w-full rounded-md border"> {/* Removed whitespace-nowrap */}
-                  <div className="flex space-x-4 p-4">
+                <ScrollArea className="w-full rounded-md border p-1"> {/* ScrollArea for images */}
+                  <div className="flex space-x-4 p-4"> {/* Added p-4 for internal padding */}
                     {item.imageUrls.map((url, index) => (
-                      <div key={index} className="w-[240px] sm:w-[300px] flex-shrink-0">
                         <ItemImageDisplay 
+                          key={index} // Ensure key is unique for siblings
                           srcProp={url} 
                           alt={`${item.name} - Image ${index + 1}`} 
                           itemType={item.itemType}
                           itemName={item.name} 
                         />
-                      </div>
                     ))}
                   </div>
                   <ScrollBar orientation="horizontal" />
@@ -171,3 +170,4 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
     </Dialog>
   );
 }
+
