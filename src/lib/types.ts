@@ -1,11 +1,12 @@
 
+import type { Timestamp } from 'firebase/firestore'; // Added Timestamp import
 
 export type UserRole = 'admin' | 'student';
 
 export type User = {
   id: string;
   email: string;
-  role: UserRole; 
+  role: UserRole;
   name?: string;
   // Firebase User properties that we might use from auth.currentUser
   uid: string;
@@ -18,14 +19,16 @@ export type LearningMaterialCategory = "Early Clinical Exposure" | "Focused Skil
 export type LearningMaterialType = 'video' | 'document' | 'slides';
 
 export type LearningMaterial = {
-  id: string;
+  id: string; // Firestore document ID
   title: string;
   category: LearningMaterialCategory;
   type: LearningMaterialType;
-  url: string; // YouTube embed URL or path to PDF/slides
+  url: string;
   description?: string;
-  thumbnailUrl?: string; // For videos or a preview image
-  specialties?: string[]; // New field for specialty tags
+  thumbnailUrl?: string;
+  specialties?: string[];
+  createdAt?: Timestamp | Date; // Can be Firestore Timestamp or JS Date after conversion
+  updatedAt?: Timestamp | Date; // Can be Firestore Timestamp or JS Date after conversion
 };
 
 export type Booking = {
@@ -56,6 +59,5 @@ export type Announcement = {
   author: string;
   createdAt: Date;
   isPinned?: boolean;
-  audience?: UserRole[]; // e.g., ['student', 'admin']
+  audience?: UserRole[];
 };
-

@@ -1,47 +1,26 @@
-import type { LearningMaterial, Booking, InventoryItem, Announcement } from './types';
 
+import type { LearningMaterial, Booking, InventoryItem, Announcement } from './types';
+import { Timestamp } from 'firebase/firestore'; // For mock data consistency with type
+
+
+// Mock learning materials are now illustrative, actual data will come from Firestore.
+// You can remove this array or keep it for reference, but it's no longer directly used by the LearningMaterialsPage.
 export const mockLearningMaterials: LearningMaterial[] = [
   {
     id: 'lm1',
     title: 'Introduction to Physical Examination',
     category: 'Physical Examination',
     type: 'video',
-    url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Replace with actual video
-    thumbnailUrl: 'https://i.ytimg.com/vi/RwkKXCCA_0k/maxresdefault.jpg', // Example YouTube thumbnail
+    url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    thumbnailUrl: 'https://i.ytimg.com/vi/RwkKXCCA_0k/maxresdefault.jpg',
     description: 'A comprehensive overview of basic physical examination techniques.',
-    specialties: ['Internal Medicine', 'General Practice']
+    specialties: ['Internal Medicine', 'General Practice'],
+    createdAt: Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() - 2))).toDate(), // Example date
+    updatedAt: Timestamp.fromDate(new Date(new Date().setDate(new Date().getDate() - 1))).toDate(), // Example date
   },
-  {
-    id: 'lm2',
-    title: 'Suturing Techniques Guide',
-    category: 'Focused Skill Station',
-    type: 'document',
-    url: '/path/to/suturing-guide.pdf', // Placeholder path
-    thumbnailUrl: 'https://placehold.co/400x225.png',
-    description: 'Step-by-step guide on various suturing methods.',
-    specialties: ['Surgery', 'Emergency Medicine']
-  },
-  {
-    id: 'lm3',
-    title: 'History Taking Best Practices',
-    category: 'Early Clinical Exposure',
-    type: 'slides',
-    url: '/path/to/history-taking.ppt', // Placeholder path
-    thumbnailUrl: 'https://image.slidesharecdn.com/bimanualexamination-230316084329-8e73da90/75/Bimanual-examination-pptx-5-2048.jpg', // Example Slideshare thumbnail
-    description: 'Key principles and examples for effective patient history taking.',
-    specialties: ['Paediatric', 'Obstetric & Gynaecology']
-  },
-  {
-    id: 'lm4',
-    title: 'ECG Interpretation Basics',
-    category: 'Focused Skill Station',
-    type: 'video',
-    url: 'https://www.youtube.com/embed/someOtherVideoID',
-    thumbnailUrl: 'https://placehold.co/400x225.png',
-    description: 'Learn the fundamentals of ECG interpretation for common cardiac conditions.',
-    specialties: ['Cardiology', 'Internal Medicine']
-  },
+  // ... other mock materials if needed for other parts of the app or testing.
 ];
+
 
 export const mockBookings: Booking[] = [
   {

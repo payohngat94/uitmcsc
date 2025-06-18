@@ -2,16 +2,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { mockLearningMaterials } from "@/lib/mock-data";
+// mockLearningMaterials removed
 import { MaterialCard } from "@/components/learning-materials/material-card";
 import { AddMaterialDialog, type AddMaterialFormValues } from "@/components/learning-materials/add-material-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, BookOpen, PlusCircle } from "lucide-react";
+import { Search, Filter, BookOpen, PlusCircle, Loader2 } from "lucide-react"; // Added Loader2
 import type { LearningMaterial, LearningMaterialCategory, LearningMaterialType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
+import { getLearningMaterials, addLearningMaterial, updateLearningMaterial, deleteLearningMaterial } from "@/lib/firebase/firestore-service"; // Firestore service
+import { Skeleton } from "@/components/ui/skeleton"; // For loading skeleton
 
 const categories: LearningMaterialCategory[] = [
   "Early Clinical Exposure",
@@ -24,7 +26,8 @@ const categories: LearningMaterialCategory[] = [
 const materialTypes: LearningMaterialType[] = ["video", "document", "slides"];
 
 export default function LearningMaterialsPage() {
-  const [materials, setMaterials] = useState<LearningMaterial[]>(mockLearningMaterials);
+  const [materials, setMaterials] = useState<LearningMaterial[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
@@ -33,6 +36,26 @@ export default function LearningMaterialsPage() {
 
   const [isMaterialDialogOpen, setIsMaterialDialogOpen] = useState(false);
   const [materialToEdit, setMaterialToEdit] = useState<LearningMaterial | null>(null);
+
+  const fetchMaterials = async () => {
+    setIsLoading(true);
+    try {
+      const fetchedMaterials = await getLearningMaterials();
+      setMaterials(fetchedMaterials);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error fetching materials",
+        description: "Could not load learning materials from the database.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMaterials();
+  }, []);
 
   const handleOpenAddDialog = () => {
     setMaterialToEdit(null);
@@ -44,52 +67,68 @@ export default function LearningMaterialsPage() {
     setIsMaterialDialogOpen(true);
   };
 
-  const handleSaveMaterial = (formData: AddMaterialFormValues, id?: string) => {
+  const handleSaveMaterial = async (formData: AddMaterialFormValues, id?: string) => {
     const parsedSpecialties = formData.specialties
       ? formData.specialties.split(',').map(s => s.trim()).filter(s => s)
       : [];
 
-    const materialData: Omit<LearningMaterial, 'id'> = {
+    // Ensure thumbnailUrl is not an empty string if it's optional and not provided
+    const thumbnailUrl = formData.thumbnailUrl?.trim() === '' ? undefined : formData.thumbnailUrl;
+
+    const materialDataForDb = {
       title: formData.title,
       category: formData.category,
       type: formData.type,
       url: formData.url,
       description: formData.description,
-      thumbnailUrl: formData.thumbnailUrl,
+      thumbnailUrl: thumbnailUrl,
       specialties: parsedSpecialties,
     };
 
-    if (id) { // Editing existing material
-      setMaterials(prevMaterials => 
-        prevMaterials.map(m => m.id === id ? { ...materialData, id } : m)
-      );
+    try {
+      if (id) { // Editing existing material
+        await updateLearningMaterial(id, materialDataForDb);
+        toast({
+          title: "Material Updated",
+          description: `"${materialDataForDb.title}" has been successfully updated.`,
+        });
+      } else { // Adding new material
+        await addLearningMaterial(materialDataForDb);
+        toast({
+          title: "Material Added",
+          description: `"${materialDataForDb.title}" has been successfully added.`,
+        });
+      }
+      fetchMaterials(); // Re-fetch materials to show changes
+    } catch (error) {
       toast({
-        title: "Material Updated",
-        description: `"${materialData.title}" has been successfully updated.`,
+        variant: "destructive",
+        title: id ? "Error Updating Material" : "Error Adding Material",
+        description: (error as Error).message || "An unexpected error occurred.",
       });
-    } else { // Adding new material
-      const newMaterial: LearningMaterial = {
-        ...materialData,
-        id: `lm${Date.now()}`, 
-      };
-      setMaterials(prevMaterials => [newMaterial, ...prevMaterials]);
-      toast({
-        title: "Material Added",
-        description: `"${newMaterial.title}" has been successfully added.`,
-      });
+    } finally {
+      setIsMaterialDialogOpen(false);
+      setMaterialToEdit(null);
     }
-    setIsMaterialDialogOpen(false);
-    setMaterialToEdit(null);
   };
 
-  const handleDeleteMaterial = (id: string) => {
+  const handleDeleteMaterial = async (id: string) => {
     const materialToDelete = materials.find(m => m.id === id);
-    setMaterials(prevMaterials => prevMaterials.filter(material => material.id !== id));
-    if (materialToDelete) {
+    if (!materialToDelete) return;
+
+    try {
+      await deleteLearningMaterial(id);
       toast({
         variant: "destructive",
         title: "Material Deleted",
         description: `"${materialToDelete.title}" has been removed.`,
+      });
+      fetchMaterials(); // Re-fetch materials
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error Deleting Material",
+        description: (error as Error).message || "Could not delete the material.",
       });
     }
   };
@@ -120,7 +159,7 @@ export default function LearningMaterialsPage() {
       </div>
 
       {currentUser?.role === 'admin' && (
-        <AddMaterialDialog 
+        <AddMaterialDialog
           isOpen={isMaterialDialogOpen}
           onOpenChange={setIsMaterialDialogOpen}
           currentMaterial={materialToEdit}
@@ -132,10 +171,10 @@ export default function LearningMaterialsPage() {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-grow">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input 
-              type="search" 
-              placeholder="Search materials by title, topic, or specialty..." 
-              className="pl-10 w-full" 
+            <Input
+              type="search"
+              placeholder="Search materials by title, topic, or specialty..."
+              className="pl-10 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -168,15 +207,35 @@ export default function LearningMaterialsPage() {
           </div>
         </div>
       </div>
-      
-      {filteredMaterials.length > 0 ? (
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="flex flex-col h-full">
+              <CardHeader className="p-0 relative">
+                <Skeleton className="aspect-video w-full rounded-t-lg" />
+              </CardHeader>
+              <CardContent className="p-4 flex-grow">
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-2/3 mb-3" />
+                <Skeleton className="h-4 w-1/4" />
+              </CardContent>
+              <CardFooter className="p-4 border-t flex justify-between items-center">
+                <Skeleton className="h-5 w-1/4" />
+                <Skeleton className="h-8 w-1/3" />
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : filteredMaterials.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMaterials.map((material) => (
-            <MaterialCard 
-              key={material.id} 
-              material={material} 
+            <MaterialCard
+              key={material.id}
+              material={material}
               onDelete={currentUser?.role === 'admin' ? handleDeleteMaterial : undefined}
-              onEdit={currentUser?.role === 'admin' ? handleOpenEditDialog : undefined} 
+              onEdit={currentUser?.role === 'admin' ? handleOpenEditDialog : undefined}
             />
           ))}
         </div>
@@ -185,10 +244,13 @@ export default function LearningMaterialsPage() {
           <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
           <h3 className="mt-2 text-xl font-semibold">No Materials Found</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Try adjusting your search or filter criteria, or add new materials if you're an admin.
+            Try adjusting your search or filter criteria. If you're an admin, you can add new materials.
           </p>
         </div>
       )}
     </div>
   );
 }
+
+// Need to import Card, CardHeader, CardContent, CardFooter for Skeleton example
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
