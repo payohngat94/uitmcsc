@@ -9,7 +9,7 @@ import Image from "next/image";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface InventoryItemRowProps {
   item: InventoryItem;
@@ -32,25 +32,40 @@ const statusColors: Record<InventoryItem['status'], string> = {
   maintenance: "bg-gray-500 hover:bg-gray-600",
 };
 
+const PRIMARY_PLACEHOLDER = "https://placehold.co/40x40.png";
+const ERROR_PLACEHOLDER = "https://placehold.co/40x40.png?text=Error";
+
 export function InventoryItemRow({ item, onViewDetails }: InventoryItemRowProps) {
   const [quantity, setQuantity] = useState(1);
+  const [imageSrc, setImageSrc] = useState(item.imageUrls?.[0] || PRIMARY_PLACEHOLDER);
+
+  useEffect(() => {
+    setImageSrc(item.imageUrls?.[0] || PRIMARY_PLACEHOLDER);
+  }, [item.imageUrls]);
 
   const handleRequest = () => {
     alert(`Requesting ${quantity} of ${item.name}. (This is a simulation)`);
     // Close dialog logic
   };
 
+  const aiHint = item.itemType === 'facility' ? "facility thumbnail" : "equipment thumbnail";
+
   return (
     <TableRow className="hover:bg-muted/50 transition-colors">
       <TableCell>
         <div className="flex items-center gap-3">
           <Image
-            src={item.imageUrls?.[0] || "https://placehold.co/40x40.png"}
+            src={imageSrc}
             alt={item.name}
             width={40}
             height={40}
             className="rounded-md object-cover"
-            data-ai-hint="medical equipment thumbnail"
+            data-ai-hint={aiHint}
+            onError={() => {
+              if (imageSrc !== ERROR_PLACEHOLDER) { // Prevent infinite loop if error placeholder also fails
+                setImageSrc(ERROR_PLACEHOLDER);
+              }
+            }}
           />
           <div>
             <div 
@@ -98,7 +113,7 @@ export function InventoryItemRow({ item, onViewDetails }: InventoryItemRowProps)
                   width={80}
                   height={80}
                   className="rounded-md object-cover"
-                  data-ai-hint="medical equipment"
+                  data-ai-hint={item.itemType === 'facility' ? "facility detail" : "equipment detail"}
                 />
                 <div>
                   <h3 className="font-semibold">{item.name}</h3>
