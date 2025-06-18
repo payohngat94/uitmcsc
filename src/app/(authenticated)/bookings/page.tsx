@@ -1,31 +1,72 @@
-import { BookingCalendar } from "@/components/bookings/booking-calendar";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { mockBookings } from "@/lib/mock-data";
 import { format } from "date-fns";
-import { CalendarCheck, Clock, User } from "lucide-react";
+import { CalendarCheck, Clock, User, CalendarDays } from "lucide-react"; // Ensured CalendarDays is imported
 import Link from "next/link";
 
 export default function BookingsPage() {
   const upcomingBookings = mockBookings.filter(b => b.status === 'confirmed' || b.status === 'pending');
   
+  // IMPORTANT: Replace this with your actual Google Form embed URL
+  const googleFormEmbedUrl = "https://docs.google.com/forms/d/e/YOUR_GOOGLE_FORM_EMBED_LINK_HERE/viewform?embedded=true";
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold font-headline mb-2">Session Bookings</h1>
         <p className="text-muted-foreground">
-          Schedule your simulation lab sessions and manage your existing bookings.
+          Schedule your simulation lab sessions using the form below and manage your existing bookings.
         </p>
       </div>
 
-      <BookingCalendar />
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl">Book a Simulation Session</CardTitle>
+          <CardDescription>
+            Please fill out the form below to request a session. Ensure you use the correct Google Form embed URL.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {googleFormEmbedUrl.startsWith("https://docs.google.com/forms/d/e/YOUR_GOOGLE_FORM_EMBED_LINK_HERE") ? (
+            <div className="p-4 border border-dashed border-destructive rounded-md bg-destructive/10">
+              <h3 className="font-semibold text-destructive">Action Required: Update Google Form Link</h3>
+              <p className="text-sm text-destructive/80">
+                Please replace the placeholder URL in the code (`src/app/(authenticated)/bookings/page.tsx`) with your actual Google Form embed link.
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                To get your embed link: Open your Google Form &rarr; Click "Send" &rarr; Go to the "&lt;&gt;" (Embed HTML) tab &rarr; Copy the `src` URL from the iframe code provided.
+              </p>
+            </div>
+          ) : (
+            <iframe
+              src={googleFormEmbedUrl}
+              width="100%"
+              height="800px"
+              frameBorder="0"
+              marginHeight={0}
+              marginWidth={0}
+              className="rounded-md border"
+              title="Simulation Session Booking Form"
+              aria-label="Simulation Session Booking Form"
+            >
+              Loading booking form…
+            </iframe>
+          )}
+           <p className="mt-4 text-sm text-muted-foreground">
+              <strong>Note:</strong> If you haven't updated the placeholder link in the code yet, the form above will not be your actual booking form.
+              To get your Google Form embed link: Open your Google Form &rarr; Click "Send" &rarr; Go to the "&lt;&gt;" (Embed HTML) tab &rarr; Copy the `src` URL from the iframe code.
+            </p>
+        </CardContent>
+      </Card>
 
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl">Your Upcoming Bookings</CardTitle>
           <CardDescription>
-            Here are your scheduled and pending simulation sessions.
+            Here are your scheduled and pending simulation sessions. This list is currently based on mock data and will not automatically update from Google Form submissions.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -64,7 +105,7 @@ export default function BookingsPage() {
               <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-2 text-xl font-semibold">No Upcoming Bookings</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                You haven't booked any sessions yet. Use the calendar above to schedule one.
+                You haven't booked any sessions yet. Use the form above to schedule one.
               </p>
             </div>
           )}
