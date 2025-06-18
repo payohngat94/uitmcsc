@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { GraduationCap, Mail, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import React, { useState, useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -85,64 +86,81 @@ export function LoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-foreground/80">Email</FormLabel>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="your.email@example.com"
-                        {...field}
-                        className="pl-10"
-                        aria-describedby={form.formState.errors.email ? "email-error" : undefined}
-                      />
-                    </FormControl>
-                  </div>
-                  <FormMessage id="email-error" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-foreground/80">Password</FormLabel>
-                    <div className="relative">
-                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="••••••••"
-                          {...field}
-                          className="pl-10"
-                          aria-describedby={form.formState.errors.password ? "password-error" : undefined}
-                        />
-                      </FormControl>
-                    </div>
-                  <FormMessage id="password-error" />
-                </FormItem>
-              )}
-            />
-            <Button 
-              type="submit" 
-              className="w-full text-base py-3" 
-              disabled={!isClient || form.formState.isSubmitting}
-            >
-              {isClient && form.formState.isSubmitting ? "Signing In..." : "Sign In"}
-            </Button>
-          </form>
-        </Form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Forgot your password? <a href="#" className="font-medium text-primary hover:underline">Reset here</a>
-        </p>
+        {!isClient ? (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-1/4" /> {/* Label */}
+              <Skeleton className="h-10 w-full" /> {/* Input */}
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-1/4" /> {/* Label */}
+              <Skeleton className="h-10 w-full" /> {/* Input */}
+            </div>
+            <Skeleton className="h-10 w-full py-3" /> {/* Button */}
+            <Skeleton className="h-4 w-3/4 mx-auto" /> {/* Forgot password link */}
+          </div>
+        ) : (
+          <>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-foreground/80">Email</FormLabel>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="your.email@example.com"
+                            {...field}
+                            className="pl-10"
+                            aria-describedby={form.formState.errors.email ? "email-error" : undefined}
+                          />
+                        </FormControl>
+                      </div>
+                      <FormMessage id="email-error" />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-foreground/80">Password</FormLabel>
+                        <div className="relative">
+                          <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <FormControl>
+                            <Input
+                              type="password"
+                              placeholder="••••••••"
+                              {...field}
+                              className="pl-10"
+                              aria-describedby={form.formState.errors.password ? "password-error" : undefined}
+                            />
+                          </FormControl>
+                        </div>
+                      <FormMessage id="password-error" />
+                    </FormItem>
+                  )}
+                />
+                <Button 
+                  type="submit" 
+                  className="w-full text-base py-3" 
+                  disabled={form.formState.isSubmitting}
+                >
+                  {form.formState.isSubmitting ? "Signing In..." : "Sign In"}
+                </Button>
+              </form>
+            </Form>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Forgot your password? <a href="#" className="font-medium text-primary hover:underline">Reset here</a>
+            </p>
+          </>
+        )}
       </CardContent>
     </Card>
   );
