@@ -6,7 +6,7 @@ import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/li
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, Tag, MapPin, BarChart, Info, ImageOff, Trash2 } from "lucide-react"; // Added Trash2
+import { Package, Tag, MapPin, BarChart, Info, ImageOff, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface InventoryItemDetailDialogProps {
@@ -32,40 +32,23 @@ const statusVariant: Record<InventoryItemStatus, "default" | "secondary" | "dest
   maintenance: "destructive",
 };
 
-const DetailImageDisplay = ({ src, alt, itemType }: { src?: string; alt: string; itemType?: InventoryItemType }) => {
+// Simplified Image Display - no longer a separate component for single URL
+export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin, onDeleteItem }: InventoryItemDetailDialogProps) {
   const DIALOG_ERROR_PLACEHOLDER = "https://placehold.co/300x200.png?text=Image+Not+Available";
-  const [currentImageSrc, setCurrentImageSrc] = useState(src || DIALOG_ERROR_PLACEHOLDER);
-  const aiHint = itemType === 'facility' ? "facility detail image" : "equipment detail image";
+  const [currentImageSrc, setCurrentImageSrc] = useState(DIALOG_ERROR_PLACEHOLDER);
 
   useEffect(() => {
-    setCurrentImageSrc(src || DIALOG_ERROR_PLACEHOLDER); 
-  }, [src]);
+    if (item?.imageUrl) {
+      setCurrentImageSrc(item.imageUrl);
+    } else {
+      setCurrentImageSrc(DIALOG_ERROR_PLACEHOLDER);
+    }
+  }, [item, item?.imageUrl]); // item?.imageUrl added as dependency
 
-  return (
-    <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted">
-      <Image
-        src={currentImageSrc}
-        alt={alt}
-        layout="fill"
-        objectFit="contain" // Use contain to ensure the whole image is visible
-        className="p-2" // Add some padding around the image within its container
-        data-ai-hint={aiHint}
-        unoptimized={true}
-        onError={() => {
-          if (currentImageSrc !== DIALOG_ERROR_PLACEHOLDER) {
-            setCurrentImageSrc(DIALOG_ERROR_PLACEHOLDER);
-          }
-        }}
-      />
-    </div>
-  );
-};
-
-
-export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin, onDeleteItem }: InventoryItemDetailDialogProps) {
   if (!item) return null;
 
   const formattedStatus = item.status.charAt(0).toUpperCase() + item.status.slice(1).replace(/-/g, ' ');
+  const aiHint = item.itemType === 'facility' ? "facility detail image" : "equipment detail image";
 
   const handleDeleteClick = () => {
     if (onDeleteItem) {
@@ -116,16 +99,26 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
             
             <div className="space-y-1">
               <h4 className="font-medium">Image:</h4>
-              {item.imageUrl ? (
-                 <DetailImageDisplay
-                    src={item.imageUrl}
-                    alt={`${item.name} image`}
-                    itemType={item.itemType}
-                  />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-muted-foreground bg-secondary/30 p-6 rounded-md h-48">
+              <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted">
+                <Image
+                  src={currentImageSrc}
+                  alt={item.name || "Inventory item image"}
+                  layout="fill"
+                  objectFit="contain"
+                  className="p-2"
+                  data-ai-hint={aiHint}
+                  unoptimized={true}
+                  onError={() => {
+                    if (currentImageSrc !== DIALOG_ERROR_PLACEHOLDER) {
+                      setCurrentImageSrc(DIALOG_ERROR_PLACEHOLDER);
+                    }
+                  }}
+                />
+              </div>
+              {!item.imageUrl && (
+                 <div className="flex flex-col items-center justify-center text-muted-foreground bg-secondary/30 p-6 rounded-md h-48">
                     <ImageOff className="h-10 w-10 mb-2" />
-                    <p className="text-sm">No image available for this item.</p>
+                    <p className="text-sm">No image URL provided for this item.</p>
                 </div>
               )}
             </div>

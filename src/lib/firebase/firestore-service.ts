@@ -1,7 +1,7 @@
 
 'use server';
 
-import { db, storage } from './config'; // Import storage
+import { db } from './config'; // Storage import removed if not used elsewhere
 import {
   collection,
   addDoc,
@@ -13,10 +13,10 @@ import {
   query,
   orderBy,
   Timestamp,
-  where,
-  writeBatch,
+  // where, // Not used
+  // writeBatch, // Not used
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'; // Import storage functions
+// Storage functions (ref, uploadBytes, getDownloadURL, deleteObject) removed
 import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus, InventoryItemType } from '@/lib/types';
 
 // Learning Material Categories Service
@@ -274,49 +274,7 @@ export async function deleteAnnouncement(id: string): Promise<void> {
   }
 }
 
-// Firebase Storage Service
-export async function uploadFileToFirebase(file: File, path: string): Promise<string> {
-  try {
-    const storageRef = ref(storage, path);
-    const snapshot = await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    return downloadURL;
-  } catch (error: any) { // Changed to 'any' to access potential Firebase specific properties
-    console.error("Firebase Storage Upload Error Details:");
-    console.error("Full error object:", error); // Log the entire error object
-    if (error.code) {
-      console.error("Error code:", error.code);
-    }
-    if (error.message) {
-      console.error("Error message:", error.message);
-    }
-    if (error.serverResponse) {
-      console.error("Server response:", error.serverResponse);
-    }
-    // Re-throw a more generic error or the original if it's an instance of Error
-    if (error instanceof Error) {
-      throw new Error(`Failed to upload file: ${error.message}. Code: ${error.code || 'N/A'}`);
-    }
-    throw new Error("An unknown error occurred during file upload. Check console for details.");
-  }
-}
-
-export async function deleteFileFromFirebase(fileUrl: string): Promise<void> {
-  try {
-    const fileRef = ref(storage, fileUrl);
-    await deleteObject(fileRef);
-  } catch (error: any) {
-    if (error.code === 'storage/object-not-found') {
-      console.warn(`File not found for deletion, URL may have been invalid or already deleted: ${fileUrl}`);
-      return; // Don't throw an error if the file doesn't exist
-    }
-    console.error("Error deleting file from Firebase Storage: ", error);
-    if (error instanceof Error) {
-      throw new Error(`Failed to delete file: ${error.message}`);
-    }
-    throw new Error("An unknown error occurred during file deletion.");
-  }
-}
+// Firebase Storage Service - REMOVED uploadFileToFirebase and deleteFileFromFirebase
 
 
 // Inventory Service
@@ -356,7 +314,7 @@ export async function addInventoryItem(itemData: Omit<InventoryItemData, 'create
     const docRef = await addDoc(inventoryCollectionRef, {
       ...itemData,
       itemType: itemData.itemType || 'equipment', 
-      imageUrl: itemData.imageUrl || null, 
+      imageUrl: itemData.imageUrl || null, // Ensure imageUrl is handled as a string or null
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -373,8 +331,15 @@ export async function addInventoryItem(itemData: Omit<InventoryItemData, 'create
 export async function updateInventoryItem(id: string, itemData: Partial<InventoryItemData>): Promise<void> {
   try {
     const itemDocRef = doc(db, 'inventoryItems', id);
+    // Ensure imageUrl is explicitly set to null if it's an empty string or undefined
+    // to avoid storing empty strings if that's not desired.
+    const dataToUpdate = { ...itemData };
+    if (dataToUpdate.imageUrl === '' || dataToUpdate.imageUrl === undefined) {
+        dataToUpdate.imageUrl = null;
+    }
+
     await updateDoc(itemDocRef, {
-      ...itemData,
+      ...dataToUpdate,
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
@@ -386,14 +351,12 @@ export async function updateInventoryItem(id: string, itemData: Partial<Inventor
   }
 }
 
-export async function deleteInventoryItem(id: string, imageUrl?: string): Promise<void> {
+export async function deleteInventoryItem(id: string): Promise<void> { // Removed imageUrl parameter
   try {
     const itemDocRef = doc(db, 'inventoryItems', id);
     await deleteDoc(itemDocRef);
 
-    if (imageUrl) {
-      await deleteFileFromFirebase(imageUrl);
-    }
+    // Removed call to deleteFileFromFirebase
   } catch (error) {
     console.error("Error deleting inventory item: ", error);
     if (error instanceof Error) {
@@ -402,4 +365,3 @@ export async function deleteInventoryItem(id: string, imageUrl?: string): Promis
     throw new Error("Failed to delete inventory item.");
   }
 }
-

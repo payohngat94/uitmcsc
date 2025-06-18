@@ -61,7 +61,7 @@ export type InventoryItem = {
   description?: string;
   status: InventoryItemStatus;
   quantity: number;
-  imageUrl?: string; // Changed from imageUrls: string[]
+  imageUrl?: string; // Reverted to single optional string URL
   location?: string;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
@@ -78,3 +78,4 @@ export type Announcement = {
   isPinned?: boolean;
   audience?: UserRole[]; // 'admin' | 'student'
 };
+
