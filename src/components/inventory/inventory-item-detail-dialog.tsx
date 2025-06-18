@@ -2,7 +2,7 @@
 "use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/lib/types";
+import type { InventoryItem, InventoryItemStatus } from "@/lib/types";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ interface InventoryItemDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   item: InventoryItem | null;
   isAdmin?: boolean;
-  onDeleteItem?: () => void; // Changed from (item: InventoryItem) => void to match usage
+  onDeleteItem?: () => void;
 }
 
 const statusColors: Record<InventoryItemStatus, string> = {
@@ -36,7 +36,6 @@ const statusVariant: Record<InventoryItemStatus, "default" | "secondary" | "dest
 const DIALOG_IMAGE_PLACEHOLDER = "https://placehold.co/300x200.png?text=Image+Not+Available";
 const DIALOG_IMAGE_ERROR_PLACEHOLDER = "https://placehold.co/300x200.png?text=Error+Loading";
 
-
 interface ItemImageDisplayProps {
   srcProp: string | undefined;
   alt: string;
@@ -50,12 +49,12 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
   useEffect(() => {
     const newSrc = srcProp?.trim() || DIALOG_IMAGE_PLACEHOLDER;
     setCurrentSrc(newSrc);
-  }, [srcProp, alt, itemName]);
+  }, [srcProp, alt, itemName]); // Added alt and itemName to dependency array
 
   return (
     <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0">
       <Image
-        key={currentSrc} 
+        key={currentSrc} // Key added previously
         src={currentSrc}
         alt={alt}
         fill
@@ -85,7 +84,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
   
   const handleDeleteClick = () => {
     if (onDeleteItem) {
-      onDeleteItem(); // Call the passed in function
+      onDeleteItem();
     }
   };
 
@@ -99,7 +98,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow py-4 pr-2 -mr-2"> {/* Main ScrollArea for content if it overflows vertically */}
+        <ScrollArea className="flex-grow py-4 pr-2 -mr-2">
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center">
@@ -133,8 +132,8 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
             <div className="space-y-2">
               <h4 className="font-medium">Images:</h4>
               {item.imageUrls && item.imageUrls.length > 0 ? (
-                <ScrollArea className="w-full whitespace-nowrap rounded-md border">
-                  <div className="flex space-x-4 p-4"> {/* Added p-4 for padding around images and space for scrollbar */}
+                <ScrollArea className="w-full rounded-md border"> {/* Removed whitespace-nowrap */}
+                  <div className="flex space-x-4 p-4">
                     {item.imageUrls.map((url, index) => (
                       <div key={index} className="w-[240px] sm:w-[300px] flex-shrink-0">
                         <ItemImageDisplay 
