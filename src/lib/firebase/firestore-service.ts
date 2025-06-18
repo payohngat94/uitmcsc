@@ -1,4 +1,3 @@
-
 'use server';
 
 import { db } from './config';
@@ -91,9 +90,16 @@ export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedA
 
 
 export async function getAnnouncements(): Promise<Announcement[]> {
-  console.log("!!! SERVER ACTION: getAnnouncements CALLED !!!");
-  console.log("getAnnouncements (server action): Attempting to fetch announcements from Firestore...");
+  console.log("\n========================================================================");
+  console.log("🚀 SERVER ACTION: getAnnouncements - Function Entry Point 🚀");
+  console.log(`Timestamp: ${new Date().toISOString()}`);
+  console.log("========================================================================\n");
+
   try {
+    console.log("\n------------------------------------------------------------------------");
+    console.log("🔍 SERVER ACTION: getAnnouncements - Attempting Firestore queries...");
+    console.log("------------------------------------------------------------------------\n");
+
     const pinnedQuery = query(
       announcementsCollectionRef,
       where('isPinned', '==', true),
@@ -105,12 +111,12 @@ export async function getAnnouncements(): Promise<Announcement[]> {
       orderBy('createdAt', 'desc')
     );
 
-    console.log("getAnnouncements (server action): Executing pinned and unpinned queries...");
+    console.log("SERVER ACTION: getAnnouncements - Executing pinned and unpinned queries...");
     const [pinnedSnapshot, unpinnedSnapshot] = await Promise.all([
       getDocs(pinnedQuery),
       getDocs(unpinnedQuery),
     ]);
-    console.log("getAnnouncements (server action): Queries executed. Pinned docs:", pinnedSnapshot.docs.length, "Unpinned docs:", unpinnedSnapshot.docs.length);
+    console.log("SERVER ACTION: getAnnouncements - Queries executed. Pinned docs:", pinnedSnapshot.docs.length, "Unpinned docs:", unpinnedSnapshot.docs.length);
 
     const transformDoc = (docSnapshot: import('firebase/firestore').QueryDocumentSnapshot): Announcement => {
       const data = docSnapshot.data();
@@ -123,7 +129,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         const parsed = new Date(data.createdAt);
         createdAtDate = isNaN(parsed.getTime()) ? new Date(0) : parsed;
       } else {
-        createdAtDate = new Date(0); // Default to Epoch if undefined
+        createdAtDate = new Date(0); 
       }
 
       let updatedAtDate;
@@ -135,7 +141,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         const parsed = new Date(data.updatedAt);
         updatedAtDate = isNaN(parsed.getTime()) ? createdAtDate : parsed;
       } else {
-        updatedAtDate = createdAtDate; // Default to createdAt if undefined
+        updatedAtDate = createdAtDate; 
       }
 
       return {
@@ -144,10 +150,10 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         content: data.content || "",
         authorId: data.authorId || "unknown_author_id",
         authorName: data.authorName || "Unknown Author",
-        isPinned: data.isPinned === true,
+        isPinned: data.isPinned === true, // Ensure boolean
         audience: Array.isArray(data.audience) && data.audience.every(role => ['student', 'admin'].includes(role))
           ? data.audience as UserRole[]
-          : ['student', 'admin'] as UserRole[],
+          : ['student', 'admin'] as UserRole[], // Default or fallback
         createdAt: createdAtDate,
         updatedAt: updatedAtDate,
       };
@@ -156,30 +162,45 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     const pinnedAnnouncements = pinnedSnapshot.docs.map(transformDoc);
     const unpinnedAnnouncements = unpinnedSnapshot.docs.map(transformDoc);
 
-    console.log("getAnnouncements (server action): Announcements transformed successfully. Total:", pinnedAnnouncements.length + unpinnedAnnouncements.length);
+    console.log("SERVER ACTION: getAnnouncements - Announcements transformed successfully. Total:", pinnedAnnouncements.length + unpinnedAnnouncements.length);
     return [...pinnedAnnouncements, ...unpinnedAnnouncements];
 
   } catch (error) {
-    console.error("!!! SERVER ACTION: getAnnouncements ERROR CAUGHT !!!");
-    console.error("Error fetching announcements from Firestore (inside catch block of getAnnouncements):");
+    console.error("\n========================================================================");
+    console.error("❌ SERVER ACTION: getAnnouncements - !!! ERROR CAUGHT !!! ❌");
+    console.error(`Timestamp: ${new Date().toISOString()}`);
+    console.error("------------------------------------------------------------------------");
+    console.error("Raw Error Object from Firestore:", error); 
+    console.error("------------------------------------------------------------------------");
+
     if (error instanceof Error) {
       console.error("Error Name:", error.name);
       console.error("Error Message:", error.message);
-      // Firestore errors often have a 'code' property
       if ((error as any).code) {
         console.error("Firebase Error Code:", (error as any).code);
       }
     } else {
-      // If the error is not an instance of Error, log its type and value
-      console.error("Caught an error that is not an instance of Error. Type:", typeof error, "Value:", error);
+      console.error("Caught an error that is NOT an instance of Error.");
+      console.error("Type of error:", typeof error);
     }
-    // Attempt to stringify the full error object to catch more details, including potential links for index creation
+
     try {
-      console.error("Full Error Object (Stringified):", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      const errorProperties = Object.getOwnPropertyNames(error);
+      const simplifiedError: { [key: string]: any } = { message: (error as any).message, name: (error as any).name, stack: (error as any).stack };
+      errorProperties.forEach(prop => {
+        // Avoid trying to stringify complex objects or functions that might cause issues
+        if (typeof (error as any)[prop] !== 'function' && typeof (error as any)[prop] !== 'object') {
+            simplifiedError[prop] = (error as any)[prop];
+        } else if (prop === 'details' || prop === 'code' ) { // include common firebase error props
+             simplifiedError[prop] = (error as any)[prop];
+        }
+      });
+      console.error("Full Error Object (Simplified & Stringified):", JSON.stringify(simplifiedError, null, 2));
     } catch (stringifyError) {
       console.error("Could not stringify the full error object due to:", stringifyError);
-      console.error("Original error object (raw):", error);
+      console.error("Original error object (raw, again):", error);
     }
+    console.error("========================================================================\n");
     throw new Error("Failed to fetch announcements."); // This is the error the client component will see
   }
 }
