@@ -43,6 +43,38 @@ const categoryColors: Record<LearningMaterial['category'], string> = {
   "Communication Skills": "bg-pink-100 text-pink-700",
 };
 
+const getYouTubeEmbedUrl = (url: string): string => {
+  let videoId = null;
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname === "www.youtube.com" || urlObj.hostname === "youtube.com") {
+      if (urlObj.pathname === "/watch") {
+        videoId = urlObj.searchParams.get("v");
+      } else if (urlObj.pathname.startsWith("/embed/")) {
+        return url; // Already an embed URL
+      } else if (urlObj.pathname.startsWith("/live/")) {
+        videoId = urlObj.pathname.substring("/live/".length);
+         if(videoId){
+          return `https://www.youtube.com/embed/${videoId}?autoplay=1`; // Autoplay for live might be desired
+        }
+      }
+    } else if (urlObj.hostname === "youtu.be") {
+      videoId = urlObj.pathname.substring(1);
+    }
+  } catch (e) {
+    // Invalid URL, return original or handle error
+    return url;
+  }
+
+  if (videoId) {
+    return `https://www.youtube.com/embed/${videoId}`;
+  }
+  // If not a recognizable YouTube URL or already an embed link, return original
+  // Or, you could return a specific error/placeholder URL if it's not embeddable
+  return url;
+};
+
+
 export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) {
   const Icon = material.type === 'video' ? Youtube : material.type === 'document' ? FileText : Presentation;
   const aiHint = material.type === 'video' ? "medical video" : material.type === 'document' ? "medical document" : "medical presentation";
@@ -61,6 +93,8 @@ export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) 
       onEdit(material);
     }
   };
+
+  const embedUrl = material.type === 'video' ? getYouTubeEmbedUrl(material.url) : material.url;
 
   return (
     <Card className="flex flex-col h-full hover:shadow-xl transition-shadow duration-300 ease-in-out">
@@ -115,7 +149,7 @@ export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) 
                   <iframe
                     width="100%"
                     height="100%"
-                    src={material.url} // Assuming material.url is an embeddable URL for videos
+                    src={embedUrl} 
                     title={material.title}
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
