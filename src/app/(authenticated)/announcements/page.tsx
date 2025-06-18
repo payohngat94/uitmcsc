@@ -152,7 +152,7 @@ export default function AnnouncementsPage() {
         const matchesSearch = searchTerm === "" ||
           announcement.title.toLowerCase().includes(searchLower) ||
           announcement.content.toLowerCase().includes(searchLower) ||
-          announcement.authorName.toLowerCase().includes(searchLower);
+          (announcement.authorName && announcement.authorName.toLowerCase().includes(searchLower));
         
         const matchesAudience = selectedAudienceFilter === "all" || 
           (Array.isArray(announcement.audience) && announcement.audience.includes(selectedAudienceFilter));
@@ -190,7 +190,7 @@ export default function AnnouncementsPage() {
             title: announcementToEdit.title,
             content: announcementToEdit.content,
             isPinned: announcementToEdit.isPinned,
-            audience: announcementToEdit.audience,
+            audience: announcementToEdit.audience || ['student', 'admin'], // Ensure audience has a default
           } : undefined}
           onSave={handleSaveAnnouncement}
         />
@@ -274,7 +274,7 @@ export default function AnnouncementsPage() {
           )}
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4">All Announcements</h2>
+            <h2 className="text-2xl font-semibold mb-4">{pinnedAnnouncements.length > 0 ? "Other Announcements" : "All Announcements"}</h2>
             {regularAnnouncements.length > 0 || pinnedAnnouncements.length > 0 ? (
               regularAnnouncements.length > 0 ? (
                 <div className="space-y-4">
@@ -308,5 +308,4 @@ export default function AnnouncementsPage() {
     </div>
   );
 }
-
     

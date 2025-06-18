@@ -101,7 +101,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     // Query for unpinned announcements, ordered by creation date descending
     const unpinnedQuery = query(
       announcementsCollectionRef,
-      where('isPinned', '==', false), // or where('isPinned', '!=', true) if you also have undefined isPinned
+      where('isPinned', '==', false),
       orderBy('createdAt', 'desc')
     );
 
@@ -124,7 +124,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         authorId: data.authorId || "unknown_author_id",
         authorName: data.authorName || "Unknown Author",
         isPinned: data.isPinned === true, // Ensure it's a boolean
-        audience: Array.isArray(data.audience) ? data.audience as UserRole[] : [],
+        audience: Array.isArray(data.audience) ? data.audience as UserRole[] : ['student', 'admin'] as UserRole[], // Default audience if undefined
         createdAt: createdAtDate,
         updatedAt: updatedAtDate,
       };
@@ -149,7 +149,7 @@ export async function addAnnouncement(
     const docRef = await addDoc(announcementsCollectionRef, {
       ...announcementData,
       isPinned: announcementData.isPinned || false,
-      audience: announcementData.audience || ['student'], // Default audience
+      audience: announcementData.audience && announcementData.audience.length > 0 ? announcementData.audience : ['student', 'admin'], // Default audience if empty or undefined
       authorId: author.id,
       authorName: author.name,
       createdAt: serverTimestamp(),
