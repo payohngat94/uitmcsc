@@ -30,16 +30,12 @@ export default function DashboardPage() {
 
       <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-xl overflow-hidden">
         <div className="flex flex-col md:flex-row items-center justify-between p-6 md:p-8">
-          <div className="space-y-3 md:max-w-2xl text-center md:text-left w-full">
+          <div className="space-y-3 md:max-w-xl text-center md:text-left w-full">
             <h1 className="text-3xl md:text-4xl font-bold font-headline">Welcome to UiTM CSC!</h1>
             <p className="text-lg text-primary-foreground/90">
               Your central platform for clinical skills development. Explore resources, book sessions, and stay informed.
             </p>
-            <Button variant="secondary" size="lg" asChild className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90">
-              <Link href="/learning-materials">
-                Get Started <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
+            {/* "Get Started" button removed */}
           </div>
         </div>
       </Card>
