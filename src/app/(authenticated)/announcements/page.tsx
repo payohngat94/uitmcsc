@@ -45,28 +45,18 @@ export default function AnnouncementsPage() {
 
 
   const fetchAnnouncements = async () => {
-    console.log("AnnouncementsPage: fetchAnnouncements called - ATTEMPTING TO CALL SERVER ACTION getAnnouncements()");
+    console.log("AnnouncementsPage: fetchAnnouncements called");
     setIsLoading(true);
     try {
       const fetchedAnnouncements = await getAnnouncements(); 
       console.log("AnnouncementsPage: fetchedAnnouncements successfully, count:", fetchedAnnouncements.length);
       setAnnouncements(fetchedAnnouncements);
     } catch (error) {
-      console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR - Raw error object:", error);
-      let descriptionMessage = "Could not load announcements. Default error.";
-      if (error instanceof Error) {
-        console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR - error.message:", error.message);
-        console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR - error.name:", error.name);
-        console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR - error.stack:", error.stack);
-        descriptionMessage = error.message; 
-      } else {
-        console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR - error is not an instance of Error. Stringified:", String(error));
-        descriptionMessage = String(error);
-      }
+      console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR:", error);
       toast({
         variant: "destructive",
         title: "Error fetching announcements",
-        description: descriptionMessage,
+        description: (error instanceof Error && error.message) ? error.message : "Could not load announcements.",
       });
     } finally {
       setIsLoading(false);
@@ -171,14 +161,12 @@ export default function AnnouncementsPage() {
           
         return matchesSearch && matchesAudience;
       })
-      // Pinned items first, then by creation date descending for regular items
       .sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        // Both are pinned or both are not pinned, sort by createdAt
         const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt || 0).getTime();
         const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt || 0).getTime();
-        return dateB - dateA; // Descending
+        return dateB - dateA; 
       });
   }, [announcements, searchTerm, selectedAudienceFilter]);
 

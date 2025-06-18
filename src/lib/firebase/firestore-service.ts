@@ -40,6 +40,9 @@ export async function getLearningMaterials(): Promise<LearningMaterial[]> {
     });
   } catch (error) {
     console.error("Error fetching learning materials: ", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to fetch learning materials.");
   }
 }
@@ -54,6 +57,9 @@ export async function addLearningMaterial(materialData: Omit<LearningMaterialDat
     return docRef.id;
   } catch (error) {
     console.error("Error adding learning material: ", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to add learning material.");
   }
 }
@@ -67,6 +73,9 @@ export async function updateLearningMaterial(id: string, materialData: Partial<L
     });
   } catch (error) {
     console.error("Error updating learning material: ", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to update learning material.");
   }
 }
@@ -77,6 +86,9 @@ export async function deleteLearningMaterial(id: string): Promise<void> {
     await deleteDoc(materialDocRef);
   } catch (error) {
     console.error("Error deleting learning material: ", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to delete learning material.");
   }
 }
@@ -91,16 +103,8 @@ export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedA
 
 
 export async function getAnnouncements(): Promise<Announcement[]> {
-  console.log("\n========================================================================");
-  console.log("🚀 SERVER ACTION: getAnnouncements - Function Entry Point 🚀");
-  console.log(`Timestamp: ${new Date().toISOString()}`);
-  console.log("========================================================================\n");
-
+  console.log("SERVER ACTION: getAnnouncements called");
   try {
-    console.log("\n------------------------------------------------------------------------");
-    console.log("🔍 SERVER ACTION: getAnnouncements - Attempting Firestore queries...");
-    console.log("------------------------------------------------------------------------\n");
-
     const pinnedQuery = query(
       announcementsCollectionRef,
       where('isPinned', '==', true),
@@ -112,12 +116,10 @@ export async function getAnnouncements(): Promise<Announcement[]> {
       orderBy('createdAt', 'desc')
     );
 
-    console.log("SERVER ACTION: getAnnouncements - Executing pinned and unpinned queries...");
     const [pinnedSnapshot, unpinnedSnapshot] = await Promise.all([
       getDocs(pinnedQuery),
       getDocs(unpinnedQuery),
     ]);
-    console.log("SERVER ACTION: getAnnouncements - Queries executed. Pinned docs:", pinnedSnapshot.docs.length, "Unpinned docs:", unpinnedSnapshot.docs.length);
 
     const transformDoc = (docSnapshot: import('firebase/firestore').QueryDocumentSnapshot): Announcement => {
       const data = docSnapshot.data();
@@ -151,10 +153,10 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         content: data.content || "",
         authorId: data.authorId || "unknown_author_id",
         authorName: data.authorName || "Unknown Author",
-        isPinned: data.isPinned === true, // Ensure boolean
+        isPinned: data.isPinned === true,
         audience: Array.isArray(data.audience) && data.audience.every(role => ['student', 'admin'].includes(role))
           ? data.audience as UserRole[]
-          : ['student', 'admin'] as UserRole[], // Default or fallback
+          : ['student', 'admin'] as UserRole[],
         createdAt: createdAtDate,
         updatedAt: updatedAtDate,
       };
@@ -162,59 +164,18 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 
     const pinnedAnnouncements = pinnedSnapshot.docs.map(transformDoc);
     const unpinnedAnnouncements = unpinnedSnapshot.docs.map(transformDoc);
-
-    console.log("SERVER ACTION: getAnnouncements - Announcements transformed successfully. Total:", pinnedAnnouncements.length + unpinnedAnnouncements.length);
+    
+    console.log("SERVER ACTION: getAnnouncements successful, count:", pinnedAnnouncements.length + unpinnedAnnouncements.length);
     return [...pinnedAnnouncements, ...unpinnedAnnouncements];
 
   } catch (error) {
-    console.error("\n========================================================================");
-    console.error("❌ SERVER ACTION: getAnnouncements - !!! ERROR CAUGHT !!! ❌");
-    console.error(`Timestamp: ${new Date().toISOString()}`);
-    console.error("------------------------------------------------------------------------");
-    console.error("Error fetching announcements from Firestore (inside catch block of getAnnouncements): ", error); 
-    console.error("------------------------------------------------------------------------");
-    
-    let detailedErrorMessage = "Failed to fetch announcements. Original error: ";
+    console.error("SERVER ACTION: getAnnouncements - ERROR CAUGHT:", error);
     if (error instanceof Error) {
-      console.error("Error Name:", error.name);
-      console.error("Error Message:", error.message);
-      detailedErrorMessage += `Name: ${error.name}, Message: ${error.message}`;
-      if ((error as any).code) {
-        console.error("Firebase Error Code:", (error as any).code);
-        detailedErrorMessage += `, Code: ${(error as any).code}`;
-      }
-      // Attempt to find a URL (common for missing index errors)
-      const messageString = String(error.message).toLowerCase();
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
-      const urls = messageString.match(urlRegex);
-      if (urls && urls.length > 0) {
-        detailedErrorMessage += `, Firebase Index URL: ${urls[0]}`;
-        console.error("Firebase Index URL found in error:", urls[0]);
-      }
-    } else {
-      console.error("Caught an error that is NOT an instance of Error.");
-      console.error("Type of error:", typeof error);
-      detailedErrorMessage += String(error);
+      // Re-throw the original Firebase error so the client can see its message
+      throw error; 
     }
-
-    try {
-      const errorProperties = Object.getOwnPropertyNames(error);
-      const simplifiedError: { [key: string]: any } = { message: (error as any).message, name: (error as any).name, stack: (error as any).stack };
-      errorProperties.forEach(prop => {
-        if (typeof (error as any)[prop] !== 'function' && typeof (error as any)[prop] !== 'object') {
-            simplifiedError[prop] = (error as any)[prop];
-        } else if (prop === 'details' || prop === 'code' ) { 
-             simplifiedError[prop] = (error as any)[prop];
-        }
-      });
-      console.error("Full Error Object (Simplified & Stringified):", JSON.stringify(simplifiedError, null, 2));
-    } catch (stringifyError) {
-      console.error("Could not stringify the full error object due to:", stringifyError);
-      console.error("Original error object (raw):", error);
-    }
-    console.error("========================================================================\n");
-    console.error("!!!! SERVER IS THROWING THIS EXACT MESSAGE TO CLIENT:", detailedErrorMessage);
-    throw new Error(detailedErrorMessage); 
+    // Fallback for non-Error objects
+    throw new Error("An unexpected error occurred while fetching announcements.");
   }
 }
 
@@ -235,6 +196,9 @@ export async function addAnnouncement(
     return docRef.id;
   } catch (error) {
     console.error("Error adding announcement: ", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to add announcement.");
   }
 }
@@ -248,6 +212,9 @@ export async function updateAnnouncement(id: string, announcementData: Partial<O
     });
   } catch (error) {
     console.error("Error updating announcement: ", error);
+     if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to update announcement.");
   }
 }
@@ -258,6 +225,9 @@ export async function deleteAnnouncement(id: string): Promise<void> {
     await deleteDoc(announcementDocRef);
   } catch (error) {
     console.error("Error deleting announcement: ", error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error("Failed to delete announcement.");
   }
 }
