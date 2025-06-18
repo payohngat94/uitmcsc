@@ -28,13 +28,13 @@ export default function DashboardPage() {
             </Button>
           </div>
           <div className="hidden md:block mt-6 md:mt-0">
-            <Image 
-              src="https://placehold.co/300x200.png" 
-              alt="Clinical Simulation" 
-              width={300} 
-              height={200} 
-              className="rounded-lg shadow-md"
-              data-ai-hint="medical students simulation" />
+            <Image
+              src="https://firebasestudio.googleapis.com/v0/b/sturdy-dryad-358801.appspot.com/o/results%2FaghkZXZ-cHJvZHVjdGlvbnVyLWYwYTRhchULEhVwcm9qZWN0X3VzZXJfZmlsZV9kYXRhGICAgIDg7YYMDA.png?alt=media&token=e2f45734-8a08-48c7-8191-769f9574b3a3"
+              alt="UiTM Sim Centre Logo"
+              width={400}
+              height={100}
+              className="rounded-lg shadow-md object-contain"
+              data-ai-hint="UiTM logo" />
           </div>
         </div>
       </Card>
