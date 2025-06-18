@@ -20,6 +20,7 @@ import { GraduationCap, Mail, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import React, { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/auth-context"; // Import useAuth
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -31,6 +32,7 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
+  const { login } = useAuth(); // Get login function from context
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -46,31 +48,18 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: LoginFormValues) {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Simulate successful login
-    if (values.email === "student@example.com" && values.password === "password") {
+    try {
+      await login(values.email, values.password);
       toast({
         title: "Login Successful",
         description: "Welcome back to UiTM CSC!",
       });
-      router.push("/dashboard");
-    } else if (values.email === "admin@example.com" && values.password === "password") {
-       toast({
-        title: "Admin Login Successful",
-        description: "Welcome back, Admin!",
-      });
-      router.push("/dashboard");
-    }
-    else {
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: "Invalid email or password. Please try again.",
-      });
-      form.setError("email", { type: "manual", message: " " });
-      form.setError("password", { type: "manual", message: "Invalid credentials" });
+      router.push("/dashboard"); // Redirect to dashboard on successful login
+    } catch (error) {
+      // Error toast is handled within the login function in AuthContext
+      // but we can still set form errors if needed for specific fields
+      form.setError("email", { type: "manual", message: " " }); // Clear previous for general error
+      form.setError("password", { type: "manual", message: "Invalid credentials or login failed." });
     }
   }
 
@@ -150,15 +139,22 @@ export function LoginForm() {
                 <Button 
                   type="submit" 
                   className="w-full text-base py-3" 
-                  disabled={form.formState.isSubmitting}
+                  disabled={form.formState.isSubmitting || !isClient}
                 >
                   {form.formState.isSubmitting ? "Signing In..." : "Sign In"}
                 </Button>
               </form>
             </Form>
             <p className="mt-6 text-center text-sm text-muted-foreground">
+              {/* Add link to Firebase password reset if needed */}
               Forgot your password? <a href="#" className="font-medium text-primary hover:underline">Reset here</a>
             </p>
+            {/* Add link to Sign Up page if you implement signup */}
+            {/* 
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Don't have an account? <Link href="/signup" className="font-medium text-primary hover:underline">Sign Up</Link>
+            </p>
+            */}
           </>
         )}
       </CardContent>

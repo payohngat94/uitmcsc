@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import {
   LayoutDashboard,
   BookOpen,
@@ -24,11 +23,12 @@ import {
   Archive,
   Megaphone,
   LogOut,
-  UserCircle,
-  GraduationCap,
-  Settings,
+  Settings, // Keep settings icon for collapse/expand visual
+  GraduationCap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context"; // Import useAuth
+import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -40,7 +40,24 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { open, setOpen, isMobile, toggleSidebar } = useSidebar();
+  const { open, setOpen, isMobile } = useSidebar();
+  const { currentUser, logout } = useAuth(); // Get currentUser and logout from context
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      // Router push is handled within the logout function in AuthContext
+    } catch (error) {
+      // Toast for error is handled within logout function
+    }
+  };
+  
+  const userInitial = currentUser?.email ? currentUser.email.charAt(0).toUpperCase() : "U";
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" side="left">
@@ -54,7 +71,7 @@ export function AppSidebar() {
           </Link>
           {!isMobile && (
              <Button variant="ghost" size="icon" onClick={() => setOpen(!open)} className="ml-auto hidden md:flex data-[state=expanded]:flex group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:size-8 group-data-[state=expanded]:size-7">
-              <Settings className="h-4 w-4" /> {/* Using settings icon as a placeholder for collapse/expand visual cue */}
+              <Settings className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -81,22 +98,28 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <div className={cn("flex items-center gap-3 transition-all duration-200", open ? "opacity-100" : "opacity-0 group-hover/sidebar-wrapper:opacity-100 group-data-[collapsible=icon]:opacity-0")}>
-          <Avatar className="h-10 w-10 border-2 border-primary/50">
-            <AvatarImage src="https://placehold.co/100x100.png" alt="User Avatar" data-ai-hint="user avatar" />
-            <AvatarFallback>U</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col truncate">
-            <span className="font-semibold text-sm text-sidebar-foreground truncate">User Name</span>
-            <span className="text-xs text-muted-foreground truncate">student@example.com</span>
+        {currentUser && (
+          <div className={cn("flex items-center gap-3 transition-all duration-200 mb-2", open ? "opacity-100" : "opacity-0 group-hover/sidebar-wrapper:opacity-100 group-data-[collapsible=icon]:opacity-0")}>
+            <Avatar className="h-10 w-10 border-2 border-primary/50">
+              {/* You can use currentUser.photoURL if available */}
+              <AvatarImage src={currentUser.photoURL || "https://placehold.co/100x100.png"} alt={currentUser.displayName || "User Avatar"} data-ai-hint="user avatar" />
+              <AvatarFallback>{userInitial}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col truncate">
+              <span className="font-semibold text-sm text-sidebar-foreground truncate">{currentUser.displayName || "User"}</span>
+              <span className="text-xs text-muted-foreground truncate">{currentUser.email}</span>
+            </div>
           </div>
-        </div>
-        <Link href="/">
-            <Button variant="ghost" className={cn("w-full justify-start mt-2 gap-2", open ? "" : "group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center")}>
-              <LogOut className="h-5 w-5" />
-              <span className={cn("truncate", open ? "" : "group-data-[collapsible=icon]:hidden")}>Logout</span>
-            </Button>
-        </Link>
+        )}
+        <Button 
+          variant="ghost" 
+          className={cn("w-full justify-start gap-2", open ? "" : "group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center")}
+          onClick={handleLogout}
+          title="Logout"
+        >
+          <LogOut className="h-5 w-5" />
+          <span className={cn("truncate", open ? "" : "group-data-[collapsible=icon]:hidden")}>Logout</span>
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
@@ -107,7 +130,7 @@ export function MobileSidebarTrigger() {
   if (!isMobile) return null;
   return (
     <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden">
-      <GraduationCap /> {/* Using PanelLeft, standard for mobile menu toggle */}
+      <GraduationCap />
     </Button>
   );
 }
