@@ -2,7 +2,7 @@
 "use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import type { InventoryItem, InventoryItemStatus } from "@/lib/types";
+import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/lib/types";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ interface InventoryItemDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   item: InventoryItem | null;
   isAdmin?: boolean;
-  onDeleteItem?: (item: InventoryItem) => void;
+  onDeleteItem?: (item: InventoryItem) => void; // Changed from () => void to (item: InventoryItem) => void
 }
 
 const statusColors: Record<InventoryItemStatus, string> = {
@@ -36,12 +36,12 @@ const statusVariant: Record<InventoryItemStatus, "default" | "secondary" | "dest
 const DIALOG_IMAGE_PLACEHOLDER = "https://placehold.co/300x200.png?text=Image+Not+Available";
 const DIALOG_IMAGE_ERROR_PLACEHOLDER = "https://placehold.co/300x200.png?text=Error+Loading";
 
-// Internal component to handle individual image loading and errors
+
 interface ItemImageDisplayProps {
-  srcProp: string | undefined; // Renamed to avoid conflict with state
+  srcProp: string | undefined;
   alt: string;
   itemType: InventoryItem['itemType'];
-  itemName: string; // For logging
+  itemName: string;
 }
 function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplayProps) {
   const [currentSrc, setCurrentSrc] = useState(srcProp?.trim() || DIALOG_IMAGE_PLACEHOLDER);
@@ -56,10 +56,11 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
   return (
     <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0">
       <Image
+        key={currentSrc} // Added key prop
         src={currentSrc}
         alt={alt}
-        fill // Changed layout to fill
-        className="object-contain p-1" // Adjusted objectFit and added padding
+        fill 
+        className="object-contain p-1" 
         data-ai-hint={aiHint}
         unoptimized={true}
         onError={() => {
@@ -82,7 +83,6 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
   const handleDeleteClick = () => {
     if (onDeleteItem) {
       onDeleteItem(item);
-      // onOpenChange(false); // Dialog will be closed by parent if delete confirmation proceeds
     }
   };
 
@@ -138,7 +138,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
                           srcProp={url} 
                           alt={`${item.name} - Image ${index + 1}`} 
                           itemType={item.itemType}
-                          itemName={item.name} // Pass item name for logging
+                          itemName={item.name} 
                         />
                       </div>
                     ))}
