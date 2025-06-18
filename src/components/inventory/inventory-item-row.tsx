@@ -1,0 +1,128 @@
+"use client";
+
+import type { InventoryItem } from "@/lib/types";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+
+interface InventoryItemRowProps {
+  item: InventoryItem;
+}
+
+const statusVariant: Record<InventoryItem['status'], "default" | "secondary" | "destructive" | "outline"> = {
+  available: "default", // Green badge
+  "in-use": "secondary", // Blue/Gray badge
+  reserved: "outline", // Yellow/Orange badge (using outline for now)
+  "out-of-stock": "destructive", // Red badge
+  maintenance: "destructive", // Red badge
+};
+
+const statusColors: Record<InventoryItem['status'], string> = {
+  available: "bg-green-500 hover:bg-green-600",
+  "in-use": "bg-blue-500 hover:bg-blue-600",
+  reserved: "bg-yellow-500 text-black hover:bg-yellow-600",
+  "out-of-stock": "bg-red-500 hover:bg-red-600",
+  maintenance: "bg-gray-500 hover:bg-gray-600",
+};
+
+export function InventoryItemRow({ item }: InventoryItemRowProps) {
+  const [quantity, setQuantity] = useState(1);
+
+  const handleRequest = () => {
+    alert(`Requesting ${quantity} of ${item.name}. (This is a simulation)`);
+    // Close dialog logic
+  };
+
+  return (
+    <TableRow className="hover:bg-muted/50 transition-colors">
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <Image
+            src={item.imageUrl || "https://placehold.co/40x40.png"}
+            alt={item.name}
+            width={40}
+            height={40}
+            className="rounded-md object-cover"
+            data-ai-hint="medical equipment"
+          />
+          <div>
+            <div className="font-medium">{item.name}</div>
+            {item.location && <div className="text-xs text-muted-foreground">{item.location}</div>}
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="text-center">
+        <Badge variant={statusVariant[item.status]} className={`${statusColors[item.status]} text-white`}>
+          {item.status.charAt(0).toUpperCase() + item.status.slice(1).replace(/-/g, ' ')}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-center">{item.quantity}</TableCell>
+      <TableCell className="text-right">
+         <Dialog>
+          <DialogTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              disabled={item.status === 'out-of-stock' || item.status === 'maintenance' || item.quantity === 0}
+            >
+              Request
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Request {item.name}</DialogTitle>
+              <DialogDescription>
+                Please specify the quantity you need and any additional details.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3">
+                <Image
+                  src={item.imageUrl || "https://placehold.co/80x80.png"}
+                  alt={item.name}
+                  width={80}
+                  height={80}
+                  className="rounded-md object-cover"
+                  data-ai-hint="medical equipment"
+                />
+                <div>
+                  <h3 className="font-semibold">{item.name}</h3>
+                  <p className="text-sm text-muted-foreground">Available: {item.quantity}</p>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="quantity">Quantity</Label>
+                <Input 
+                  id="quantity" 
+                  type="number" 
+                  min="1" 
+                  max={item.quantity} 
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, Math.min(item.quantity, parseInt(e.target.value, 10) || 1)))}
+                  className="mt-1"
+                />
+              </div>
+               <div>
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Input 
+                  id="notes" 
+                  placeholder="e.g., For OSCE Practice Group A"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline">Cancel</Button>
+              <Button onClick={handleRequest}>Submit Request</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </TableCell>
+    </TableRow>
+  );
+}
