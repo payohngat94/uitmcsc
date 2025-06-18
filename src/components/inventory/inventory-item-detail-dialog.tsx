@@ -5,12 +5,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/lib/types";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Package, Tag, MapPin, BarChart, Info } from "lucide-react";
-import { useState, useEffect } from "react"; // Added useState and useEffect
+import { Package, Tag, MapPin, BarChart, Info, ImageOff } from "lucide-react"; // Added ImageOff
+import { useState, useEffect } from "react";
 
-// Consistent status styling with InventoryItemRow
+interface InventoryItemDetailDialogProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  item: InventoryItem | null;
+}
+
 const statusColors: Record<InventoryItemStatus, string> = {
   available: "bg-green-500 hover:bg-green-600",
   "in-use": "bg-blue-500 hover:bg-blue-600",
@@ -26,30 +30,32 @@ const statusVariant: Record<InventoryItemStatus, "default" | "secondary" | "dest
   maintenance: "destructive",
 };
 
-const DetailImage = ({ src, alt, itemType }: { src: string; alt: string; itemType?: InventoryItemType }) => {
-  const DIALOG_ERROR_PLACEHOLDER = "https://placehold.co/200x150.png?text=Not+Found";
-  const [currentImageSrc, setCurrentImageSrc] = useState(src);
+const DetailImageDisplay = ({ src, alt, itemType }: { src?: string; alt: string; itemType?: InventoryItemType }) => {
+  const DIALOG_ERROR_PLACEHOLDER = "https://placehold.co/300x200.png?text=Image+Not+Available";
+  const [currentImageSrc, setCurrentImageSrc] = useState(src || DIALOG_ERROR_PLACEHOLDER);
   const aiHint = itemType === 'facility' ? "facility detail image" : "equipment detail image";
 
   useEffect(() => {
-    setCurrentImageSrc(src); // Reset image src if the prop changes
+    setCurrentImageSrc(src || DIALOG_ERROR_PLACEHOLDER); 
   }, [src]);
 
   return (
-    <Image
-      src={currentImageSrc}
-      alt={alt}
-      width={200}
-      height={150}
-      className="h-[150px] w-auto max-w-[200px] rounded-md object-cover border shadow-sm"
-      data-ai-hint={aiHint}
-      unoptimized={true} // Added unoptimized prop
-      onError={() => {
-        if (currentImageSrc !== DIALOG_ERROR_PLACEHOLDER) {
-          setCurrentImageSrc(DIALOG_ERROR_PLACEHOLDER);
-        }
-      }}
-    />
+    <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted">
+      <Image
+        src={currentImageSrc}
+        alt={alt}
+        layout="fill"
+        objectFit="contain" // Use contain to ensure the whole image is visible
+        className="p-2" // Add some padding around the image within its container
+        data-ai-hint={aiHint}
+        unoptimized={true}
+        onError={() => {
+          if (currentImageSrc !== DIALOG_ERROR_PLACEHOLDER) {
+            setCurrentImageSrc(DIALOG_ERROR_PLACEHOLDER);
+          }
+        }}
+      />
+    </div>
   );
 };
 
@@ -61,7 +67,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item }: Invent
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl md:max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] flex flex-col">
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="text-2xl flex items-center">
             <Package className="h-7 w-7 mr-3 text-primary" />
@@ -69,8 +75,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item }: Invent
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow overflow-y-auto pr-2 -mr-2">
-          <div className="py-4 space-y-5">
+        <div className="flex-grow overflow-y-auto pr-2 -mr-2 py-4 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center">
                 <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -100,34 +105,25 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item }: Invent
               </div>
             )}
             
-            {item.imageUrls && item.imageUrls.length > 0 && (
-              <div className="space-y-1">
-                <h4 className="font-medium">Images:</h4>
-                <ScrollArea className="w-full whitespace-nowrap rounded-md border bg-secondary/30">
-                  <div className="flex space-x-4 p-4">
-                    {item.imageUrls.map((url, index) => (
-                      <div key={index} className="flex-shrink-0">
-                        <DetailImage
-                          src={url}
-                          alt={`${item.name} image ${index + 1}`}
-                          itemType={item.itemType}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-              </div>
-            )}
-            {(!item.imageUrls || item.imageUrls.length === 0) && (
-                <p className="text-sm text-muted-foreground text-center py-4">No images available for this item.</p>
-            )}
-          </div>
-        </ScrollArea>
+            <div className="space-y-1">
+              <h4 className="font-medium">Image:</h4>
+              {item.imageUrl ? (
+                 <DetailImageDisplay
+                    src={item.imageUrl}
+                    alt={`${item.name} image`}
+                    itemType={item.itemType}
+                  />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-muted-foreground bg-secondary/30 p-6 rounded-md h-48">
+                    <ImageOff className="h-10 w-10 mb-2" />
+                    <p className="text-sm">No image available for this item.</p>
+                </div>
+              )}
+            </div>
+        </div>
 
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="pt-4 border-t mt-auto">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-          {/* Could add a "Request Item" button here too if desired */}
         </DialogFooter>
       </DialogContent>
     </Dialog>

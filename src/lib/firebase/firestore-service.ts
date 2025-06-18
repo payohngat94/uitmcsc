@@ -1,7 +1,7 @@
 
 'use server';
 
-import { db } from './config';
+import { db, storage } from './config'; // Import storage
 import {
   collection,
   addDoc,
@@ -16,6 +16,7 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'; // Import storage functions
 import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus, InventoryItemType } from '@/lib/types';
 
 // Learning Material Categories Service
@@ -273,11 +274,46 @@ export async function deleteAnnouncement(id: string): Promise<void> {
   }
 }
 
+// Firebase Storage Service
+export async function uploadFileToFirebase(file: File, path: string): Promise<string> {
+  try {
+    const storageRef = ref(storage, path);
+    // Optional: Add metadata like content type
+    // const metadata = { contentType: file.type };
+    // const snapshot = await uploadBytes(storageRef, file, metadata);
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading file to Firebase Storage: ", error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to upload file: ${error.message}`);
+    }
+    throw new Error("An unknown error occurred during file upload.");
+  }
+}
+
+export async function deleteFileFromFirebase(fileUrl: string): Promise<void> {
+  try {
+    const fileRef = ref(storage, fileUrl);
+    await deleteObject(fileRef);
+  } catch (error: any) {
+    if (error.code === 'storage/object-not-found') {
+      console.warn(`File not found for deletion, URL may have been invalid or already deleted: ${fileUrl}`);
+      return; // Don't throw an error if the file doesn't exist
+    }
+    console.error("Error deleting file from Firebase Storage: ", error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to delete file: ${error.message}`);
+    }
+    throw new Error("An unknown error occurred during file deletion.");
+  }
+}
+
+
 // Inventory Service
 const inventoryCollectionRef = collection(db, 'inventoryItems');
-export type InventoryItemData = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt' | 'imageUrls'> & {
-  imageUrls?: string[];
-  itemType?: InventoryItemType; // Added itemType
+export type InventoryItemData = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'> & { // Removed imageUrls
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
@@ -292,8 +328,8 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
       return {
         id: docSnapshot.id,
         ...data,
-        itemType: data.itemType as InventoryItemType, // Ensure itemType is cast
-        imageUrls: data.imageUrls || [], 
+        itemType: data.itemType as InventoryItemType,
+        imageUrl: data.imageUrl || undefined, // Use imageUrl
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
       } as InventoryItem;
@@ -311,8 +347,8 @@ export async function addInventoryItem(itemData: Omit<InventoryItemData, 'create
   try {
     const docRef = await addDoc(inventoryCollectionRef, {
       ...itemData,
-      itemType: itemData.itemType || 'equipment', // Default to equipment if not specified
-      imageUrls: itemData.imageUrls || [],
+      itemType: itemData.itemType || 'equipment', 
+      imageUrl: itemData.imageUrl || null, // Store single imageUrl
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -342,10 +378,15 @@ export async function updateInventoryItem(id: string, itemData: Partial<Inventor
   }
 }
 
-export async function deleteInventoryItem(id: string): Promise<void> {
+export async function deleteInventoryItem(id: string, imageUrl?: string): Promise<void> {
   try {
     const itemDocRef = doc(db, 'inventoryItems', id);
     await deleteDoc(itemDocRef);
+
+    // If an image URL was associated, delete it from storage
+    if (imageUrl) {
+      await deleteFileFromFirebase(imageUrl);
+    }
   } catch (error) {
     console.error("Error deleting inventory item: ", error);
     if (error instanceof Error) {

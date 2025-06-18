@@ -1,7 +1,7 @@
 
 "use client";
 
-import * as React from "react"; // Added this import
+import * as React from "react"; 
 import { useState, useEffect, useMemo } from "react";
 import { InventoryItemRow } from "@/components/inventory/inventory-item-row";
 import { InventoryItemDetailDialog } from "@/components/inventory/inventory-item-detail-dialog";
@@ -9,7 +9,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, ListFilter, Archive, Building, Package } from "lucide-react";
+import { Search, PlusCircle, ListFilter, Archive, Building, Package, Trash2 } from "lucide-react"; // Added Trash2
 import {
   Select,
   SelectContent,
@@ -17,6 +17,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/auth-context";
 import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/lib/types";
 import { getInventoryItems, addInventoryItem, updateInventoryItem, deleteInventoryItem } from "@/lib/firebase/firestore-service";
@@ -39,7 +49,9 @@ export default function InventoryPage() {
   const [defaultItemTypeForDialog, setDefaultItemTypeForDialog] = useState<InventoryItemType>('equipment');
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedItemForDetail, setSelectedItemForDetail] = useState<InventoryItem | null>(null);
-  // const [itemToEdit, setItemToEdit] = useState<InventoryItem | null>(null); // For future edit functionality
+  const [itemToEdit, setItemToEdit] = useState<InventoryItem | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+
 
   const fetchInventory = async () => {
     setIsLoading(true);
@@ -62,10 +74,41 @@ export default function InventoryPage() {
   }, []);
 
   const handleOpenAddItemDialog = (itemType: InventoryItemType) => {
-    // setItemToEdit(null);
+    setItemToEdit(null);
     setDefaultItemTypeForDialog(itemType);
     setIsAddItemDialogOpen(true);
   };
+  
+  const handleOpenEditDialog = (item: InventoryItem) => {
+    setItemToEdit(item);
+    setDefaultItemTypeForDialog(item.itemType || 'equipment');
+    setIsAddItemDialogOpen(true);
+  };
+
+  const handleOpenDeleteDialog = (item: InventoryItem) => {
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete || !currentUser || currentUser.role !== 'admin') return;
+    try {
+      await deleteInventoryItem(itemToDelete.id, itemToDelete.imageUrl); // Pass imageUrl for storage deletion
+      toast({
+        title: "Item Deleted",
+        description: `"${itemToDelete.name}" has been removed.`,
+      });
+      fetchInventory(); 
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error Deleting Item",
+        description: (error instanceof Error && error.message) || "Could not delete the item.",
+      });
+    } finally {
+      setItemToDelete(null);
+    }
+  };
+
 
   const handleOpenDetailDialog = (item: InventoryItem) => {
     setSelectedItemForDetail(item);
@@ -78,27 +121,21 @@ export default function InventoryPage() {
       return;
     }
 
-    const urlsArray = formData.imageUrls
-      ? formData.imageUrls.split(',').map(url => url.trim()).filter(url => {
-          try { new URL(url); return true; } catch { return false; }
-        })
-      : [];
-
     const itemDataForDb = {
       name: formData.name,
       itemType: formData.itemType,
       description: formData.description,
       status: formData.status,
       quantity: formData.quantity,
-      imageUrls: urlsArray,
+      imageUrl: formData.imageUrl || null, // Use the single imageUrl
       location: formData.location,
     };
 
     try {
-      if (id) {
-        // await updateInventoryItem(id, itemDataForDb); // For edit functionality
-        // toast({ title: "Item Updated", description: `"${itemDataForDb.name}" updated.` });
-      } else {
+      if (id) { // Editing existing item
+        await updateInventoryItem(id, itemDataForDb); 
+        toast({ title: "Item Updated", description: `"${itemDataForDb.name}" updated.` });
+      } else { // Adding new item
         await addInventoryItem(itemDataForDb);
         toast({ title: "Item Added", description: `"${itemDataForDb.name}" added to inventory.` });
       }
@@ -111,7 +148,7 @@ export default function InventoryPage() {
       });
     } finally {
       setIsAddItemDialogOpen(false);
-      // setItemToEdit(null);
+      setItemToEdit(null);
     }
   };
 
@@ -133,7 +170,7 @@ export default function InventoryPage() {
   }, [globallyFilteredItems]);
 
   const equipmentItems = useMemo(() => {
-    return globallyFilteredItems.filter(item => item.itemType === 'equipment' || !item.itemType); // !item.itemType for backward compatibility
+    return globallyFilteredItems.filter(item => item.itemType === 'equipment' || !item.itemType); 
   }, [globallyFilteredItems]);
 
 
@@ -188,7 +225,7 @@ export default function InventoryPage() {
                   <TableHead className="min-w-[250px]">Name</TableHead>
                   <TableHead className="text-center min-w-[120px]">Status</TableHead>
                   <TableHead className="text-center min-w-[100px]">Quantity</TableHead>
-                  <TableHead className="text-right min-w-[100px]">Actions</TableHead>
+                  <TableHead className="text-right min-w-[180px]">Actions</TableHead> 
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -197,6 +234,8 @@ export default function InventoryPage() {
                     key={item.id}
                     item={item}
                     onViewDetails={handleOpenDetailDialog}
+                    onEdit={currentUser?.role === 'admin' ? () => handleOpenEditDialog(item) : undefined}
+                    onDelete={currentUser?.role === 'admin' ? () => handleOpenDeleteDialog(item) : undefined}
                   />
                 ))}
               </TableBody>
@@ -223,7 +262,7 @@ export default function InventoryPage() {
       <div>
         <h1 className="text-3xl font-bold font-headline mb-2">Facilities and Equipment</h1>
         <p className="text-muted-foreground">
-          Browse available facilities and simulation equipment, check their status, and make loan requests.
+          Browse available facilities and simulation equipment, check their status, and manage inventory.
         </p>
       </div>
 
@@ -233,6 +272,7 @@ export default function InventoryPage() {
           onOpenChange={setIsAddItemDialogOpen}
           onSave={handleSaveItem}
           defaultItemType={defaultItemTypeForDialog}
+          currentItem={itemToEdit}
         />
       )}
 
@@ -241,6 +281,24 @@ export default function InventoryPage() {
         onOpenChange={setIsDetailDialogOpen}
         item={selectedItemForDetail}
       />
+      
+      <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the item "{itemToDelete?.name}".
+              If an image is associated with this item, it will also be deleted from storage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -291,4 +349,3 @@ export default function InventoryPage() {
     </div>
   );
 }
-

@@ -61,7 +61,7 @@ export type InventoryItem = {
   description?: string;
   status: InventoryItemStatus;
   quantity: number;
-  imageUrls?: string[];
+  imageUrl?: string; // Changed from imageUrls: string[]
   location?: string;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;

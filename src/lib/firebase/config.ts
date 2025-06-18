@@ -2,6 +2,7 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore"; // Added Firestore import
+import { getStorage, type FirebaseStorage } from "firebase/storage"; // Added Storage import
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -22,5 +23,6 @@ if (!getApps().length) {
 
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app); // Initialized Firestore
+const storage: FirebaseStorage = getStorage(app); // Initialize Storage
 
-export { app, auth, db }; // Exported db
+export { app, auth, db, storage }; // Exported db and storage

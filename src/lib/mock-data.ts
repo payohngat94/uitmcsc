@@ -47,6 +47,7 @@ export const mockInventoryItems: InventoryItem[] = [
   {
     id: 'inv1',
     name: 'Adult CPR Manikin',
+    itemType: 'equipment',
     status: 'available',
     quantity: 5,
     imageUrl: 'https://placehold.co/100x100.png',
@@ -55,6 +56,7 @@ export const mockInventoryItems: InventoryItem[] = [
   {
     id: 'inv2',
     name: 'ECG Machine',
+    itemType: 'equipment',
     status: 'in-use',
     quantity: 2,
     imageUrl: 'https://placehold.co/100x100.png',
@@ -63,6 +65,7 @@ export const mockInventoryItems: InventoryItem[] = [
   {
     id: 'inv3',
     name: 'Suture Practice Kit',
+    itemType: 'equipment',
     status: 'reserved',
     quantity: 10,
     imageUrl: 'https://placehold.co/100x100.png',
@@ -71,6 +74,7 @@ export const mockInventoryItems: InventoryItem[] = [
   {
     id: 'inv4',
     name: 'Stethoscope',
+    itemType: 'equipment',
     status: 'available',
     quantity: 20,
     imageUrl: 'https://placehold.co/100x100.png',

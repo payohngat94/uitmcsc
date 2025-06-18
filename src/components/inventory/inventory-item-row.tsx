@@ -10,10 +10,13 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
+import { Pencil, Trash2 } from "lucide-react"; // Added Pencil
 
 interface InventoryItemRowProps {
   item: InventoryItem;
   onViewDetails?: (item: InventoryItem) => void;
+  onEdit?: (item: InventoryItem) => void;
+  onDelete?: (item: InventoryItem) => void;
 }
 
 const statusVariant: Record<InventoryItem['status'], "default" | "secondary" | "destructive" | "outline"> = {
@@ -33,15 +36,15 @@ const statusColors: Record<InventoryItem['status'], string> = {
 };
 
 const PRIMARY_PLACEHOLDER = "https://placehold.co/40x40.png";
-const ERROR_PLACEHOLDER = "https://placehold.co/40x40.png?text=Error";
+const ERROR_PLACEHOLDER = "https://placehold.co/40x40.png?text=NoImg"; // Changed placeholder text
 
-export function InventoryItemRow({ item, onViewDetails }: InventoryItemRowProps) {
+export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: InventoryItemRowProps) {
   const [quantity, setQuantity] = useState(1);
-  const [imageSrc, setImageSrc] = useState(item.imageUrls?.[0] || PRIMARY_PLACEHOLDER);
+  const [imageSrc, setImageSrc] = useState(item.imageUrl || PRIMARY_PLACEHOLDER);
 
   useEffect(() => {
-    setImageSrc(item.imageUrls?.[0] || PRIMARY_PLACEHOLDER);
-  }, [item.imageUrls]);
+    setImageSrc(item.imageUrl || PRIMARY_PLACEHOLDER);
+  }, [item.imageUrl]);
 
   const handleRequest = () => {
     alert(`Requesting ${quantity} of ${item.name}. (This is a simulation)`);
@@ -61,7 +64,7 @@ export function InventoryItemRow({ item, onViewDetails }: InventoryItemRowProps)
             height={40}
             className="rounded-md object-cover"
             data-ai-hint={aiHint}
-            unoptimized={true} // Added unoptimized prop
+            unoptimized={true} 
             onError={() => {
               if (imageSrc !== ERROR_PLACEHOLDER) { 
                 setImageSrc(ERROR_PLACEHOLDER);
@@ -89,66 +92,80 @@ export function InventoryItemRow({ item, onViewDetails }: InventoryItemRowProps)
       </TableCell>
       <TableCell className="text-center">{item.quantity}</TableCell>
       <TableCell className="text-right">
-         <Dialog>
-          <DialogTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              disabled={item.status === 'out-of-stock' || item.status === 'maintenance' || item.quantity === 0}
-            >
-              Request
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Request {item.name}</DialogTitle>
-              <DialogDescription>
-                Please specify the quantity you need and any additional details.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="flex items-center gap-3">
-                <Image
-                  src={item.imageUrls?.[0] || "https://placehold.co/80x80.png"}
-                  alt={item.name}
-                  width={80}
-                  height={80}
-                  className="rounded-md object-cover"
-                  data-ai-hint={item.itemType === 'facility' ? "facility detail" : "equipment detail"}
-                  unoptimized={true} // Also add here if this image could be problematic
-                />
+        <div className="flex justify-end items-center gap-1">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={item.status === 'out-of-stock' || item.status === 'maintenance' || item.quantity === 0}
+              >
+                Request
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Request {item.name}</DialogTitle>
+                <DialogDescription>
+                  Please specify the quantity you need and any additional details.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={item.imageUrl || "https://placehold.co/80x80.png"}
+                    alt={item.name}
+                    width={80}
+                    height={80}
+                    className="rounded-md object-cover"
+                    data-ai-hint={item.itemType === 'facility' ? "facility detail" : "equipment detail"}
+                    unoptimized={true} 
+                  />
+                  <div>
+                    <h3 className="font-semibold">{item.name}</h3>
+                    <p className="text-sm text-muted-foreground">Available: {item.quantity}</p>
+                  </div>
+                </div>
                 <div>
-                  <h3 className="font-semibold">{item.name}</h3>
-                  <p className="text-sm text-muted-foreground">Available: {item.quantity}</p>
+                  <Label htmlFor="quantity">Quantity</Label>
+                  <Input 
+                    id="quantity" 
+                    type="number" 
+                    min="1" 
+                    max={item.quantity} 
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, Math.min(item.quantity, parseInt(e.target.value, 10) || 1)))}
+                    className="mt-1"
+                  />
+                </div>
+                 <div>
+                  <Label htmlFor="notes">Notes (Optional)</Label>
+                  <Input 
+                    id="notes" 
+                    placeholder="e.g., For OSCE Practice Group A"
+                    className="mt-1"
+                  />
                 </div>
               </div>
-              <div>
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input 
-                  id="quantity" 
-                  type="number" 
-                  min="1" 
-                  max={item.quantity} 
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Math.min(item.quantity, parseInt(e.target.value, 10) || 1)))}
-                  className="mt-1"
-                />
-              </div>
-               <div>
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Input 
-                  id="notes" 
-                  placeholder="e.g., For OSCE Practice Group A"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline">Cancel</Button>
-              <Button onClick={handleRequest}>Submit Request</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline">Cancel</Button>
+                <Button onClick={handleRequest}>Submit Request</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          {onEdit && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(item)}>
+              <Pencil className="h-4 w-4" />
+              <span className="sr-only">Edit</span>
+            </Button>
+          )}
+          {onDelete && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive/80" onClick={() => onDelete(item)}>
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Delete</span>
+            </Button>
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );
