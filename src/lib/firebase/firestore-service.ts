@@ -278,18 +278,26 @@ export async function deleteAnnouncement(id: string): Promise<void> {
 export async function uploadFileToFirebase(file: File, path: string): Promise<string> {
   try {
     const storageRef = ref(storage, path);
-    // Optional: Add metadata like content type
-    // const metadata = { contentType: file.type };
-    // const snapshot = await uploadBytes(storageRef, file, metadata);
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
-  } catch (error) {
-    console.error("Error uploading file to Firebase Storage: ", error);
-    if (error instanceof Error) {
-      throw new Error(`Failed to upload file: ${error.message}`);
+  } catch (error: any) { // Changed to 'any' to access potential Firebase specific properties
+    console.error("Firebase Storage Upload Error Details:");
+    console.error("Full error object:", error); // Log the entire error object
+    if (error.code) {
+      console.error("Error code:", error.code);
     }
-    throw new Error("An unknown error occurred during file upload.");
+    if (error.message) {
+      console.error("Error message:", error.message);
+    }
+    if (error.serverResponse) {
+      console.error("Server response:", error.serverResponse);
+    }
+    // Re-throw a more generic error or the original if it's an instance of Error
+    if (error instanceof Error) {
+      throw new Error(`Failed to upload file: ${error.message}. Code: ${error.code || 'N/A'}`);
+    }
+    throw new Error("An unknown error occurred during file upload. Check console for details.");
   }
 }
 
@@ -313,7 +321,7 @@ export async function deleteFileFromFirebase(fileUrl: string): Promise<void> {
 
 // Inventory Service
 const inventoryCollectionRef = collection(db, 'inventoryItems');
-export type InventoryItemData = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'> & { // Removed imageUrls
+export type InventoryItemData = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'> & {
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
@@ -329,7 +337,7 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
         id: docSnapshot.id,
         ...data,
         itemType: data.itemType as InventoryItemType,
-        imageUrl: data.imageUrl || undefined, // Use imageUrl
+        imageUrl: data.imageUrl || undefined, 
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
       } as InventoryItem;
@@ -348,7 +356,7 @@ export async function addInventoryItem(itemData: Omit<InventoryItemData, 'create
     const docRef = await addDoc(inventoryCollectionRef, {
       ...itemData,
       itemType: itemData.itemType || 'equipment', 
-      imageUrl: itemData.imageUrl || null, // Store single imageUrl
+      imageUrl: itemData.imageUrl || null, 
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -383,7 +391,6 @@ export async function deleteInventoryItem(id: string, imageUrl?: string): Promis
     const itemDocRef = doc(db, 'inventoryItems', id);
     await deleteDoc(itemDocRef);
 
-    // If an image URL was associated, delete it from storage
     if (imageUrl) {
       await deleteFileFromFirebase(imageUrl);
     }
@@ -395,3 +402,4 @@ export async function deleteInventoryItem(id: string, imageUrl?: string): Promis
     throw new Error("Failed to delete inventory item.");
   }
 }
+
