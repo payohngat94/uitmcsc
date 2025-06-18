@@ -8,7 +8,7 @@ import { CategoryCard } from "@/components/learning-materials/category-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, BookOpen, PlusCircle, ArrowLeft, Layers, Tag } from "lucide-react";
+import { Search, Filter, BookOpen, PlusCircle, ArrowLeft, Layers, Tag, ListX } from "lucide-react";
 import type { LearningMaterial, LearningMaterialCategory, LearningMaterialType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
@@ -32,7 +32,7 @@ export default function LearningMaterialsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMaterialType, setSelectedMaterialType] = useState<string>("all");
   const [selectedCategoryView, setSelectedCategoryView] = useState<LearningMaterialCategory | null>(null);
-  const [selectedTag, setSelectedTag] = useState<string>(""); // New state for tag filter
+  const [selectedTag, setSelectedTag] = useState<string>("");
 
   const { toast } = useToast();
   const { currentUser } = useAuth();
@@ -119,31 +119,54 @@ export default function LearningMaterialsPage() {
     }
   };
 
+  const isGlobalFilterActive = useMemo(() => {
+    return searchTerm.trim() !== "" || selectedTag.trim() !== "" || selectedMaterialType !== "all";
+  }, [searchTerm, selectedTag, selectedMaterialType]);
+
+  const globallyFilteredMaterials = useMemo(() => {
+    if (selectedCategoryView || !isGlobalFilterActive) return [];
+    
+    return materials.filter(material => {
+      const searchLower = searchTerm.toLowerCase();
+      const tagLower = selectedTag.toLowerCase();
+
+      const matchesSearchTerm = searchTerm.trim() === "" ||
+                                material.title.toLowerCase().includes(searchLower) ||
+                                (material.description && material.description.toLowerCase().includes(searchLower));
+      
+      const matchesType = selectedMaterialType === "all" || material.type === selectedMaterialType;
+
+      const matchesTag = selectedTag.trim() === "" ||
+                         (material.specialties && material.specialties.some(s => s.toLowerCase().includes(tagLower)));
+      
+      return matchesSearchTerm && matchesType && matchesTag;
+    });
+  }, [materials, searchTerm, selectedMaterialType, selectedTag, isGlobalFilterActive, selectedCategoryView]);
+  
   const materialsBySelectedCategory = useMemo(() => {
     if (!selectedCategoryView) return [];
     return materials.filter(material => material.category === selectedCategoryView);
   }, [materials, selectedCategoryView]);
 
-  const filteredMaterials = useMemo(() => {
+  const categoryScopedFilteredMaterials = useMemo(() => {
     if (!selectedCategoryView) return [];
 
     return materialsBySelectedCategory.filter(material => {
       const searchLower = searchTerm.toLowerCase();
       const tagLower = selectedTag.toLowerCase();
 
-      const matchesSearchTerm = searchTerm === "" ||
+      const matchesSearchTerm = searchTerm.trim() === "" ||
                                 material.title.toLowerCase().includes(searchLower) ||
                                 (material.description && material.description.toLowerCase().includes(searchLower));
       
       const matchesType = selectedMaterialType === "all" || material.type === selectedMaterialType;
 
-      const matchesTag = selectedTag === "" ||
+      const matchesTag = selectedTag.trim() === "" ||
                          (material.specialties && material.specialties.some(s => s.toLowerCase().includes(tagLower)));
       
       return matchesSearchTerm && matchesType && matchesTag;
     });
   }, [materialsBySelectedCategory, searchTerm, selectedMaterialType, selectedCategoryView, selectedTag]);
-
 
   const categoryCounts = useMemo(() => {
     const counts: Record<LearningMaterialCategory, number> = categories.reduce((acc, cat) => {
@@ -160,19 +183,26 @@ export default function LearningMaterialsPage() {
 
   const handleCategorySelect = (category: LearningMaterialCategory) => {
     setSelectedCategoryView(category);
-    setSearchTerm("");
-    setSelectedMaterialType("all");
-    setSelectedTag(""); // Reset tag filter
+    // Filters (searchTerm, selectedTag, selectedMaterialType) persist
   };
 
-  const handleBackToCategories = () => {
+  const handleClearFiltersAndShowCategories = () => {
     setSelectedCategoryView(null);
     setSearchTerm("");
     setSelectedMaterialType("all");
-    setSelectedTag(""); // Reset tag filter
+    setSelectedTag("");
   };
 
-
+  const getPageSubHeader = () => {
+    if (selectedCategoryView) {
+      return `Browsing materials for "${selectedCategoryView}". Found ${categoryScopedFilteredMaterials.length} item(s).`;
+    }
+    if (isGlobalFilterActive) {
+      return `Showing global search results. Found ${globallyFilteredMaterials.length} material(s).`;
+    }
+    return "Explore a comprehensive library by category or search all materials using the filters below.";
+  };
+  
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -183,7 +213,7 @@ export default function LearningMaterialsPage() {
           </div>
           {currentUser?.role === 'admin' && <Skeleton className="h-10 w-48" />}
         </div>
-        <Skeleton className="h-12 w-full rounded-lg" />
+        <Skeleton className="h-12 w-full rounded-lg" /> 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <ShadCNCard key={i} className="flex flex-col h-full">
@@ -213,10 +243,7 @@ export default function LearningMaterialsPage() {
         <div>
           <h1 className="text-3xl font-bold font-headline mb-2">Learning Materials</h1>
           <p className="text-muted-foreground">
-            {selectedCategoryView 
-              ? `Browse materials for "${selectedCategoryView}". Use filters to refine your search.`
-              : "Explore a comprehensive library by category to enhance your clinical skills."
-            }
+            {getPageSubHeader()}
           </p>
         </div>
         {currentUser?.role === 'admin' && (
@@ -235,51 +262,106 @@ export default function LearningMaterialsPage() {
         />
       )}
 
-      {(selectedCategoryView) && (
-        <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <Button variant="outline" onClick={handleBackToCategories} className="sm:mr-auto w-full sm:w-auto">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Categories
-            </Button>
-            <div className="relative flex-grow w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search titles, descriptions..."
-                className="pl-10 w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-grow">
-              <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search by tag (e.g., cardiology)"
-                className="pl-10 w-full"
-                value={selectedTag}
-                onChange={(e) => setSelectedTag(e.target.value)}
-              />
-            </div>
-            <Select value={selectedMaterialType} onValueChange={setSelectedMaterialType}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Filter by Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {materialTypes.map(type => (
-                   <SelectItem key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm space-y-4">
+        <div className="relative flex-grow w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search titles, descriptions..."
+            className="pl-10 w-full"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-grow">
+            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Filter by tag (e.g., cardiology)"
+              className="pl-10 w-full"
+              value={selectedTag}
+              onChange={(e) => setSelectedTag(e.target.value)}
+            />
+          </div>
+          <Select value={selectedMaterialType} onValueChange={setSelectedMaterialType}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Filter by Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {materialTypes.map(type => (
+                 <SelectItem key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      {selectedCategoryView && (
+        <Button variant="outline" onClick={handleClearFiltersAndShowCategories} className="mb-6 w-full sm:w-auto">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to All Categories & Clear Filters
+        </Button>
       )}
 
-      {!selectedCategoryView ? (
+      {!selectedCategoryView && isGlobalFilterActive && (
+        <Button variant="outline" onClick={handleClearFiltersAndShowCategories} className="mb-6 w-full sm:w-auto">
+          <ListX className="mr-2 h-4 w-4" /> Clear Search & View Categories
+        </Button>
+      )}
+
+      {/* Main Content Area */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-72 w-full rounded-lg" />)}
+        </div>
+      ) : selectedCategoryView ? (
+        // Viewing materials within a category
+        categoryScopedFilteredMaterials.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {categoryScopedFilteredMaterials.map((material) => (
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onDelete={currentUser?.role === 'admin' ? handleDeleteMaterial : undefined}
+                onEdit={currentUser?.role === 'admin' ? handleOpenEditDialog : undefined}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-2 text-xl font-semibold">No Materials Found</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              No materials match your current filters in "{selectedCategoryView}".
+            </p>
+          </div>
+        )
+      ) : isGlobalFilterActive ? (
+        // Viewing global search results
+        globallyFilteredMaterials.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {globallyFilteredMaterials.map((material) => (
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onDelete={currentUser?.role === 'admin' ? handleDeleteMaterial : undefined}
+                onEdit={currentUser?.role === 'admin' ? handleOpenEditDialog : undefined}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-2 text-xl font-semibold">No Materials Found</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Your global search did not match any learning materials. Try different keywords or filters.
+            </p>
+          </div>
+        )
+      ) : (
+        // Viewing category list
         categories.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {categories.map(category => (
@@ -297,27 +379,6 @@ export default function LearningMaterialsPage() {
             <h3 className="mt-2 text-xl font-semibold">No Categories Defined</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               Contact an administrator to set up learning material categories.
-            </p>
-          </div>
-        )
-      ) : (
-        filteredMaterials.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredMaterials.map((material) => (
-              <MaterialCard
-                key={material.id}
-                material={material}
-                onDelete={currentUser?.role === 'admin' ? handleDeleteMaterial : undefined}
-                onEdit={currentUser?.role === 'admin' ? handleOpenEditDialog : undefined}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-2 text-xl font-semibold">No Materials Found</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              No materials match your current selection or filters in "{selectedCategoryView}".
             </p>
           </div>
         )
