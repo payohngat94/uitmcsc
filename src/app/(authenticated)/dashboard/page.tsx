@@ -1,9 +1,16 @@
 
+"use client";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { BookOpen, CalendarDays, Archive, Megaphone, ArrowRight, CheckCircle, AlertTriangle } from "lucide-react";
+import { BookOpen, CalendarDays, Archive, Megaphone, CheckCircle, AlertTriangle, Pin, Info } from "lucide-react";
 import Image from "next/image";
+import { getAnnouncements } from "@/lib/firebase/firestore-service";
+import type { Announcement } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 const quickLinks = [
   { title: "Browse Learning Materials", href: "/learning-materials", icon: BookOpen, description: "Access videos, documents, and slides." },
@@ -13,6 +20,38 @@ const quickLinks = [
 ];
 
 export default function DashboardPage() {
+  const [pinnedAnnouncements, setPinnedAnnouncements] = useState<Announcement[]>([]);
+  const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchPinnedAnnouncements = async () => {
+      setIsLoadingAnnouncements(true);
+      try {
+        const allAnnouncements = await getAnnouncements();
+        const pinned = allAnnouncements
+          .filter(ann => ann.isPinned)
+          .sort((a, b) => {
+            const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt || 0).getTime();
+            const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt || 0).getTime();
+            return dateB - dateA;
+          });
+        setPinnedAnnouncements(pinned);
+      } catch (error) {
+        console.error("Dashboard: Failed to fetch announcements", error);
+        toast({
+          variant: "destructive",
+          title: "Error Fetching Updates",
+          description: "Could not load the latest pinned announcements.",
+        });
+      } finally {
+        setIsLoadingAnnouncements(false);
+      }
+    };
+
+    fetchPinnedAnnouncements();
+  }, [toast]);
+
   return (
     <div className="space-y-8">
       <section className="mb-8">
@@ -35,7 +74,6 @@ export default function DashboardPage() {
             <p className="text-lg text-primary-foreground/90">
               Your central platform for clinical skills development. Explore resources, book sessions, and stay informed.
             </p>
-            {/* "Get Started" button removed */}
           </div>
         </div>
       </Card>
@@ -63,24 +101,54 @@ export default function DashboardPage() {
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center"><AlertTriangle className="h-6 w-6 text-destructive mr-2" />Important Updates</CardTitle>
+            <CardTitle className="flex items-center"><Pin className="h-6 w-6 text-primary mr-2" />Important Updates</CardTitle>
             <CardDescription>Latest pinned announcements and critical information.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-start p-3 bg-destructive/10 rounded-md">
-              <AlertTriangle className="h-5 w-5 text-destructive mr-3 mt-1 shrink-0" />
-              <div>
-                <h3 className="font-semibold text-destructive">OSCE Exam Briefing Tomorrow</h3>
-                <p className="text-sm text-muted-foreground">Mandatory briefing for all Year 3 students at 10 AM in Lecture Hall A.</p>
+            {isLoadingAnnouncements ? (
+              <>
+                <div className="flex items-start p-3 bg-secondary/50 rounded-md">
+                  <Skeleton className="h-5 w-5 mr-3 mt-1 shrink-0 rounded-full" />
+                  <div className="w-full">
+                    <Skeleton className="h-5 w-3/4 mb-1.5" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                </div>
+                <div className="flex items-start p-3 bg-secondary/50 rounded-md">
+                  <Skeleton className="h-5 w-5 mr-3 mt-1 shrink-0 rounded-full" />
+                  <div className="w-full">
+                    <Skeleton className="h-5 w-2/3 mb-1.5" />
+                    <Skeleton className="h-4 w-4/5" />
+                  </div>
+                </div>
+              </>
+            ) : pinnedAnnouncements.length > 0 ? (
+              pinnedAnnouncements.slice(0, 3).map(announcement => ( // Display up to 3 pinned announcements
+                <div key={announcement.id} className="flex items-start p-3 bg-primary/10 rounded-md hover:bg-primary/20 transition-colors">
+                  <Pin className="h-5 w-5 text-primary mr-3 mt-1 shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-primary">{announcement.title}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{announcement.content}</p>
+                     <Link href="/announcements" className="text-xs text-primary hover:underline mt-1 inline-block">
+                      Read more
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6">
+                <Info className="mx-auto h-10 w-10 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">No pinned announcements at the moment.</p>
+                <Button variant="link" asChild className="mt-1">
+                  <Link href="/announcements">View all announcements</Link>
+                </Button>
               </div>
-            </div>
-             <div className="flex items-start p-3 bg-secondary rounded-md">
-              <Megaphone className="h-5 w-5 text-primary mr-3 mt-1 shrink-0" />
-              <div>
-                <h3 className="font-semibold text-primary">New Suture Workshop Added</h3>
-                <p className="text-sm text-muted-foreground">Limited spots available. Book now via the Bookings page.</p>
-              </div>
-            </div>
+            )}
+            {pinnedAnnouncements.length > 3 && (
+               <Button variant="outline" asChild className="w-full mt-2">
+                  <Link href="/announcements">View all pinned announcements</Link>
+                </Button>
+            )}
           </CardContent>
         </Card>
 
