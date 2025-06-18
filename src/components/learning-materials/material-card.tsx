@@ -19,13 +19,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 
 interface MaterialCardProps {
   material: LearningMaterial;
-  onDelete?: (id: string) => void; // Made optional for non-admins
-  onEdit?: (material: LearningMaterial) => void; // Made optional for non-admins
+  onDelete?: (id: string) => void;
+  onEdit?: (material: LearningMaterial) => void;
 }
 
 const categoryColors: Record<LearningMaterial['category'], string> = {
@@ -93,11 +100,38 @@ export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) 
           {material.type.charAt(0).toUpperCase() + material.type.slice(1)}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={material.url} target="_blank" rel="noopener noreferrer">
-              View <ExternalLink className="ml-1.5 h-4 w-4" />
-            </Link>
-          </Button>
+          {material.type === 'video' ? (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Play Video <Youtube className="ml-1.5 h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-2xl md:max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>{material.title}</DialogTitle>
+                </DialogHeader>
+                <div className="aspect-video mt-4">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={material.url} // Assuming material.url is an embeddable URL for videos
+                    title={material.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="rounded-md"
+                  ></iframe>
+                </div>
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <Button variant="outline" size="sm" asChild>
+              <Link href={material.url} target="_blank" rel="noopener noreferrer">
+                View <ExternalLink className="ml-1.5 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
           {currentUser?.role === 'admin' && onEdit && (
             <Button variant="outline" size="sm" onClick={handleEdit}>
               <Pencil className="h-4 w-4" />
