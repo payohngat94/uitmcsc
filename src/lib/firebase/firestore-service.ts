@@ -91,7 +91,7 @@ export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedA
 
 
 export async function getAnnouncements(): Promise<Announcement[]> {
-  console.log("getAnnouncements: Attempting to fetch announcements from Firestore...");
+  console.log("getAnnouncements (server action): Attempting to fetch announcements from Firestore...");
   try {
     const pinnedQuery = query(
       announcementsCollectionRef,
@@ -100,21 +100,44 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     );
     const unpinnedQuery = query(
       announcementsCollectionRef,
-      where('isPinned', '==', false),
+      where('isPinned', '==', false), // Ensure this is explicitly false
       orderBy('createdAt', 'desc')
     );
 
-    console.log("getAnnouncements: Executing pinned and unpinned queries...");
+    console.log("getAnnouncements (server action): Executing pinned and unpinned queries...");
     const [pinnedSnapshot, unpinnedSnapshot] = await Promise.all([
       getDocs(pinnedQuery),
       getDocs(unpinnedQuery),
     ]);
-    console.log("getAnnouncements: Queries executed. Pinned docs:", pinnedSnapshot.docs.length, "Unpinned docs:", unpinnedSnapshot.docs.length);
+    console.log("getAnnouncements (server action): Queries executed. Pinned docs:", pinnedSnapshot.docs.length, "Unpinned docs:", unpinnedSnapshot.docs.length);
     
     const transformDoc = (docSnapshot: import('firebase/firestore').QueryDocumentSnapshot): Announcement => {
       const data = docSnapshot.data();
-      const createdAtDate = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date(0));
-      const updatedAtDate = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.updatedAt ? new Date(data.updatedAt) : createdAtDate);
+      // Robust date handling: ensure createdAt is always a Date, default to epoch if missing/invalid
+      let createdAtDate;
+      if (data.createdAt instanceof Timestamp) {
+        createdAtDate = data.createdAt.toDate();
+      } else if (data.createdAt && typeof data.createdAt.seconds === 'number' && typeof data.createdAt.nanoseconds === 'number') {
+        // Handle plain object Timestamps if they occur (e.g. from incorrect manual entry or older data)
+        createdAtDate = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds).toDate();
+      } else if (data.createdAt) {
+        const parsed = new Date(data.createdAt);
+        createdAtDate = isNaN(parsed.getTime()) ? new Date(0) : parsed; // Default to epoch if unparsable
+      } else {
+        createdAtDate = new Date(0); // Default to epoch if field is missing
+      }
+
+      let updatedAtDate;
+      if (data.updatedAt instanceof Timestamp) {
+        updatedAtDate = data.updatedAt.toDate();
+      } else if (data.updatedAt && typeof data.updatedAt.seconds === 'number' && typeof data.updatedAt.nanoseconds === 'number') {
+        updatedAtDate = new Timestamp(data.updatedAt.seconds, data.updatedAt.nanoseconds).toDate();
+      } else if (data.updatedAt) {
+        const parsed = new Date(data.updatedAt);
+        updatedAtDate = isNaN(parsed.getTime()) ? createdAtDate : parsed; // Default to createdAt if unparsable
+      } else {
+        updatedAtDate = createdAtDate; // Default to createdAt if field is missing
+      }
 
       return {
         id: docSnapshot.id,
@@ -122,8 +145,10 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         content: data.content || "",
         authorId: data.authorId || "unknown_author_id",
         authorName: data.authorName || "Unknown Author",
-        isPinned: data.isPinned === true,
-        audience: Array.isArray(data.audience) ? data.audience as UserRole[] : ['student', 'admin'] as UserRole[],
+        isPinned: data.isPinned === true, // Explicitly check for true
+        audience: Array.isArray(data.audience) && data.audience.every(role => ['student', 'admin'].includes(role)) 
+          ? data.audience as UserRole[] 
+          : ['student', 'admin'] as UserRole[], // Default or corrected audience
         createdAt: createdAtDate,
         updatedAt: updatedAtDate,
       };
@@ -132,17 +157,26 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     const pinnedAnnouncements = pinnedSnapshot.docs.map(transformDoc);
     const unpinnedAnnouncements = unpinnedSnapshot.docs.map(transformDoc);
     
-    console.log("getAnnouncements: Announcements transformed successfully.");
+    console.log("getAnnouncements (server action): Announcements transformed successfully.");
     return [...pinnedAnnouncements, ...unpinnedAnnouncements];
 
   } catch (error) {
     console.error("Error fetching announcements from Firestore (inside catch block of getAnnouncements):");
-    console.error("Error Name:", (error instanceof Error ? error.name : "N/A"));
-    console.error("Error Message:", (error instanceof Error ? error.message : "N/A"));
-    if ((error as any)?.code) {
-      console.error("Firebase Error Code:", (error as any).code);
+    if (error instanceof Error) {
+      console.error("Error Name:", error.name);
+      console.error("Error Message:", error.message);
+      if ((error as any).code) {
+        console.error("Firebase Error Code:", (error as any).code);
+      }
+    } else {
+      console.error("Caught an error that is not an instance of Error:", error);
     }
-    console.error("Full Error Object:", JSON.stringify(error, Object.getOwnPropertyNames(error))); // Stringify to see all properties
+    try {
+      console.error("Full Error Object (Stringified):", JSON.stringify(error, Object.getOwnPropertyNames(error))); 
+    } catch (stringifyError) {
+      console.error("Could not stringify the full error object:", stringifyError);
+      console.error("Original error object (raw):", error);
+    }
     throw new Error("Failed to fetch announcements."); // This is the error the client component will see
   }
 }
