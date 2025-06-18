@@ -101,7 +101,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     );
     const unpinnedQuery = query(
       announcementsCollectionRef,
-      where('isPinned', '==', false), 
+      where('isPinned', '==', false),
       orderBy('createdAt', 'desc')
     );
 
@@ -111,7 +111,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
       getDocs(unpinnedQuery),
     ]);
     console.log("getAnnouncements (server action): Queries executed. Pinned docs:", pinnedSnapshot.docs.length, "Unpinned docs:", unpinnedSnapshot.docs.length);
-    
+
     const transformDoc = (docSnapshot: import('firebase/firestore').QueryDocumentSnapshot): Announcement => {
       const data = docSnapshot.data();
       let createdAtDate;
@@ -120,10 +120,8 @@ export async function getAnnouncements(): Promise<Announcement[]> {
       } else if (data.createdAt && typeof data.createdAt.seconds === 'number' && typeof data.createdAt.nanoseconds === 'number') {
         createdAtDate = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds).toDate();
       } else if (data.createdAt) {
-        // Attempt to parse if it's a string or number representation of a date
         const parsed = new Date(data.createdAt);
-        // If parsing results in an invalid date, default to a very old date or now
-        createdAtDate = isNaN(parsed.getTime()) ? new Date(0) : parsed; // Default to Epoch if invalid
+        createdAtDate = isNaN(parsed.getTime()) ? new Date(0) : parsed;
       } else {
         createdAtDate = new Date(0); // Default to Epoch if undefined
       }
@@ -135,7 +133,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         updatedAtDate = new Timestamp(data.updatedAt.seconds, data.updatedAt.nanoseconds).toDate();
       } else if (data.updatedAt) {
         const parsed = new Date(data.updatedAt);
-        updatedAtDate = isNaN(parsed.getTime()) ? createdAtDate : parsed; // Default to createdAt if invalid
+        updatedAtDate = isNaN(parsed.getTime()) ? createdAtDate : parsed;
       } else {
         updatedAtDate = createdAtDate; // Default to createdAt if undefined
       }
@@ -146,10 +144,10 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         content: data.content || "",
         authorId: data.authorId || "unknown_author_id",
         authorName: data.authorName || "Unknown Author",
-        isPinned: data.isPinned === true, // Ensure boolean, default false if undefined/null
-        audience: Array.isArray(data.audience) && data.audience.every(role => ['student', 'admin'].includes(role)) 
-          ? data.audience as UserRole[] 
-          : ['student', 'admin'] as UserRole[], // Default audience
+        isPinned: data.isPinned === true,
+        audience: Array.isArray(data.audience) && data.audience.every(role => ['student', 'admin'].includes(role))
+          ? data.audience as UserRole[]
+          : ['student', 'admin'] as UserRole[],
         createdAt: createdAtDate,
         updatedAt: updatedAtDate,
       };
@@ -157,7 +155,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 
     const pinnedAnnouncements = pinnedSnapshot.docs.map(transformDoc);
     const unpinnedAnnouncements = unpinnedSnapshot.docs.map(transformDoc);
-    
+
     console.log("getAnnouncements (server action): Announcements transformed successfully. Total:", pinnedAnnouncements.length + unpinnedAnnouncements.length);
     return [...pinnedAnnouncements, ...unpinnedAnnouncements];
 
@@ -177,7 +175,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     }
     // Attempt to stringify the full error object to catch more details, including potential links for index creation
     try {
-      console.error("Full Error Object (Stringified):", JSON.stringify(error, Object.getOwnPropertyNames(error))); 
+      console.error("Full Error Object (Stringified):", JSON.stringify(error, Object.getOwnPropertyNames(error)));
     } catch (stringifyError) {
       console.error("Could not stringify the full error object due to:", stringifyError);
       console.error("Original error object (raw):", error);
@@ -187,7 +185,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 }
 
 export async function addAnnouncement(
-  announcementData: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName'>, 
+  announcementData: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName'>,
   author: { id: string; name: string }
 ): Promise<string> {
   try {
