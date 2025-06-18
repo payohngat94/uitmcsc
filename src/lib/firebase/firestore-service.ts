@@ -84,14 +84,15 @@ export async function deleteLearningMaterial(id: string): Promise<void> {
 
 // Announcements Service
 const announcementsCollectionRef = collection(db, 'announcements');
-export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'> & {
+export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName'> & {
+  // authorId and authorName are added when creating, not expected in partial updates directly through this type
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
 
+
 export async function getAnnouncements(): Promise<Announcement[]> {
   try {
-    // Fetch pinned and unpinned separately to ensure pinned come first, then sort by date
     const pinnedQuery = query(announcementsCollectionRef, where('isPinned', '==', true), orderBy('createdAt', 'desc'));
     const unpinnedQuery = query(announcementsCollectionRef, where('isPinned', '==', false), orderBy('createdAt', 'desc'));
 
@@ -100,13 +101,19 @@ export async function getAnnouncements(): Promise<Announcement[]> {
       getDocs(unpinnedQuery),
     ]);
     
-    const transformDoc = (doc: any) => {
-      const data = doc.data();
+    const transformDoc = (docSnapshot: import('firebase/firestore').QueryDocumentSnapshot) => {
+      const data = docSnapshot.data();
+      // Ensure all fields of Announcement are present, providing defaults if necessary
       return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
-        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
+        id: docSnapshot.id,
+        title: data.title || "",
+        content: data.content || "",
+        authorId: data.authorId || "",
+        authorName: data.authorName || "Unknown Author",
+        isPinned: data.isPinned === true, // Explicitly ensure boolean
+        audience: Array.isArray(data.audience) ? data.audience as UserRole[] : [],
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(0), // Default to epoch if invalid
+        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(0)),
       } as Announcement;
     };
 
@@ -116,15 +123,20 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     return [...pinnedAnnouncements, ...unpinnedAnnouncements];
 
   } catch (error) {
-    console.error("Error fetching announcements: ", error);
-    throw new Error("Failed to fetch announcements.");
+    console.error("Error fetching announcements from Firestore: ", error); // Log the specific Firebase error
+    throw new Error("Failed to fetch announcements."); // Generic error for the UI
   }
 }
 
-export async function addAnnouncement(announcementData: Omit<AnnouncementData, 'createdAt' | 'updatedAt' | 'authorId' | 'authorName'>, author: { id: string; name: string }): Promise<string> {
+export async function addAnnouncement(
+  announcementData: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName'>, 
+  author: { id: string; name: string }
+): Promise<string> {
   try {
     const docRef = await addDoc(announcementsCollectionRef, {
       ...announcementData,
+      isPinned: announcementData.isPinned || false, // Ensure isPinned is explicitly set
+      audience: announcementData.audience || [],   // Ensure audience is explicitly set
       authorId: author.id,
       authorName: author.name,
       createdAt: serverTimestamp(),
@@ -137,7 +149,7 @@ export async function addAnnouncement(announcementData: Omit<AnnouncementData, '
   }
 }
 
-export async function updateAnnouncement(id: string, announcementData: Partial<AnnouncementData>): Promise<void> {
+export async function updateAnnouncement(id: string, announcementData: Partial<Omit<Announcement, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName'>>): Promise<void> {
   try {
     const announcementDocRef = doc(db, 'announcements', id);
     await updateDoc(announcementDocRef, {

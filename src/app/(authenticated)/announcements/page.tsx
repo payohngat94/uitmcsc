@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { AnnouncementCard } from "@/components/announcements/announcement-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, Filter, Megaphone, Edit3, Trash2 } from "lucide-react";
+import { PlusCircle, Search, Filter, Megaphone } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -28,8 +28,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"; // AlertDialogTrigger was not used, so removed.
 
 export default function AnnouncementsPage() {
   const { currentUser } = useAuth();
@@ -51,10 +50,11 @@ export default function AnnouncementsPage() {
       const fetchedAnnouncements = await getAnnouncements();
       setAnnouncements(fetchedAnnouncements);
     } catch (error) {
+      console.error("Detailed error fetching announcements:", error); // Log detailed error
       toast({
         variant: "destructive",
         title: "Error fetching announcements",
-        description: "Could not load announcements from the database.",
+        description: "Could not load announcements from the database. Check console for details.",
       });
     } finally {
       setIsLoading(false);
@@ -84,11 +84,11 @@ export default function AnnouncementsPage() {
     try {
       await deleteAnnouncement(announcementToDelete.id);
       toast({
-        variant: "destructive",
+        variant: "default", // Using "default" for success, destructive is usually for the action button itself
         title: "Announcement Deleted",
         description: `"${announcementToDelete.title}" has been removed.`,
       });
-      fetchAnnouncements(); // Re-fetch
+      fetchAnnouncements(); 
     } catch (error) {
       toast({
         variant: "destructive",
@@ -119,13 +119,13 @@ export default function AnnouncementsPage() {
     };
 
     try {
-      if (id) { // Editing
+      if (id) { 
         await updateAnnouncement(id, announcementDataForDb);
         toast({
           title: "Announcement Updated",
           description: `"${announcementDataForDb.title}" has been successfully updated.`,
         });
-      } else { // Adding
+      } else { 
         await addAnnouncement(announcementDataForDb, { id: currentUser.uid, name: currentUser.displayName || currentUser.email || "Admin" });
         toast({
           title: "Announcement Added",
@@ -148,18 +148,23 @@ export default function AnnouncementsPage() {
   const filteredAnnouncements = useMemo(() => {
     return announcements
       .filter(announcement => {
+        const searchLower = searchTerm.toLowerCase();
         const matchesSearch = searchTerm === "" ||
-          announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          announcement.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          announcement.authorName.toLowerCase().includes(searchTerm.toLowerCase());
+          announcement.title.toLowerCase().includes(searchLower) ||
+          announcement.content.toLowerCase().includes(searchLower) ||
+          announcement.authorName.toLowerCase().includes(searchLower);
         
         const matchesAudience = selectedAudienceFilter === "all" || 
-          (announcement.audience && announcement.audience.includes(selectedAudienceFilter));
+          (Array.isArray(announcement.audience) && announcement.audience.includes(selectedAudienceFilter));
           
         return matchesSearch && matchesAudience;
-      });
+      })
+      // relies on getAnnouncements to already sort pinned first, then by date
   }, [announcements, searchTerm, selectedAudienceFilter]);
 
+  // Pinned and regular announcements are now derived from the already sorted `filteredAnnouncements`
+  // The `getAnnouncements` function is responsible for the primary sorting (pinned first, then by date).
+  // This ensures filtering doesn't mess up the pinned-first order.
   const pinnedAnnouncements = filteredAnnouncements.filter(a => a.isPinned);
   const regularAnnouncements = filteredAnnouncements.filter(a => !a.isPinned);
 
@@ -184,7 +189,7 @@ export default function AnnouncementsPage() {
         <AddAnnouncementDialog
           isOpen={isAnnouncementDialogOpen}
           onOpenChange={setIsAnnouncementDialogOpen}
-          currentAnnouncement={announcementToEdit ? {
+          currentAnnouncement={announcementToEdit ? { // Pass necessary fields for the form
             id: announcementToEdit.id,
             title: announcementToEdit.title,
             content: announcementToEdit.content,
@@ -205,7 +210,7 @@ export default function AnnouncementsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setAnnouncementToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -264,8 +269,8 @@ export default function AnnouncementsPage() {
                   <AnnouncementCard 
                     key={announcement.id} 
                     announcement={announcement}
-                    onEdit={currentUser?.role === 'admin' ? handleOpenEditDialog : undefined}
-                    onDelete={currentUser?.role === 'admin' ? handleOpenDeleteDialog : undefined}
+                    onEdit={currentUser?.role === 'admin' ? () => handleOpenEditDialog(announcement) : undefined}
+                    onDelete={currentUser?.role === 'admin' ? () => handleOpenDeleteDialog(announcement) : undefined}
                   />
                 ))}
               </div>
@@ -281,13 +286,14 @@ export default function AnnouncementsPage() {
                     <AnnouncementCard 
                       key={announcement.id} 
                       announcement={announcement} 
-                      onEdit={currentUser?.role === 'admin' ? handleOpenEditDialog : undefined}
-                      onDelete={currentUser?.role === 'admin' ? handleOpenDeleteDialog : undefined}
+                      onEdit={currentUser?.role === 'admin' ? () => handleOpenEditDialog(announcement) : undefined}
+                      onDelete={currentUser?.role === 'admin' ? () => handleOpenDeleteDialog(announcement) : undefined}
                     />
                   ))}
                 </div>
               ) : (
-                pinnedAnnouncements.length > 0 && <p className="text-muted-foreground">No other announcements match your current filters.</p>
+                // This case means there are pinned announcements, but no regular ones matching filters.
+                pinnedAnnouncements.length > 0 && searchTerm && <p className="text-muted-foreground">No other announcements match your current filters.</p>
               )
             ) : (
               <div className="text-center py-12">
