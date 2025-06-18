@@ -6,7 +6,7 @@ import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/li
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Added ScrollArea and ScrollBar
 import { Package, Tag, MapPin, BarChart, Info, ImageOff, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -50,17 +50,17 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
   useEffect(() => {
     const newSrc = srcProp?.trim() || DIALOG_IMAGE_PLACEHOLDER;
     setCurrentSrc(newSrc);
-    console.log(`[ItemImageDisplay] Item: ${itemName}, Alt: ${alt}, Initial src for Image component: ${newSrc}`);
+    // console.log(`[ItemImageDisplay] Item: ${itemName}, Alt: ${alt}, Initial src for Image component: ${newSrc}`);
   }, [srcProp, alt, itemName]);
 
   return (
     <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0">
       <Image
-        key={currentSrc} 
+        key={currentSrc} // Added key to potentially help with src changes
         src={currentSrc}
         alt={alt}
-        fill 
-        className="object-contain p-1" 
+        fill
+        className="object-contain p-1"
         data-ai-hint={aiHint}
         unoptimized={true}
         onError={() => {
@@ -101,7 +101,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow py-4 pr-2 -mr-2">
+        <ScrollArea className="flex-grow py-4 pr-2 -mr-2"> {/* Main ScrollArea for content if it overflows vertically */}
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center">
@@ -138,7 +138,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
                 <ScrollArea className="w-full whitespace-nowrap">
                   <div className="flex space-x-4 pb-4">
                     {item.imageUrls.map((url, index) => (
-                      <div key={index} className="w-[240px] sm:w-[300px]">
+                      <div key={index} className="w-[240px] sm:w-[300px] flex-shrink-0"> {/* Added flex-shrink-0 here */}
                         <ItemImageDisplay 
                           srcProp={url} 
                           alt={`${item.name} - Image ${index + 1}`} 
@@ -174,3 +174,4 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
     </Dialog>
   );
 }
+
