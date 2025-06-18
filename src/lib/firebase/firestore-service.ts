@@ -213,10 +213,11 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 
   } catch (error: any) {
     console.error("SERVER ACTION: getAnnouncements - ERROR:", error.name, error.message, error.code);
-    if (error instanceof Error) {
-        throw error; 
+    if (error instanceof Error) { // This will catch FirebaseError as it extends Error
+        throw error; // Re-throw the original FirebaseError (or any other Error)
     }
-    throw new Error(`Failed to fetch announcements. Original error: ${(error as Error)?.message || 'Unknown Firebase error'}`);
+    // Fallback for non-Error objects, though Firestore errors are typically FirebaseError instances
+    throw new Error(`Failed to fetch announcements. Original error: ${(error as any)?.message || 'Unknown Firebase error'}`);
   }
 }
 
