@@ -29,7 +29,7 @@ export default function DashboardPage() {
           </div>
           <div className="hidden md:block mt-6 md:mt-0">
             <Image
-              src="https://firebasestudio.googleapis.com/v0/b/sturdy-dryad-358801.appspot.com/o/results%2FaghkZXZ-cHJvZHVjdGlvbnVyLWYwYTRhchULEhVwcm9qZWN0X3VzZXJfZmlsZV9kYXRhGICAgIDg7YYMDA.png?alt=media&token=e2f45734-8a08-48c7-8191-769f9574b3a3"
+              src="https://drive.google.com/file/d/1J9uHRNgzX2jey_XGLQ9Bes-mUXZ28cNx/view?usp=sharing"
               alt="UiTM Sim Centre Logo"
               width={400}
               height={100}

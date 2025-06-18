@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
         hostname: 'firebasestudio.googleapis.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'drive.google.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
