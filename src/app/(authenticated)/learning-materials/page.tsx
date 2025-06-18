@@ -423,7 +423,7 @@ export default function LearningMaterialsPage() {
             <Layers className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-2 text-xl font-semibold">No Categories Defined</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Admins can add new categories using the "Add Category" button above.
+              To display category cards here, an Administrator should first add some learning categories using the 'Add Category' button.
             </p>
           </div>
         )
@@ -431,3 +431,4 @@ export default function LearningMaterialsPage() {
     </div>
   );
 }
+
