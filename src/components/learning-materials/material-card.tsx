@@ -1,14 +1,28 @@
+
 "use client";
 
 import type { LearningMaterial } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { Youtube, FileText, Presentation, ExternalLink } from "lucide-react";
+import { Youtube, FileText, Presentation, ExternalLink, Trash2 } from "lucide-react";
 import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 interface MaterialCardProps {
   material: LearningMaterial;
+  onDelete: (id: string) => void; // Function to call when delete is confirmed
 }
 
 const categoryColors: Record<LearningMaterial['category'], string> = {
@@ -19,9 +33,15 @@ const categoryColors: Record<LearningMaterial['category'], string> = {
   "Communication Skills": "bg-pink-100 text-pink-700",
 };
 
-export function MaterialCard({ material }: MaterialCardProps) {
+export function MaterialCard({ material, onDelete }: MaterialCardProps) {
   const Icon = material.type === 'video' ? Youtube : material.type === 'document' ? FileText : Presentation;
   const aiHint = material.type === 'video' ? "medical video" : material.type === 'document' ? "medical document" : "medical presentation";
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const handleDeleteConfirm = () => {
+    onDelete(material.id);
+    setIsDeleteDialogOpen(false);
+  };
 
   return (
     <Card className="flex flex-col h-full hover:shadow-xl transition-shadow duration-300 ease-in-out">
@@ -51,11 +71,35 @@ export function MaterialCard({ material }: MaterialCardProps) {
           <Icon className="h-4 w-4 mr-1.5" />
           {material.type.charAt(0).toUpperCase() + material.type.slice(1)}
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={material.url} target="_blank" rel="noopener noreferrer">
-            View Material <ExternalLink className="ml-1.5 h-4 w-4" />
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={material.url} target="_blank" rel="noopener noreferrer">
+              View <ExternalLink className="ml-1.5 h-4 w-4" />
+            </Link>
+          </Button>
+          {/* TODO: Conditionally render this based on admin role */}
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the learning material titled "{material.title}".
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteConfirm}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </CardFooter>
     </Card>
   );

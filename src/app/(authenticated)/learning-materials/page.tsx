@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, BookOpen } from "lucide-react";
 import type { LearningMaterial, LearningMaterialCategory, LearningMaterialType } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 const categories: LearningMaterialCategory[] = [
   "Early Clinical Exposure",
@@ -25,6 +26,7 @@ export default function LearningMaterialsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
+  const { toast } = useToast();
 
   const handleAddNewMaterial = (newMaterialData: Omit<LearningMaterial, 'id'>) => {
     const newMaterial: LearningMaterial = {
@@ -32,6 +34,22 @@ export default function LearningMaterialsPage() {
       id: `lm${Date.now()}`, // Simple unique ID generation
     };
     setMaterials(prevMaterials => [newMaterial, ...prevMaterials]);
+    toast({
+      title: "Material Added",
+      description: `"${newMaterial.title}" has been successfully added.`,
+    });
+  };
+
+  const handleDeleteMaterial = (id: string) => {
+    const materialToDelete = materials.find(m => m.id === id);
+    setMaterials(prevMaterials => prevMaterials.filter(material => material.id !== id));
+    if (materialToDelete) {
+      toast({
+        variant: "destructive",
+        title: "Material Deleted",
+        description: `"${materialToDelete.title}" has been removed.`,
+      });
+    }
   };
 
   const filteredMaterials = materials.filter(material => {
@@ -99,7 +117,7 @@ export default function LearningMaterialsPage() {
       {filteredMaterials.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMaterials.map((material) => (
-            <MaterialCard key={material.id} material={material} />
+            <MaterialCard key={material.id} material={material} onDelete={handleDeleteMaterial} />
           ))}
         </div>
       ) : (
