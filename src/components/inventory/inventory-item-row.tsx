@@ -40,11 +40,14 @@ const ERROR_PLACEHOLDER = "https://placehold.co/40x40.png?text=Error";
 
 export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: InventoryItemRowProps) {
   const [quantity, setQuantity] = useState(1);
-  const [imageSrc, setImageSrc] = useState(item.imageUrls?.[0] || PRIMARY_PLACEHOLDER);
+  const [imageSrc, setImageSrc] = useState(item.imageUrls?.[0]?.trim() || PRIMARY_PLACEHOLDER);
 
   useEffect(() => {
-    setImageSrc(item.imageUrls?.[0] || PRIMARY_PLACEHOLDER);
-  }, [item.imageUrls]);
+    const firstUrl = item.imageUrls?.[0]?.trim();
+    const newSrc = firstUrl || PRIMARY_PLACEHOLDER;
+    setImageSrc(newSrc);
+    console.log(`[InventoryItemRow] Item: ${item.name}, Image URLs: ${JSON.stringify(item.imageUrls)}, Initial src for Image component: ${newSrc}`);
+  }, [item.imageUrls, item.name]);
 
   const handleRequest = () => {
     alert(`Requesting ${quantity} of ${item.name}. (This is a simulation)`);
@@ -65,6 +68,7 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
             data-ai-hint={aiHint}
             unoptimized={true} 
             onError={() => {
+              console.error(`[InventoryItemRow] Error loading image for ${item.name}: ${item.imageUrls?.[0]}`);
               if (imageSrc !== ERROR_PLACEHOLDER) { 
                 setImageSrc(ERROR_PLACEHOLDER);
               }
@@ -112,7 +116,7 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
               <div className="space-y-4 py-4">
                 <div className="flex items-center gap-3">
                   <Image
-                    src={item.imageUrls?.[0] || "https://placehold.co/80x80.png?text=No+Image"}
+                    src={item.imageUrls?.[0]?.trim() || "https://placehold.co/80x80.png?text=No+Image"}
                     alt={item.name}
                     width={80}
                     height={80}

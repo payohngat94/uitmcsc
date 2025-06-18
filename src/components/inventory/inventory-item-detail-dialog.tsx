@@ -38,29 +38,32 @@ const DIALOG_IMAGE_ERROR_PLACEHOLDER = "https://placehold.co/300x200.png?text=Er
 
 // Internal component to handle individual image loading and errors
 interface ItemImageDisplayProps {
-  src: string;
+  srcProp: string | undefined; // Renamed to avoid conflict with state
   alt: string;
   itemType: InventoryItem['itemType'];
+  itemName: string; // For logging
 }
-function ItemImageDisplay({ src, alt, itemType }: ItemImageDisplayProps) {
-  const [currentSrc, setCurrentSrc] = useState(src || DIALOG_IMAGE_PLACEHOLDER);
+function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplayProps) {
+  const [currentSrc, setCurrentSrc] = useState(srcProp?.trim() || DIALOG_IMAGE_PLACEHOLDER);
   const aiHint = itemType === 'facility' ? "facility detail image" : "equipment detail image";
 
   useEffect(() => {
-    setCurrentSrc(src || DIALOG_IMAGE_PLACEHOLDER);
-  }, [src]);
+    const newSrc = srcProp?.trim() || DIALOG_IMAGE_PLACEHOLDER;
+    setCurrentSrc(newSrc);
+    console.log(`[ItemImageDisplay] Item: ${itemName}, Alt: ${alt}, Initial src for Image component: ${newSrc}`);
+  }, [srcProp, alt, itemName]);
 
   return (
     <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0">
       <Image
         src={currentSrc}
         alt={alt}
-        layout="fill"
-        objectFit="contain"
-        className="p-2"
+        fill // Changed layout to fill
+        className="object-contain p-1" // Adjusted objectFit and added padding
         data-ai-hint={aiHint}
         unoptimized={true}
         onError={() => {
+          console.error(`[ItemImageDisplay] Error loading image for ${itemName}, alt: ${alt}, attempted src: ${srcProp}`);
           if (currentSrc !== DIALOG_IMAGE_ERROR_PLACEHOLDER) {
             setCurrentSrc(DIALOG_IMAGE_ERROR_PLACEHOLDER);
           }
@@ -79,7 +82,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
   const handleDeleteClick = () => {
     if (onDeleteItem) {
       onDeleteItem(item);
-      onOpenChange(false); 
+      // onOpenChange(false); // Dialog will be closed by parent if delete confirmation proceeds
     }
   };
 
@@ -132,9 +135,10 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
                     {item.imageUrls.map((url, index) => (
                       <div key={index} className="w-[240px] sm:w-[300px]">
                         <ItemImageDisplay 
-                          src={url} 
+                          srcProp={url} 
                           alt={`${item.name} - Image ${index + 1}`} 
                           itemType={item.itemType}
+                          itemName={item.name} // Pass item name for logging
                         />
                       </div>
                     ))}
@@ -151,7 +155,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
           </div>
         </ScrollArea>
 
-        <DialogFooter className="pt-4 border-t mt-auto flex justify-between">
+        <DialogFooter className="pt-4 border-t mt-auto flex justify-between items-center">
           <div>
             {isAdmin && onDeleteItem && (
               <Button variant="destructive" onClick={handleDeleteClick} className="mr-2">
