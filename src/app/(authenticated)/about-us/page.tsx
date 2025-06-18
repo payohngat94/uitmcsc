@@ -33,11 +33,15 @@ export default function AboutUsPage() {
     <div className="space-y-8">
       <Card className="shadow-lg overflow-hidden">
         <CardHeader className="bg-primary/10 p-8 text-center">
-          {/* Placeholder for Logo - In a real app, you'd use an Image component with your logo */}
-          <div className="mb-4">
-            <h1 className="text-5xl font-bold font-headline text-primary">UiTM Sim Centre</h1>
-            <p className="text-xl font-semibold text-primary/80">Endless learning beyond imagination</p>
-            <p className="text-md text-muted-foreground mt-1">FACULTY OF MEDICINE</p>
+          <div className="relative w-full h-32 md:h-40 max-w-2xl mx-auto mb-4">
+            <Image
+              src="https://medicine.uitm.edu.my/DoME/images/logo/logo-csc-01a-01.png"
+              alt="UiTM Sim Centre Logo"
+              fill
+              priority
+              className="object-contain"
+              data-ai-hint="Sim Centre logo"
+            />
           </div>
         </CardHeader>
         <CardContent className="p-6 md:p-8">

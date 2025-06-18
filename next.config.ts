@@ -49,7 +49,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'www.mcrmedical.com', // Added this hostname
+        hostname: 'www.mcrmedical.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'medicine.uitm.edu.my', // Added this hostname
         port: '',
         pathname: '/**',
       }
