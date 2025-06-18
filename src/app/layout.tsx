@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'SimuLearn Hub',
+  title: 'UiTM CSC',
   description: 'Centralized platform for clinical simulation learning.',
 };
 

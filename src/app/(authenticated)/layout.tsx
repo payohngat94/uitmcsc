@@ -14,7 +14,7 @@ export default function AuthenticatedLayout({
         <div className="flex flex-1 flex-col">
           <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-md px-4 md:px-6 md:hidden">
              <MobileSidebarTrigger />
-             <h1 className="text-xl font-semibold font-headline">SimuLearn Hub</h1>
+             <h1 className="text-xl font-semibold font-headline">UiTM CSC</h1>
           </header>
           <ScrollArea className="flex-1">
             <main className="p-4 md:p-8 lg:p-10">

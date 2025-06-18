@@ -48,7 +48,7 @@ export function AppSidebar() {
           <Link href="/dashboard" className="flex items-center gap-2 text-xl font-headline font-semibold text-primary hover:text-primary/80 transition-colors">
             <GraduationCap className="h-8 w-8 text-primary" />
             <span className={cn("whitespace-nowrap transition-opacity duration-200", open ? "opacity-100" : "opacity-0 group-hover/sidebar-wrapper:opacity-100 group-data-[collapsible=icon]:opacity-0")}>
-              SimuLearn
+              UiTM CSC
             </span>
           </Link>
           {!isMobile && (

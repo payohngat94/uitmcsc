@@ -52,7 +52,7 @@ export function LoginForm() {
     if (values.email === "student@example.com" && values.password === "password") {
       toast({
         title: "Login Successful",
-        description: "Welcome back to SimuLearn Hub!",
+        description: "Welcome back to UiTM CSC!",
       });
       router.push("/dashboard");
     } else if (values.email === "admin@example.com" && values.password === "password") {
@@ -79,7 +79,7 @@ export function LoginForm() {
         <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full text-primary">
           <GraduationCap size={48} strokeWidth={1.5} />
         </div>
-        <CardTitle className="text-3xl font-headline">SimuLearn Hub</CardTitle>
+        <CardTitle className="text-3xl font-headline">UiTM CSC</CardTitle>
         <CardDescription className="text-muted-foreground">
           Access your clinical simulation resources.
         </CardDescription>
