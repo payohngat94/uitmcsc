@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { Youtube, FileText, Presentation, ExternalLink, Trash2, Tag, Pencil } from "lucide-react";
+import { Youtube, FileText, Presentation, ExternalLink, Trash2, Tag, Pencil, BookOpen } from "lucide-react";
 import Link from "next/link";
 import {
   AlertDialog,
@@ -51,27 +51,50 @@ const getYouTubeEmbedUrl = (url: string): string => {
       if (urlObj.pathname === "/watch") {
         videoId = urlObj.searchParams.get("v");
       } else if (urlObj.pathname.startsWith("/embed/")) {
-        return url; // Already an embed URL
+        return url; 
       } else if (urlObj.pathname.startsWith("/live/")) {
         videoId = urlObj.pathname.substring("/live/".length);
          if(videoId){
-          return `https://www.youtube.com/embed/${videoId}?autoplay=1`; // Autoplay for live might be desired
+          return `https://www.youtube.com/embed/${videoId}?autoplay=1`; 
         }
       }
     } else if (urlObj.hostname === "youtu.be") {
       videoId = urlObj.pathname.substring(1);
     }
   } catch (e) {
-    // Invalid URL, return original or handle error
     return url;
   }
 
   if (videoId) {
     return `https://www.youtube.com/embed/${videoId}`;
   }
-  // If not a recognizable YouTube URL or already an embed link, return original
-  // Or, you could return a specific error/placeholder URL if it's not embeddable
   return url;
+};
+
+const isGoogleDocUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname === 'docs.google.com' && urlObj.pathname.includes('/document/d/');
+  } catch (e) {
+    return false;
+  }
+};
+
+const getGoogleDocEmbedUrl = (url: string): string => {
+  if (!isGoogleDocUrl(url)) return url; 
+
+  try {
+    const urlObj = new URL(url);
+    const parts = urlObj.pathname.split('/');
+    const docIdIndex = parts.findIndex(part => part === 'd') + 1;
+    if (docIdIndex > 0 && parts[docIdIndex]) {
+      const docId = parts[docIdIndex];
+      return `https://docs.google.com/document/d/${docId}/preview`;
+    }
+  } catch (e) {
+    // Fall through
+  }
+  return url; // Fallback to original URL if transformation fails
 };
 
 
@@ -94,7 +117,10 @@ export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) 
     }
   };
 
-  const embedUrl = material.type === 'video' ? getYouTubeEmbedUrl(material.url) : material.url;
+  const videoEmbedUrl = material.type === 'video' ? getYouTubeEmbedUrl(material.url) : material.url;
+  const isDocGoogleType = material.type === 'document' && isGoogleDocUrl(material.url);
+  const googleDocEmbedUrl = isDocGoogleType ? getGoogleDocEmbedUrl(material.url) : material.url;
+
 
   return (
     <Card className="flex flex-col h-full hover:shadow-xl transition-shadow duration-300 ease-in-out">
@@ -149,7 +175,7 @@ export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) 
                   <iframe
                     width="100%"
                     height="100%"
-                    src={embedUrl} 
+                    src={videoEmbedUrl} 
                     title={material.title}
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -159,13 +185,38 @@ export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) 
                 </div>
               </DialogContent>
             </Dialog>
+          ) : isDocGoogleType ? (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Open Document <BookOpen className="ml-1.5 h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-2xl md:max-w-4xl lg:max-w-5xl h-[80vh] flex flex-col">
+                <DialogHeader>
+                  <DialogTitle>{material.title}</DialogTitle>
+                </DialogHeader>
+                <div className="flex-grow mt-4">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={googleDocEmbedUrl}
+                    title={material.title}
+                    frameBorder="0"
+                    allowFullScreen
+                    className="rounded-md border"
+                  ></iframe>
+                </div>
+              </DialogContent>
+            </Dialog>
           ) : (
-            <Button variant="outline" size="sm" asChild>
+             <Button variant="outline" size="sm" asChild>
               <Link href={material.url} target="_blank" rel="noopener noreferrer">
                 View <ExternalLink className="ml-1.5 h-4 w-4" />
               </Link>
             </Button>
           )}
+
           {currentUser?.role === 'admin' && onEdit && (
             <Button variant="outline" size="sm" onClick={handleEdit}>
               <Pencil className="h-4 w-4" />
@@ -199,3 +250,4 @@ export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) 
     </Card>
   );
 }
+
