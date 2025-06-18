@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from './config';
@@ -170,38 +171,50 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     console.error("❌ SERVER ACTION: getAnnouncements - !!! ERROR CAUGHT !!! ❌");
     console.error(`Timestamp: ${new Date().toISOString()}`);
     console.error("------------------------------------------------------------------------");
-    console.error("Raw Error Object from Firestore:", error); 
+    console.error("Error fetching announcements from Firestore (inside catch block of getAnnouncements): ", error); 
     console.error("------------------------------------------------------------------------");
-
+    
+    let detailedErrorMessage = "Failed to fetch announcements. Original error: ";
     if (error instanceof Error) {
       console.error("Error Name:", error.name);
       console.error("Error Message:", error.message);
+      detailedErrorMessage += `Name: ${error.name}, Message: ${error.message}`;
       if ((error as any).code) {
         console.error("Firebase Error Code:", (error as any).code);
+        detailedErrorMessage += `, Code: ${(error as any).code}`;
+      }
+      // Attempt to find a URL (common for missing index errors)
+      const messageString = String(error.message).toLowerCase();
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const urls = messageString.match(urlRegex);
+      if (urls && urls.length > 0) {
+        detailedErrorMessage += `, Firebase Index URL: ${urls[0]}`;
+        console.error("Firebase Index URL found in error:", urls[0]);
       }
     } else {
       console.error("Caught an error that is NOT an instance of Error.");
       console.error("Type of error:", typeof error);
+      detailedErrorMessage += String(error);
     }
 
     try {
       const errorProperties = Object.getOwnPropertyNames(error);
       const simplifiedError: { [key: string]: any } = { message: (error as any).message, name: (error as any).name, stack: (error as any).stack };
       errorProperties.forEach(prop => {
-        // Avoid trying to stringify complex objects or functions that might cause issues
         if (typeof (error as any)[prop] !== 'function' && typeof (error as any)[prop] !== 'object') {
             simplifiedError[prop] = (error as any)[prop];
-        } else if (prop === 'details' || prop === 'code' ) { // include common firebase error props
+        } else if (prop === 'details' || prop === 'code' ) { 
              simplifiedError[prop] = (error as any)[prop];
         }
       });
       console.error("Full Error Object (Simplified & Stringified):", JSON.stringify(simplifiedError, null, 2));
     } catch (stringifyError) {
       console.error("Could not stringify the full error object due to:", stringifyError);
-      console.error("Original error object (raw, again):", error);
+      console.error("Original error object (raw):", error);
     }
     console.error("========================================================================\n");
-    throw new Error("Failed to fetch announcements."); // This is the error the client component will see
+    console.error("!!!! SERVER IS THROWING THIS EXACT MESSAGE TO CLIENT:", detailedErrorMessage);
+    throw new Error(detailedErrorMessage); 
   }
 }
 

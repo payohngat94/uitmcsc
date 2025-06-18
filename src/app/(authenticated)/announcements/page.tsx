@@ -48,15 +48,25 @@ export default function AnnouncementsPage() {
     console.log("AnnouncementsPage: fetchAnnouncements called - ATTEMPTING TO CALL SERVER ACTION getAnnouncements()");
     setIsLoading(true);
     try {
-      const fetchedAnnouncements = await getAnnouncements(); // This calls the server action
+      const fetchedAnnouncements = await getAnnouncements(); 
       console.log("AnnouncementsPage: fetchedAnnouncements successfully, count:", fetchedAnnouncements.length);
       setAnnouncements(fetchedAnnouncements);
     } catch (error) {
-      console.error("Error in fetchAnnouncements on page (AnnouncementsPage):", error);
+      console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR - Raw error object:", error);
+      let descriptionMessage = "Could not load announcements. Default error.";
+      if (error instanceof Error) {
+        console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR - error.message:", error.message);
+        console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR - error.name:", error.name);
+        console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR - error.stack:", error.stack);
+        descriptionMessage = error.message; 
+      } else {
+        console.error("AnnouncementsPage: fetchAnnouncements CAUGHT ERROR - error is not an instance of Error. Stringified:", String(error));
+        descriptionMessage = String(error);
+      }
       toast({
         variant: "destructive",
         title: "Error fetching announcements",
-        description: (error instanceof Error && error.message) || "Could not load announcements. Check browser console and server logs for details from Firebase.",
+        description: descriptionMessage,
       });
     } finally {
       setIsLoading(false);
