@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -14,9 +15,22 @@ const quickLinks = [
 export default function DashboardPage() {
   return (
     <div className="space-y-8">
+      <section className="mb-8">
+        <div className="relative w-full h-auto aspect-[4/1] md:aspect-[5/1] overflow-hidden rounded-lg shadow-lg">
+          <Image
+            src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/s9jx9215vtmm/CSC_Header.png"
+            alt="UiTM Sim Centre Banner"
+            fill
+            priority
+            className="object-contain"
+            data-ai-hint="UiTM banner"
+          />
+        </div>
+      </section>
+
       <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-xl overflow-hidden">
         <div className="flex flex-col md:flex-row items-center justify-between p-6 md:p-8">
-          <div className="space-y-3 md:max-w-2xl">
+          <div className="space-y-3 md:max-w-2xl text-center md:text-left w-full">
             <h1 className="text-3xl md:text-4xl font-bold font-headline">Welcome to UiTM CSC!</h1>
             <p className="text-lg text-primary-foreground/90">
               Your central platform for clinical skills development. Explore resources, book sessions, and stay informed.
@@ -26,15 +40,6 @@ export default function DashboardPage() {
                 Get Started <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-          </div>
-          <div className="hidden md:block mt-6 md:mt-0">
-            <Image
-              src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/s9jx9215vtmm/CSC_Header.png"
-              alt="UiTM Sim Centre Logo"
-              width={400}
-              height={100}
-              className="rounded-lg shadow-md object-contain"
-              data-ai-hint="UiTM logo" />
           </div>
         </div>
       </Card>
