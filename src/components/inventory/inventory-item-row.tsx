@@ -40,13 +40,18 @@ const ERROR_PLACEHOLDER = "https://placehold.co/40x40.png?text=Error";
 
 export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: InventoryItemRowProps) {
   const [quantity, setQuantity] = useState(1);
-  const [imageSrc, setImageSrc] = useState(item.imageUrls?.[0]?.trim() || PRIMARY_PLACEHOLDER);
+  const [imageSrc, setImageSrc] = useState(PRIMARY_PLACEHOLDER);
 
   useEffect(() => {
     const firstUrl = item.imageUrls?.[0]?.trim();
     const newSrc = firstUrl || PRIMARY_PLACEHOLDER;
+    
+    console.log(`[InventoryItemRow] Item: "${item.name}"`, 
+                `item.imageUrls: ${JSON.stringify(item.imageUrls)}`, 
+                `Attempting to use first URL: "${firstUrl}"`,
+                `Image src set to: "${newSrc}"`);
+
     setImageSrc(newSrc);
-    console.log(`[InventoryItemRow] Item: ${item.name}, Image URLs: ${JSON.stringify(item.imageUrls)}, Initial src for Image component: ${newSrc}`);
   }, [item.imageUrls, item.name]);
 
   const handleRequest = () => {
@@ -68,7 +73,7 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
             data-ai-hint={aiHint}
             unoptimized={true} 
             onError={() => {
-              console.error(`[InventoryItemRow] Error loading image for ${item.name}: ${item.imageUrls?.[0]}`);
+              console.error(`[InventoryItemRow] Error loading image for ${item.name}: current src was ${imageSrc}. Attempted firstUrl: ${item.imageUrls?.[0]?.trim()}`);
               if (imageSrc !== ERROR_PLACEHOLDER) { 
                 setImageSrc(ERROR_PLACEHOLDER);
               }
