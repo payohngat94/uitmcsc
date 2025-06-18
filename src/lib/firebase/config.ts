@@ -24,4 +24,3 @@ const auth: Auth = getAuth(app);
 // const db: Firestore = getFirestore(app); // Optional: for user roles later
 
 export { app, auth }; // Remove db if not using Firestore yet
-
