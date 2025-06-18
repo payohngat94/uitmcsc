@@ -42,14 +42,18 @@ export type Booking = {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
 };
 
+export type InventoryItemStatus = 'available' | 'in-use' | 'reserved' | 'out-of-stock' | 'maintenance';
+
 export type InventoryItem = {
   id: string;
   name: string;
   description?: string;
-  status: 'available' | 'in-use' | 'reserved' | 'out-of-stock' | 'maintenance';
+  status: InventoryItemStatus;
   quantity: number;
   imageUrl?: string;
   location?: string;
+  createdAt?: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
 };
 
 export type Announcement = {
