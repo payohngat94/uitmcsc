@@ -77,10 +77,10 @@ export default function InventoryPage() {
       return;
     }
 
-    const urlsArray = formData.imageUrls 
+    const urlsArray = formData.imageUrls
       ? formData.imageUrls.split(',').map(url => url.trim()).filter(url => {
           try { new URL(url); return true; } catch { return false; }
-        }) 
+        })
       : [];
 
     const itemDataForDb = {
@@ -112,7 +112,7 @@ export default function InventoryPage() {
       // setItemToEdit(null);
     }
   };
-  
+
   const filteredInventory = useMemo(() => {
     return inventory.filter(item => {
       const searchLower = searchTerm.toLowerCase();
@@ -120,9 +120,9 @@ export default function InventoryPage() {
         item.name.toLowerCase().includes(searchLower) ||
         (item.description && item.description.toLowerCase().includes(searchLower)) ||
         (item.location && item.location.toLowerCase().includes(searchLower));
-      
+
       const matchesStatus = selectedStatusFilter === "all" || item.status === selectedStatusFilter;
-        
+
       return matchesSearch && matchesStatus;
     });
   }, [inventory, searchTerm, selectedStatusFilter]);
@@ -131,7 +131,7 @@ export default function InventoryPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline mb-2">Equipment Inventory</h1>
+        <h1 className="text-3xl font-bold font-headline mb-2">Facilities and Equipment</h1>
         <p className="text-muted-foreground">
           Browse available simulation equipment, check their status, and make loan requests.
         </p>
@@ -151,7 +151,7 @@ export default function InventoryPage() {
         onOpenChange={setIsDetailDialogOpen}
         item={selectedItemForDetail}
       />
-      
+
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -170,10 +170,10 @@ export default function InventoryPage() {
           <div className="mt-6 flex flex-col sm:flex-row gap-4">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input 
-                type="search" 
-                placeholder="Search equipment..." 
-                className="pl-10 w-full" 
+              <Input
+                type="search"
+                placeholder="Search equipment..."
+                className="pl-10 w-full"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -222,9 +222,9 @@ export default function InventoryPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredInventory.map((item) => (
-                    <InventoryItemRow 
-                      key={item.id} 
-                      item={item} 
+                    <InventoryItemRow
+                      key={item.id}
+                      item={item}
                       onViewDetails={handleOpenDetailDialog}
                       // onEdit={currentUser?.role === 'admin' ? () => {} : undefined} // Placeholder for edit
                       // onDelete={currentUser?.role === 'admin' ? () => {} : undefined} // Placeholder for delete
