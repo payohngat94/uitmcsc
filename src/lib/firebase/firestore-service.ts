@@ -16,7 +16,7 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus } from '@/lib/types';
+import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus, InventoryItemType } from '@/lib/types';
 
 // Learning Material Categories Service
 const learningMaterialCategoriesCollectionRef = collection(db, 'learningMaterialCategories');
@@ -213,10 +213,9 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 
   } catch (error: any) {
     console.error("SERVER ACTION: getAnnouncements - ERROR:", error.name, error.message, error.code);
-    if (error instanceof Error) { // This will catch FirebaseError as it extends Error
-        throw error; // Re-throw the original FirebaseError (or any other Error)
+    if (error instanceof Error) { 
+        throw error; 
     }
-    // Fallback for non-Error objects, though Firestore errors are typically FirebaseError instances
     throw new Error(`Failed to fetch announcements. Original error: ${(error as any)?.message || 'Unknown Firebase error'}`);
   }
 }
@@ -277,7 +276,8 @@ export async function deleteAnnouncement(id: string): Promise<void> {
 // Inventory Service
 const inventoryCollectionRef = collection(db, 'inventoryItems');
 export type InventoryItemData = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt' | 'imageUrls'> & {
-  imageUrls?: string[]; 
+  imageUrls?: string[];
+  itemType?: InventoryItemType; // Added itemType
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
@@ -292,6 +292,7 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
       return {
         id: docSnapshot.id,
         ...data,
+        itemType: data.itemType as InventoryItemType, // Ensure itemType is cast
         imageUrls: data.imageUrls || [], 
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
@@ -310,6 +311,7 @@ export async function addInventoryItem(itemData: Omit<InventoryItemData, 'create
   try {
     const docRef = await addDoc(inventoryCollectionRef, {
       ...itemData,
+      itemType: itemData.itemType || 'equipment', // Default to equipment if not specified
       imageUrls: itemData.imageUrls || [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

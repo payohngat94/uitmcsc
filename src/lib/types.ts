@@ -52,10 +52,12 @@ export type Booking = {
 };
 
 export type InventoryItemStatus = 'available' | 'in-use' | 'reserved' | 'out-of-stock' | 'maintenance';
+export type InventoryItemType = 'facility' | 'equipment';
 
 export type InventoryItem = {
   id: string;
   name: string;
+  itemType?: InventoryItemType; // Added itemType
   description?: string;
   status: InventoryItemStatus;
   quantity: number;

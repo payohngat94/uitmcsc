@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription as DialogDescriptionComponent, // Renamed to avoid conflict with FormDescription
+  DialogDescription as DialogDescriptionComponent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -17,7 +17,7 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription, // Added FormDescription to import
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -26,16 +26,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { InventoryItem, InventoryItemStatus } from "@/lib/types";
+import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/lib/types";
 
 const itemStatuses: InventoryItemStatus[] = ['available', 'in-use', 'reserved', 'out-of-stock', 'maintenance'];
+const itemTypes: InventoryItemType[] = ['facility', 'equipment'];
 
 const inventoryItemSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters." }),
+  itemType: z.enum(itemTypes, { required_error: "Item type is required."}).default('equipment'),
   description: z.string().optional(),
   status: z.enum(itemStatuses, { required_error: "Status is required." }),
   quantity: z.coerce.number().min(0, { message: "Quantity cannot be negative." }),
-  imageUrls: z.string().optional(), // Comma-separated URLs
+  imageUrls: z.string().optional(), 
   location: z.string().optional(),
 });
 
@@ -46,13 +48,15 @@ interface AddItemDialogProps {
   onOpenChange: (open: boolean) => void;
   currentItem?: InventoryItem | null;
   onSave: (data: InventoryItemFormValues, id?: string) => void;
+  defaultItemType?: InventoryItemType;
 }
 
-export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: AddItemDialogProps) {
+export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave, defaultItemType }: AddItemDialogProps) {
   const form = useForm<InventoryItemFormValues>({
     resolver: zodResolver(inventoryItemSchema),
     defaultValues: {
       name: "",
+      itemType: defaultItemType || 'equipment',
       description: "",
       status: 'available',
       quantity: 0,
@@ -66,6 +70,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
       if (currentItem) {
         form.reset({
           name: currentItem.name,
+          itemType: currentItem.itemType || defaultItemType || 'equipment',
           description: currentItem.description || "",
           status: currentItem.status,
           quantity: currentItem.quantity,
@@ -75,6 +80,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
       } else {
         form.reset({
           name: "",
+          itemType: defaultItemType || 'equipment',
           description: "",
           status: 'available',
           quantity: 0,
@@ -83,12 +89,12 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
         });
       }
     }
-  }, [isOpen, currentItem, form]);
+  }, [isOpen, currentItem, form, defaultItemType]);
 
-  const dialogTitle = currentItem ? "Edit Inventory Item" : "Add New Inventory Item";
-  const dialogDescriptionText = currentItem // Renamed variable to avoid conflict
-    ? "Update the details for this inventory item."
-    : "Fill in the details for the new inventory item.";
+  const dialogTitle = currentItem ? "Edit Item" : "Add New Item";
+  const dialogDescriptionText = currentItem
+    ? "Update the details for this item."
+    : "Fill in the details for the new item.";
   const submitButtonText = currentItem ? "Save Changes" : "Add Item";
 
   async function onSubmit(values: InventoryItemFormValues) {
@@ -100,7 +106,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
-          <DialogDescriptionComponent> {/* Use renamed import */}
+          <DialogDescriptionComponent>
             {dialogDescriptionText}
           </DialogDescriptionComponent>
         </DialogHeader>
@@ -113,12 +119,36 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
                 <FormItem>
                   <FormLabel>Item Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., CPR Manikin Adult" {...field} />
+                    <Input placeholder="e.g., CPR Manikin Adult / Sim Lab A" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="itemType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Item Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select item type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {itemTypes.map(type => (
+                        <SelectItem key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <FormField
               control={form.control}
               name="description"
@@ -181,7 +211,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
                   <FormLabel>Image URLs (Optional)</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Enter image URLs, separated by commas (e.g., https://url1.com/image.png, https://url2.com/image.jpg)" 
+                      placeholder="Enter image URLs, separated by commas..." 
                       className="resize-y min-h-[80px]"
                       {...field} 
                     />
