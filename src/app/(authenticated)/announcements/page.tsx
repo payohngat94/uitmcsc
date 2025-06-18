@@ -45,10 +45,10 @@ export default function AnnouncementsPage() {
 
 
   const fetchAnnouncements = async () => {
-    console.log("AnnouncementsPage: fetchAnnouncements called");
+    console.log("AnnouncementsPage: fetchAnnouncements called - ATTEMPTING TO CALL SERVER ACTION getAnnouncements()");
     setIsLoading(true);
     try {
-      const fetchedAnnouncements = await getAnnouncements();
+      const fetchedAnnouncements = await getAnnouncements(); // This calls the server action
       console.log("AnnouncementsPage: fetchedAnnouncements successfully, count:", fetchedAnnouncements.length);
       setAnnouncements(fetchedAnnouncements);
     } catch (error) {
@@ -161,6 +161,15 @@ export default function AnnouncementsPage() {
           
         return matchesSearch && matchesAudience;
       })
+      // Pinned items first, then by creation date descending for regular items
+      .sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        // Both are pinned or both are not pinned, sort by createdAt
+        const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt || 0).getTime();
+        const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt || 0).getTime();
+        return dateB - dateA; // Descending
+      });
   }, [announcements, searchTerm, selectedAudienceFilter]);
 
   const pinnedAnnouncements = filteredAnnouncements.filter(a => a.isPinned);

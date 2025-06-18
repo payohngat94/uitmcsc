@@ -91,6 +91,7 @@ export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedA
 
 
 export async function getAnnouncements(): Promise<Announcement[]> {
+  console.log("!!! SERVER ACTION: getAnnouncements CALLED !!!");
   console.log("getAnnouncements (server action): Attempting to fetch announcements from Firestore...");
   try {
     const pinnedQuery = query(
@@ -119,10 +120,12 @@ export async function getAnnouncements(): Promise<Announcement[]> {
       } else if (data.createdAt && typeof data.createdAt.seconds === 'number' && typeof data.createdAt.nanoseconds === 'number') {
         createdAtDate = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds).toDate();
       } else if (data.createdAt) {
+        // Attempt to parse if it's a string or number representation of a date
         const parsed = new Date(data.createdAt);
-        createdAtDate = isNaN(parsed.getTime()) ? new Date(0) : parsed; 
+        // If parsing results in an invalid date, default to a very old date or now
+        createdAtDate = isNaN(parsed.getTime()) ? new Date(0) : parsed; // Default to Epoch if invalid
       } else {
-        createdAtDate = new Date(0); 
+        createdAtDate = new Date(0); // Default to Epoch if undefined
       }
 
       let updatedAtDate;
@@ -132,9 +135,9 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         updatedAtDate = new Timestamp(data.updatedAt.seconds, data.updatedAt.nanoseconds).toDate();
       } else if (data.updatedAt) {
         const parsed = new Date(data.updatedAt);
-        updatedAtDate = isNaN(parsed.getTime()) ? createdAtDate : parsed; 
+        updatedAtDate = isNaN(parsed.getTime()) ? createdAtDate : parsed; // Default to createdAt if invalid
       } else {
-        updatedAtDate = createdAtDate; 
+        updatedAtDate = createdAtDate; // Default to createdAt if undefined
       }
 
       return {
@@ -143,10 +146,10 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         content: data.content || "",
         authorId: data.authorId || "unknown_author_id",
         authorName: data.authorName || "Unknown Author",
-        isPinned: data.isPinned === true, 
+        isPinned: data.isPinned === true, // Ensure boolean, default false if undefined/null
         audience: Array.isArray(data.audience) && data.audience.every(role => ['student', 'admin'].includes(role)) 
           ? data.audience as UserRole[] 
-          : ['student', 'admin'] as UserRole[], 
+          : ['student', 'admin'] as UserRole[], // Default audience
         createdAt: createdAtDate,
         updatedAt: updatedAtDate,
       };
@@ -155,21 +158,24 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     const pinnedAnnouncements = pinnedSnapshot.docs.map(transformDoc);
     const unpinnedAnnouncements = unpinnedSnapshot.docs.map(transformDoc);
     
-    console.log("getAnnouncements (server action): Announcements transformed successfully.");
+    console.log("getAnnouncements (server action): Announcements transformed successfully. Total:", pinnedAnnouncements.length + unpinnedAnnouncements.length);
     return [...pinnedAnnouncements, ...unpinnedAnnouncements];
 
   } catch (error) {
+    console.error("!!! SERVER ACTION: getAnnouncements ERROR CAUGHT !!!");
     console.error("Error fetching announcements from Firestore (inside catch block of getAnnouncements):");
     if (error instanceof Error) {
       console.error("Error Name:", error.name);
       console.error("Error Message:", error.message);
+      // Firestore errors often have a 'code' property
       if ((error as any).code) {
         console.error("Firebase Error Code:", (error as any).code);
       }
     } else {
-      console.error("Caught an error that is not an instance of Error:", error);
+      // If the error is not an instance of Error, log its type and value
+      console.error("Caught an error that is not an instance of Error. Type:", typeof error, "Value:", error);
     }
-    // Attempt to stringify the full error object to catch more details
+    // Attempt to stringify the full error object to catch more details, including potential links for index creation
     try {
       console.error("Full Error Object (Stringified):", JSON.stringify(error, Object.getOwnPropertyNames(error))); 
     } catch (stringifyError) {
