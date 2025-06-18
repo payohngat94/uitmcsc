@@ -40,7 +40,7 @@ import { Alert, AlertDescription as ShadCNAlertDescription, AlertTitle as ShadCN
 const itemStatuses: InventoryItemStatus[] = ['all', 'available', 'in-use', 'reserved', 'out-of-stock', 'maintenance'];
 
 // IMPORTANT: Replace this with your actual Google Form link for booking/requesting inventory items.
-const INVENTORY_BOOKING_FORM_URL = "YOUR_GOOGLE_FORM_LINK_HERE";
+const INVENTORY_BOOKING_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJBYKhEOf7yfTxBAv0MXLqJo0xE0KQ2VkldnQA6BtyKM-soA/viewform";
 
 export default function InventoryPage() {
   const { currentUser } = useAuth();
@@ -291,6 +291,7 @@ export default function InventoryPage() {
           <ShadCNAlertDescription>
             Please update the `INVENTORY_BOOKING_FORM_URL` placeholder in the code 
             (`src/app/(authenticated)/inventory/page.tsx`) with your actual Google Form link for item bookings.
+            This constant seems to be still set to its placeholder value.
           </ShadCNAlertDescription>
         </Alert>
       )}
