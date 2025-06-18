@@ -1,4 +1,5 @@
 
+
 export type User = {
   id: string;
   email: string;
@@ -7,12 +8,13 @@ export type User = {
 };
 
 export type LearningMaterialCategory = "Early Clinical Exposure" | "Focused Skill Station" | "Physical Examination" | "Procedural Skills" | "Communication Skills";
+export type LearningMaterialType = 'video' | 'document' | 'slides';
 
 export type LearningMaterial = {
   id: string;
   title: string;
   category: LearningMaterialCategory;
-  type: 'video' | 'document' | 'slides';
+  type: LearningMaterialType;
   url: string; // YouTube embed URL or path to PDF/slides
   description?: string;
   thumbnailUrl?: string; // For videos or a preview image
