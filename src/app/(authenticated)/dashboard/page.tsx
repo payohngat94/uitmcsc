@@ -29,7 +29,7 @@ export default function DashboardPage() {
           </div>
           <div className="hidden md:block mt-6 md:mt-0">
             <Image
-              src="https://drive.google.com/file/d/1J9uHRNgzX2jey_XGLQ9Bes-mUXZ28cNx/view?usp=sharing"
+              src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/s9jx9215vtmm/CSC_Header.png"
               alt="UiTM Sim Centre Logo"
               width={400}
               height={100}
