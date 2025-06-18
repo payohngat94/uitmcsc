@@ -114,8 +114,6 @@ export async function getAnnouncements(): Promise<Announcement[]> {
       where('isPinned', '==', true),
       orderBy('createdAt', 'desc')
     );
-    // Changed '!=' to '==' for unpinned query for robustness.
-    // This is generally a better practice and might simplify index requirements.
     const unpinnedQuery = query(
       announcementsCollectionRef,
       where('isPinned', '==', false), 
@@ -176,13 +174,11 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 
   } catch (error: any) {
     console.error("SERVER ACTION: getAnnouncements - ERROR:", error.name, error.message, error.code);
-    console.error("Original error object (raw):", error);
-    // Re-throw the original error if it's an Error instance for better client-side details
     if (error instanceof Error) {
-      throw error; 
+        throw error; 
     }
-    // Fallback for non-Error objects
-    throw new Error(`Failed to fetch announcements. Original error: ${error.message || 'Unknown error'}`);
+    const errorMessage = `Failed to fetch announcements. Original error: ${error?.name} - ${error?.message} (Code: ${error?.code}).`;
+    throw new Error(errorMessage);
   }
 }
 
@@ -241,10 +237,12 @@ export async function deleteAnnouncement(id: string): Promise<void> {
 
 // Inventory Service
 const inventoryCollectionRef = collection(db, 'inventoryItems');
-export type InventoryItemData = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'> & {
+export type InventoryItemData = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt' | 'imageUrls'> & {
+  imageUrls?: string[]; // Ensure this is an array for Firestore
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
+
 
 export async function getInventoryItems(): Promise<InventoryItem[]> {
   try {
@@ -255,6 +253,7 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
       return {
         id: docSnapshot.id,
         ...data,
+        imageUrls: data.imageUrls || [], // Ensure imageUrls is always an array
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
       } as InventoryItem;
@@ -272,6 +271,7 @@ export async function addInventoryItem(itemData: Omit<InventoryItemData, 'create
   try {
     const docRef = await addDoc(inventoryCollectionRef, {
       ...itemData,
+      imageUrls: itemData.imageUrls || [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -313,4 +313,3 @@ export async function deleteInventoryItem(id: string): Promise<void> {
     throw new Error("Failed to delete inventory item.");
   }
 }
-    

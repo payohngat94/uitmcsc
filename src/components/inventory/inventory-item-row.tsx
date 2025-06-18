@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { InventoryItem } from "@/lib/types";
@@ -12,14 +13,15 @@ import { useState } from "react";
 
 interface InventoryItemRowProps {
   item: InventoryItem;
+  onViewDetails?: (item: InventoryItem) => void;
 }
 
 const statusVariant: Record<InventoryItem['status'], "default" | "secondary" | "destructive" | "outline"> = {
-  available: "default", // Green badge
-  "in-use": "secondary", // Blue/Gray badge
-  reserved: "outline", // Yellow/Orange badge (using outline for now)
-  "out-of-stock": "destructive", // Red badge
-  maintenance: "destructive", // Red badge
+  available: "default", 
+  "in-use": "secondary", 
+  reserved: "outline", 
+  "out-of-stock": "destructive", 
+  maintenance: "destructive", 
 };
 
 const statusColors: Record<InventoryItem['status'], string> = {
@@ -30,7 +32,7 @@ const statusColors: Record<InventoryItem['status'], string> = {
   maintenance: "bg-gray-500 hover:bg-gray-600",
 };
 
-export function InventoryItemRow({ item }: InventoryItemRowProps) {
+export function InventoryItemRow({ item, onViewDetails }: InventoryItemRowProps) {
   const [quantity, setQuantity] = useState(1);
 
   const handleRequest = () => {
@@ -43,15 +45,23 @@ export function InventoryItemRow({ item }: InventoryItemRowProps) {
       <TableCell>
         <div className="flex items-center gap-3">
           <Image
-            src={item.imageUrl || "https://placehold.co/40x40.png"}
+            src={item.imageUrls?.[0] || "https://placehold.co/40x40.png"}
             alt={item.name}
             width={40}
             height={40}
             className="rounded-md object-cover"
-            data-ai-hint="medical equipment"
+            data-ai-hint="medical equipment thumbnail"
           />
           <div>
-            <div className="font-medium">{item.name}</div>
+            <div 
+              className="font-medium hover:underline cursor-pointer" 
+              onClick={() => onViewDetails?.(item)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onViewDetails?.(item);}}
+              role="button"
+              tabIndex={0}
+            >
+              {item.name}
+            </div>
             {item.location && <div className="text-xs text-muted-foreground">{item.location}</div>}
           </div>
         </div>
@@ -83,7 +93,7 @@ export function InventoryItemRow({ item }: InventoryItemRowProps) {
             <div className="space-y-4 py-4">
               <div className="flex items-center gap-3">
                 <Image
-                  src={item.imageUrl || "https://placehold.co/80x80.png"}
+                  src={item.imageUrls?.[0] || "https://placehold.co/80x80.png"}
                   alt={item.name}
                   width={80}
                   height={80}

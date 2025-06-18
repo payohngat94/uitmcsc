@@ -34,7 +34,7 @@ const inventoryItemSchema = z.object({
   description: z.string().optional(),
   status: z.enum(itemStatuses, { required_error: "Status is required." }),
   quantity: z.coerce.number().min(0, { message: "Quantity cannot be negative." }),
-  imageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  imageUrls: z.string().optional(), // Comma-separated URLs
   location: z.string().optional(),
 });
 
@@ -43,7 +43,7 @@ export type InventoryItemFormValues = z.infer<typeof inventoryItemSchema>;
 interface AddItemDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  currentItem?: InventoryItem | null; // For editing, not used initially
+  currentItem?: InventoryItem | null;
   onSave: (data: InventoryItemFormValues, id?: string) => void;
 }
 
@@ -55,7 +55,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
       description: "",
       status: 'available',
       quantity: 0,
-      imageUrl: "",
+      imageUrls: "",
       location: "",
     },
   });
@@ -68,7 +68,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
           description: currentItem.description || "",
           status: currentItem.status,
           quantity: currentItem.quantity,
-          imageUrl: currentItem.imageUrl || "",
+          imageUrls: currentItem.imageUrls?.join(', ') || "",
           location: currentItem.location || "",
         });
       } else {
@@ -77,7 +77,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
           description: "",
           status: 'available',
           quantity: 0,
-          imageUrl: "",
+          imageUrls: "",
           location: "",
         });
       }
@@ -174,13 +174,20 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
             </div>
             <FormField
               control={form.control}
-              name="imageUrl"
+              name="imageUrls"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL (Optional)</FormLabel>
+                  <FormLabel>Image URLs (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://example.com/image.png" {...field} />
+                    <Textarea 
+                      placeholder="Enter image URLs, separated by commas (e.g., https://url1.com/image.png, https://url2.com/image.jpg)" 
+                      className="resize-y min-h-[80px]"
+                      {...field} 
+                    />
                   </FormControl>
+                  <FormDescription>
+                    Provide one or more image URLs, separated by commas.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

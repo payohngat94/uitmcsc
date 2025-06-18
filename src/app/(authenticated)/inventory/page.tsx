@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { InventoryItemRow } from "@/components/inventory/inventory-item-row";
+import { InventoryItemDetailDialog } from "@/components/inventory/inventory-item-detail-dialog";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const itemStatuses: InventoryItemStatus[] = ['all', 'available', 'in-use', 'reserved', 'out-of-stock', 'maintenance'];
 
-
 export default function InventoryPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -35,6 +35,8 @@ export default function InventoryPage() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<InventoryItemStatus | "all">("all");
 
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [selectedItemForDetail, setSelectedItemForDetail] = useState<InventoryItem | null>(null);
   // const [itemToEdit, setItemToEdit] = useState<InventoryItem | null>(null); // For future edit functionality
   // const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null); // For future delete functionality
 
@@ -60,8 +62,13 @@ export default function InventoryPage() {
   }, []);
 
   const handleOpenAddItemDialog = () => {
-    // setItemToEdit(null); // For edit functionality
+    // setItemToEdit(null);
     setIsAddItemDialogOpen(true);
+  };
+
+  const handleOpenDetailDialog = (item: InventoryItem) => {
+    setSelectedItemForDetail(item);
+    setIsDetailDialogOpen(true);
   };
 
   const handleSaveItem = async (formData: InventoryItemFormValues, id?: string) => {
@@ -70,12 +77,18 @@ export default function InventoryPage() {
       return;
     }
 
+    const urlsArray = formData.imageUrls 
+      ? formData.imageUrls.split(',').map(url => url.trim()).filter(url => {
+          try { new URL(url); return true; } catch { return false; }
+        }) 
+      : [];
+
     const itemDataForDb = {
       name: formData.name,
       description: formData.description,
       status: formData.status,
       quantity: formData.quantity,
-      imageUrl: formData.imageUrl?.trim() === '' ? undefined : formData.imageUrl,
+      imageUrls: urlsArray,
       location: formData.location,
     };
 
@@ -132,6 +145,12 @@ export default function InventoryPage() {
           onSave={handleSaveItem}
         />
       )}
+
+      <InventoryItemDetailDialog
+        isOpen={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+        item={selectedItemForDetail}
+      />
       
       <Card className="shadow-lg">
         <CardHeader>
@@ -139,7 +158,7 @@ export default function InventoryPage() {
             <div>
               <CardTitle className="text-2xl">Available Equipment</CardTitle>
               <CardDescription>
-                Find the tools you need for your clinical practice.
+                Find the tools you need for your clinical practice. Click item name for details.
               </CardDescription>
             </div>
             {currentUser?.role === 'admin' && (
@@ -206,6 +225,7 @@ export default function InventoryPage() {
                     <InventoryItemRow 
                       key={item.id} 
                       item={item} 
+                      onViewDetails={handleOpenDetailDialog}
                       // onEdit={currentUser?.role === 'admin' ? () => {} : undefined} // Placeholder for edit
                       // onDelete={currentUser?.role === 'admin' ? () => {} : undefined} // Placeholder for delete
                     />
