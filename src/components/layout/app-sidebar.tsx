@@ -23,11 +23,12 @@ import {
   Archive,
   Megaphone,
   LogOut,
-  Settings, // Keep settings icon for collapse/expand visual
-  GraduationCap
+  Settings, 
+  GraduationCap,
+  Info // Added Info icon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/auth-context"; // Import useAuth
+import { useAuth } from "@/contexts/auth-context"; 
 import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
@@ -36,12 +37,13 @@ const navItems = [
   { href: "/bookings", icon: CalendarDays, label: "Bookings" },
   { href: "/inventory", icon: Archive, label: "Inventory" },
   { href: "/announcements", icon: Megaphone, label: "Announcements" },
+  { href: "/about-us", icon: Info, label: "About Us" }, // Added About Us link
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { open, setOpen, isMobile } = useSidebar();
-  const { currentUser, logout } = useAuth(); // Get currentUser and logout from context
+  const { currentUser, logout } = useAuth(); 
   const { toast } = useToast();
 
   const handleLogout = async () => {
