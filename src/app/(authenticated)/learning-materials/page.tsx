@@ -4,65 +4,89 @@
 import { useState, useEffect, useMemo } from "react";
 import { MaterialCard } from "@/components/learning-materials/material-card";
 import { AddMaterialDialog, type AddMaterialFormValues } from "@/components/learning-materials/add-material-dialog";
+import { AddCategoryDialog } from "@/components/learning-materials/add-category-dialog"; // New dialog
 import { CategoryCard } from "@/components/learning-materials/category-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, BookOpen, PlusCircle, ArrowLeft, Layers, Tag, ListX } from "lucide-react";
-import type { LearningMaterial, LearningMaterialCategory, LearningMaterialType } from "@/lib/types";
+import { Search, Filter, BookOpen, PlusCircle, ArrowLeft, Layers, Tag, ListX, LayoutGrid } from "lucide-react";
+import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialType, LearningMaterialCategoryName } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
-import { getLearningMaterials, addLearningMaterial, updateLearningMaterial, deleteLearningMaterial } from "@/lib/firebase/firestore-service";
+import { getLearningMaterials, addLearningMaterial, updateLearningMaterial, deleteLearningMaterial, getLearningMaterialCategories } from "@/lib/firebase/firestore-service"; // Added getLearningMaterialCategories
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card as ShadCNCard, CardContent as ShadCNCardContent, CardHeader as ShadCNCardHeader, CardFooter as ShadCNCardFooter } from "@/components/ui/card";
 
-const categories: LearningMaterialCategory[] = [
-  "Early Clinical Exposure",
-  "Focused Skill Station",
-  "Physical Examination",
-  "Procedural Skills",
-  "Communication Skills",
-];
-
+// Removed hardcoded categories array
 const materialTypes: LearningMaterialType[] = ["video", "document", "slides"];
 
 export default function LearningMaterialsPage() {
   const [materials, setMaterials] = useState<LearningMaterial[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [fetchedCategories, setFetchedCategories] = useState<LearningMaterialCategoryDoc[]>([]);
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState(true);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMaterialType, setSelectedMaterialType] = useState<string>("all");
-  const [selectedCategoryView, setSelectedCategoryView] = useState<LearningMaterialCategory | null>(null);
+  const [selectedCategoryView, setSelectedCategoryView] = useState<LearningMaterialCategoryName | null>(null);
   const [selectedTag, setSelectedTag] = useState<string>("");
 
   const { toast } = useToast();
   const { currentUser } = useAuth();
 
   const [isMaterialDialogOpen, setIsMaterialDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false); // State for new dialog
   const [materialToEdit, setMaterialToEdit] = useState<LearningMaterial | null>(null);
 
-  const fetchMaterials = async () => {
-    setIsLoading(true);
+  const fetchAllData = async () => {
+    setIsLoadingMaterials(true);
+    setIsLoadingCategories(true);
     try {
-      const fetchedMaterials = await getLearningMaterials();
-      setMaterials(fetchedMaterials);
+      const [fetchedMaterialsData, fetchedCategoriesData] = await Promise.all([
+        getLearningMaterials(),
+        getLearningMaterialCategories()
+      ]);
+      setMaterials(fetchedMaterialsData);
+      setFetchedCategories(fetchedCategoriesData);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error fetching materials",
-        description: (error instanceof Error && error.message) || "Could not load learning materials.",
+        title: "Error fetching data",
+        description: (error instanceof Error && error.message) || "Could not load learning materials or categories.",
       });
     } finally {
-      setIsLoading(false);
+      setIsLoadingMaterials(false);
+      setIsLoadingCategories(false);
     }
   };
+  
+  const fetchJustCategories = async () => {
+    setIsLoadingCategories(true);
+    try {
+      const fetchedCategoriesData = await getLearningMaterialCategories();
+      setFetchedCategories(fetchedCategoriesData);
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Error fetching categories",
+        description: (error instanceof Error && error.message) || "Could not load categories.",
+      });
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  }
+
 
   useEffect(() => {
-    fetchMaterials();
+    fetchAllData();
   }, []);
 
-  const handleOpenAddDialog = () => {
+  const handleOpenAddMaterialDialog = () => {
     setMaterialToEdit(null);
     setIsMaterialDialogOpen(true);
+  };
+  
+  const handleOpenAddCategoryDialog = () => {
+    setIsCategoryDialogOpen(true);
   };
 
   const handleOpenEditDialog = (material: LearningMaterial) => {
@@ -94,7 +118,7 @@ export default function LearningMaterialsPage() {
         await addLearningMaterial(materialDataForDb);
         toast({ title: "Material Added", description: `"${materialDataForDb.title}" added.` });
       }
-      fetchMaterials();
+      fetchAllData(); // Refresh materials (and categories in case, though not directly modified here)
     } catch (error) {
       toast({
         variant: "destructive",
@@ -112,8 +136,8 @@ export default function LearningMaterialsPage() {
     if (!materialToDelete) return;
     try {
       await deleteLearningMaterial(id);
-      toast({ variant: "destructive", title: "Material Deleted", description: `"${materialToDelete.title}" removed.` });
-      fetchMaterials();
+      toast({ variant: "default", title: "Material Deleted", description: `"${materialToDelete.title}" removed.` });
+      fetchAllData(); // Refresh materials
     } catch (error) {
       toast({ variant: "destructive", title: "Error Deleting Material", description: (error as Error).message || "Could not delete." });
     }
@@ -169,21 +193,20 @@ export default function LearningMaterialsPage() {
   }, [materialsBySelectedCategory, searchTerm, selectedMaterialType, selectedCategoryView, selectedTag]);
 
   const categoryCounts = useMemo(() => {
-    const counts: Record<LearningMaterialCategory, number> = categories.reduce((acc, cat) => {
-      acc[cat] = 0;
+    const counts: Record<LearningMaterialCategoryName, number> = (fetchedCategories || []).reduce((acc, catDoc) => {
+      acc[catDoc.name] = 0;
       return acc;
-    }, {} as Record<LearningMaterialCategory, number>);
+    }, {} as Record<LearningMaterialCategoryName, number>);
     materials.forEach(material => {
       if (counts[material.category] !== undefined) {
         counts[material.category]++;
       }
     });
     return counts;
-  }, [materials]);
+  }, [materials, fetchedCategories]);
 
-  const handleCategorySelect = (category: LearningMaterialCategory) => {
-    setSelectedCategoryView(category);
-    // Filters (searchTerm, selectedTag, selectedMaterialType) persist
+  const handleCategorySelect = (categoryName: LearningMaterialCategoryName) => {
+    setSelectedCategoryView(categoryName);
   };
 
   const handleClearFiltersAndShowCategories = () => {
@@ -203,6 +226,8 @@ export default function LearningMaterialsPage() {
     return "Explore a comprehensive library by category or search all materials using the filters below.";
   };
   
+  const isLoading = isLoadingMaterials || isLoadingCategories;
+
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -211,9 +236,10 @@ export default function LearningMaterialsPage() {
             <Skeleton className="h-9 w-72 mb-2" />
             <Skeleton className="h-5 w-96" />
           </div>
-          {currentUser?.role === 'admin' && <Skeleton className="h-10 w-48" />}
+          {currentUser?.role === 'admin' && <div className="flex gap-2"><Skeleton className="h-10 w-48" /><Skeleton className="h-10 w-40" /></div>}
         </div>
-        <Skeleton className="h-12 w-full rounded-lg" /> 
+        <Skeleton className="h-12 w-full rounded-lg mb-4" /> 
+        <Skeleton className="h-12 w-full rounded-lg" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <ShadCNCard key={i} className="flex flex-col h-full">
@@ -247,19 +273,34 @@ export default function LearningMaterialsPage() {
           </p>
         </div>
         {currentUser?.role === 'admin' && (
-          <Button onClick={handleOpenAddDialog} className="w-full sm:w-auto">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add New Material
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button onClick={handleOpenAddCategoryDialog} className="w-full sm:w-auto" variant="outline">
+              <LayoutGrid className="mr-2 h-5 w-5" /> Add Category
+            </Button>
+            <Button onClick={handleOpenAddMaterialDialog} className="w-full sm:w-auto">
+              <PlusCircle className="mr-2 h-5 w-5" /> Add Material
+            </Button>
+          </div>
         )}
       </div>
 
       {currentUser?.role === 'admin' && (
-        <AddMaterialDialog
-          isOpen={isMaterialDialogOpen}
-          onOpenChange={setIsMaterialDialogOpen}
-          currentMaterial={materialToEdit}
-          onSave={handleSaveMaterial}
-        />
+        <>
+          <AddMaterialDialog
+            isOpen={isMaterialDialogOpen}
+            onOpenChange={setIsMaterialDialogOpen}
+            currentMaterial={materialToEdit}
+            onSave={handleSaveMaterial}
+            availableCategories={fetchedCategories}
+          />
+          <AddCategoryDialog
+            isOpen={isCategoryDialogOpen}
+            onOpenChange={setIsCategoryDialogOpen}
+            onCategoryAdded={() => {
+              fetchJustCategories(); // Re-fetch categories after adding a new one
+            }}
+          />
+        </>
       )}
 
       <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm space-y-4">
@@ -312,7 +353,7 @@ export default function LearningMaterialsPage() {
       )}
 
       {/* Main Content Area */}
-      {isLoading ? (
+      {isLoadingMaterials ? ( // Keep material loading skeleton separate if categories load faster
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-72 w-full rounded-lg" />)}
         </div>
@@ -362,14 +403,18 @@ export default function LearningMaterialsPage() {
         )
       ) : (
         // Viewing category list
-        categories.length > 0 ? (
+        isLoadingCategories ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, i) => <Skeleton key={`cat_skel_${i}`} className="h-48 w-full rounded-lg" />)}
+            </div>
+        ) : fetchedCategories.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categories.map(category => (
+            {fetchedCategories.map(categoryDoc => (
               <CategoryCard
-                key={category}
-                categoryName={category}
-                materialCount={categoryCounts[category] || 0}
-                onClick={() => handleCategorySelect(category)}
+                key={categoryDoc.id}
+                categoryName={categoryDoc.name}
+                materialCount={categoryCounts[categoryDoc.name] || 0}
+                onClick={() => handleCategorySelect(categoryDoc.name)}
               />
             ))}
           </div>
@@ -378,7 +423,7 @@ export default function LearningMaterialsPage() {
             <Layers className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-2 text-xl font-semibold">No Categories Defined</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Contact an administrator to set up learning material categories.
+              Admins can add new categories using the "Add Category" button.
             </p>
           </div>
         )

@@ -15,13 +15,22 @@ export type User = {
   emailVerified: boolean;
 };
 
-export type LearningMaterialCategory = "Early Clinical Exposure" | "Focused Skill Station" | "Physical Examination" | "Procedural Skills" | "Communication Skills";
+// export type LearningMaterialCategory = "Early Clinical Exposure" | "Focused Skill Station" | "Physical Examination" | "Procedural Skills" | "Communication Skills"; // OLD
+export type LearningMaterialCategoryName = string; // NEW - category names are now dynamic strings
+
+export type LearningMaterialCategoryDoc = {
+  id: string;
+  name: LearningMaterialCategoryName;
+  createdAt?: Timestamp | Date;
+  // could add description, icon, color etc. in future
+};
+
 export type LearningMaterialType = 'video' | 'document' | 'slides';
 
 export type LearningMaterial = {
   id: string; // Firestore document ID
   title: string;
-  category: LearningMaterialCategory;
+  category: LearningMaterialCategoryName; // NEW - uses the dynamic string name
   type: LearningMaterialType;
   url: string;
   description?: string;
@@ -50,7 +59,7 @@ export type InventoryItem = {
   description?: string;
   status: InventoryItemStatus;
   quantity: number;
-  imageUrls?: string[]; // Changed from imageUrl to imageUrls
+  imageUrls?: string[];
   location?: string;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;

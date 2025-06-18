@@ -16,7 +16,62 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import type { LearningMaterial, Announcement, UserRole, InventoryItem, InventoryItemStatus } from '@/lib/types';
+import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus } from '@/lib/types';
+
+// Learning Material Categories Service
+const learningMaterialCategoriesCollectionRef = collection(db, 'learningMaterialCategories');
+
+export async function getLearningMaterialCategories(): Promise<LearningMaterialCategoryDoc[]> {
+  console.log("SERVER ACTION: getLearningMaterialCategories - Entry");
+  try {
+    const q = query(learningMaterialCategoriesCollectionRef, orderBy('name', 'asc'));
+    const querySnapshot = await getDocs(q);
+    const categories = querySnapshot.docs.map(docSnapshot => {
+      const data = docSnapshot.data();
+      return {
+        id: docSnapshot.id,
+        name: data.name as LearningMaterialCategoryName,
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+      } as LearningMaterialCategoryDoc;
+    });
+    console.log("SERVER ACTION: getLearningMaterialCategories - Success, Count:", categories.length);
+    return categories;
+  } catch (error: any) {
+    console.error("SERVER ACTION: getLearningMaterialCategories - ERROR:", error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to fetch learning material categories. Original error: ${error.message || 'Unknown error'}`);
+  }
+}
+
+export async function addLearningMaterialCategory(categoryName: LearningMaterialCategoryName): Promise<string> {
+  try {
+    // Case-insensitive check for duplicates
+    const allCategoriesSnapshot = await getDocs(learningMaterialCategoriesCollectionRef);
+    const lowerCaseCategoryName = categoryName.toLowerCase();
+    const existingCategory = allCategoriesSnapshot.docs.find(
+      doc => (doc.data().name as string).toLowerCase() === lowerCaseCategoryName
+    );
+
+    if (existingCategory) {
+      throw new Error(`Category "${categoryName}" already exists.`);
+    }
+
+    const docRef = await addDoc(learningMaterialCategoriesCollectionRef, {
+      name: categoryName,
+      createdAt: serverTimestamp(),
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding learning material category: ", error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to add learning material category: ${(error as Error).message || 'Unknown error'}`);
+  }
+}
+
 
 // Learning Materials Service
 const learningMaterialsCollectionRef = collection(db, 'learningMaterials');
@@ -35,6 +90,7 @@ export async function getLearningMaterials(): Promise<LearningMaterial[]> {
       return {
         id: docSnapshot.id,
         ...data,
+        category: data.category as LearningMaterialCategoryName,
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
       } as LearningMaterial;
@@ -43,11 +99,10 @@ export async function getLearningMaterials(): Promise<LearningMaterial[]> {
     return materials;
   } catch (error: any) {
     console.error("SERVER ACTION: getLearningMaterials - ERROR:", error.name, error.message, error.code);
-    console.error("Original error object (raw):", error);
     if (error instanceof Error) {
-      throw error; 
+      throw error;
     }
-    throw new Error(`Failed to fetch learning materials. Original error: ${error.message || 'Unknown error'}`);
+    throw new Error(`Failed to fetch learning materials. Original error: ${(error as Error).message || 'Unknown error'}`);
   }
 }
 
@@ -109,23 +164,10 @@ export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedA
 export async function getAnnouncements(): Promise<Announcement[]> {
   console.log("SERVER ACTION: getAnnouncements - Entry");
   try {
-    const pinnedQuery = query(
-      announcementsCollectionRef,
-      where('isPinned', '==', true),
-      orderBy('createdAt', 'desc')
-    );
-    const unpinnedQuery = query(
-      announcementsCollectionRef,
-      where('isPinned', '==', false), 
-      orderBy('createdAt', 'desc')
-    );
+    const q = query(announcementsCollectionRef, orderBy('isPinned', 'desc'), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
     
-    const [pinnedSnapshot, unpinnedSnapshot] = await Promise.all([
-      getDocs(pinnedQuery),
-      getDocs(unpinnedQuery),
-    ]);
-
-    const transformDoc = (docSnapshot: import('firebase/firestore').QueryDocumentSnapshot): Announcement => {
+    const announcements = querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
       let createdAtDate;
       if (data.createdAt instanceof Timestamp) {
@@ -164,21 +206,17 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         createdAt: createdAtDate,
         updatedAt: updatedAtDate,
       };
-    };
-
-    const pinnedAnnouncements = pinnedSnapshot.docs.map(transformDoc);
-    const unpinnedAnnouncements = unpinnedSnapshot.docs.map(transformDoc);
+    });
     
-    console.log("SERVER ACTION: getAnnouncements - Success, Count:", pinnedAnnouncements.length + unpinnedAnnouncements.length);
-    return [...pinnedAnnouncements, ...unpinnedAnnouncements];
+    console.log("SERVER ACTION: getAnnouncements - Success, Count:", announcements.length);
+    return announcements;
 
   } catch (error: any) {
     console.error("SERVER ACTION: getAnnouncements - ERROR:", error.name, error.message, error.code);
     if (error instanceof Error) {
         throw error; 
     }
-    const errorMessage = `Failed to fetch announcements. Original error: ${error?.name} - ${error?.message} (Code: ${error?.code}).`;
-    throw new Error(errorMessage);
+    throw new Error(`Failed to fetch announcements. Original error: ${(error as Error)?.message || 'Unknown Firebase error'}`);
   }
 }
 
@@ -238,7 +276,7 @@ export async function deleteAnnouncement(id: string): Promise<void> {
 // Inventory Service
 const inventoryCollectionRef = collection(db, 'inventoryItems');
 export type InventoryItemData = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt' | 'imageUrls'> & {
-  imageUrls?: string[]; // Ensure this is an array for Firestore
+  imageUrls?: string[]; 
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
@@ -253,7 +291,7 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
       return {
         id: docSnapshot.id,
         ...data,
-        imageUrls: data.imageUrls || [], // Ensure imageUrls is always an array
+        imageUrls: data.imageUrls || [], 
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
       } as InventoryItem;

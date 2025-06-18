@@ -25,20 +25,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { LearningMaterial, LearningMaterialCategory, LearningMaterialType } from "@/lib/types";
+import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialType, LearningMaterialCategoryName } from "@/lib/types";
 
-const categories: LearningMaterialCategory[] = [
-  "Early Clinical Exposure",
-  "Focused Skill Station",
-  "Physical Examination",
-  "Procedural Skills",
-  "Communication Skills",
-];
+// const categories: LearningMaterialCategory[] = [ // Removed hardcoded categories
+//   "Early Clinical Exposure",
+//   "Focused Skill Station",
+//   "Physical Examination",
+//   "Procedural Skills",
+//   "Communication Skills",
+// ];
 const materialTypes: LearningMaterialType[] = ["video", "document", "slides"];
 
 const addMaterialSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
-  category: z.enum(categories, { required_error: "Category is required." }),
+  category: z.string().min(1, { message: "Category is required." }), // Changed from z.enum
   type: z.enum(materialTypes, { required_error: "Type is required."}),
   url: z.string().url({ message: "Please enter a valid URL." }),
   description: z.string().optional(),
@@ -53,17 +53,20 @@ interface AddMaterialDialogProps {
   onOpenChange: (open: boolean) => void;
   currentMaterial?: LearningMaterial | null;
   onSave: (data: AddMaterialFormValues, id?: string) => void;
+  availableCategories: LearningMaterialCategoryDoc[]; // Added prop for dynamic categories
 }
 
-export function AddMaterialDialog({ isOpen, onOpenChange, currentMaterial, onSave }: AddMaterialDialogProps) {
+export function AddMaterialDialog({ isOpen, onOpenChange, currentMaterial, onSave, availableCategories }: AddMaterialDialogProps) {
   const form = useForm<AddMaterialFormValues>({
     resolver: zodResolver(addMaterialSchema),
     defaultValues: {
       title: "",
+      category: undefined, // Ensure category is undefined initially if no currentMaterial
       description: "",
       url: "",
       thumbnailUrl: "",
       specialties: "",
+      type: undefined,
     },
   });
 
@@ -72,6 +75,7 @@ export function AddMaterialDialog({ isOpen, onOpenChange, currentMaterial, onSav
       if (currentMaterial) {
         form.reset({
           ...currentMaterial,
+          category: currentMaterial.category as LearningMaterialCategoryName, // Ensure type compatibility
           specialties: currentMaterial.specialties?.join(', ') || "",
         });
       } else {
@@ -136,8 +140,9 @@ export function AddMaterialDialog({ isOpen, onOpenChange, currentMaterial, onSav
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map(cat => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        {availableCategories.length === 0 && <SelectItem value="loading" disabled>Loading categories...</SelectItem>}
+                        {availableCategories.map(catDoc => (
+                          <SelectItem key={catDoc.id} value={catDoc.name}>{catDoc.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -238,4 +243,3 @@ export function AddMaterialDialog({ isOpen, onOpenChange, currentMaterial, onSav
     </Dialog>
   );
 }
-
