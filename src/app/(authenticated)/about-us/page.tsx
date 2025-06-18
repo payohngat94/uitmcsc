@@ -1,9 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { CheckSquare, Users, BookOpen, Lightbulb, Target, UsersRound } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 
 export default function AboutUsPage() {
   const keyObjectives = [
@@ -32,14 +30,14 @@ export default function AboutUsPage() {
   return (
     <div className="space-y-8">
       <Card className="shadow-lg overflow-hidden">
-        <CardHeader className="bg-primary/10 p-8 text-center">
-          <div className="relative w-full h-32 md:h-40 max-w-3xl mx-auto mb-4">
+        <CardHeader className="bg-card p-0 text-center"> {/* Changed background to white and removed padding */}
+          <div className="relative w-full aspect-[4/1]"> {/* Ensured full width and 4:1 aspect ratio for image container */}
             <Image
               src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/s9jx9215vtmm/CSC_Header.png"
               alt="UiTM CSC Banner"
               fill
               priority
-              className="object-contain"
+              className="object-contain" // Image will fit within the container, preserving aspect ratio
               data-ai-hint="CSC banner"
             />
           </div>
