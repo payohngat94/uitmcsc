@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { Youtube, FileText, Presentation, ExternalLink, Trash2, Tag } from "lucide-react";
+import { Youtube, FileText, Presentation, ExternalLink, Trash2, Tag, Pencil } from "lucide-react";
 import Link from "next/link";
 import {
   AlertDialog,
@@ -24,6 +24,7 @@ import { useState } from "react";
 interface MaterialCardProps {
   material: LearningMaterial;
   onDelete: (id: string) => void;
+  onEdit: (material: LearningMaterial) => void;
 }
 
 const categoryColors: Record<LearningMaterial['category'], string> = {
@@ -34,7 +35,7 @@ const categoryColors: Record<LearningMaterial['category'], string> = {
   "Communication Skills": "bg-pink-100 text-pink-700",
 };
 
-export function MaterialCard({ material, onDelete }: MaterialCardProps) {
+export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) {
   const Icon = material.type === 'video' ? Youtube : material.type === 'document' ? FileText : Presentation;
   const aiHint = material.type === 'video' ? "medical video" : material.type === 'document' ? "medical document" : "medical presentation";
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -86,6 +87,9 @@ export function MaterialCard({ material, onDelete }: MaterialCardProps) {
             <Link href={material.url} target="_blank" rel="noopener noreferrer">
               View <ExternalLink className="ml-1.5 h-4 w-4" />
             </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => onEdit(material)}>
+            <Pencil className="h-4 w-4" />
           </Button>
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogTrigger asChild>

@@ -4,10 +4,11 @@
 import { useState, useEffect } from "react";
 import { mockLearningMaterials } from "@/lib/mock-data";
 import { MaterialCard } from "@/components/learning-materials/material-card";
-import { AddMaterialDialog } from "@/components/learning-materials/add-material-dialog";
+import { AddMaterialDialog, type AddMaterialFormValues } from "@/components/learning-materials/add-material-dialog";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, BookOpen } from "lucide-react";
+import { Search, Filter, BookOpen, PlusCircle } from "lucide-react";
 import type { LearningMaterial, LearningMaterialCategory, LearningMaterialType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,16 +29,55 @@ export default function LearningMaterialsPage() {
   const [selectedType, setSelectedType] = useState<string>("all");
   const { toast } = useToast();
 
-  const handleAddNewMaterial = (newMaterialData: Omit<LearningMaterial, 'id'>) => {
-    const newMaterial: LearningMaterial = {
-      ...newMaterialData,
-      id: `lm${Date.now()}`, 
+  const [isMaterialDialogOpen, setIsMaterialDialogOpen] = useState(false);
+  const [materialToEdit, setMaterialToEdit] = useState<LearningMaterial | null>(null);
+
+  const handleOpenAddDialog = () => {
+    setMaterialToEdit(null);
+    setIsMaterialDialogOpen(true);
+  };
+
+  const handleOpenEditDialog = (material: LearningMaterial) => {
+    setMaterialToEdit(material);
+    setIsMaterialDialogOpen(true);
+  };
+
+  const handleSaveMaterial = (formData: AddMaterialFormValues, id?: string) => {
+    const parsedSpecialties = formData.specialties
+      ? formData.specialties.split(',').map(s => s.trim()).filter(s => s)
+      : [];
+
+    const materialData: Omit<LearningMaterial, 'id'> = {
+      title: formData.title,
+      category: formData.category,
+      type: formData.type,
+      url: formData.url,
+      description: formData.description,
+      thumbnailUrl: formData.thumbnailUrl,
+      specialties: parsedSpecialties,
     };
-    setMaterials(prevMaterials => [newMaterial, ...prevMaterials]);
-    toast({
-      title: "Material Added",
-      description: `"${newMaterial.title}" has been successfully added.`,
-    });
+
+    if (id) { // Editing existing material
+      setMaterials(prevMaterials => 
+        prevMaterials.map(m => m.id === id ? { ...materialData, id } : m)
+      );
+      toast({
+        title: "Material Updated",
+        description: `"${materialData.title}" has been successfully updated.`,
+      });
+    } else { // Adding new material
+      const newMaterial: LearningMaterial = {
+        ...materialData,
+        id: `lm${Date.now()}`, 
+      };
+      setMaterials(prevMaterials => [newMaterial, ...prevMaterials]);
+      toast({
+        title: "Material Added",
+        description: `"${newMaterial.title}" has been successfully added.`,
+      });
+    }
+    setIsMaterialDialogOpen(false);
+    setMaterialToEdit(null);
   };
 
   const handleDeleteMaterial = (id: string) => {
@@ -70,8 +110,17 @@ export default function LearningMaterialsPage() {
             Explore a comprehensive library of videos, documents, and presentations to enhance your clinical skills.
           </p>
         </div>
-        <AddMaterialDialog onMaterialAdded={handleAddNewMaterial} />
+        <Button onClick={handleOpenAddDialog} className="w-full sm:w-auto">
+          <PlusCircle className="mr-2 h-5 w-5" /> Add New Material
+        </Button>
       </div>
+
+      <AddMaterialDialog 
+        isOpen={isMaterialDialogOpen}
+        onOpenChange={setIsMaterialDialogOpen}
+        currentMaterial={materialToEdit}
+        onSave={handleSaveMaterial}
+      />
 
       <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -117,7 +166,12 @@ export default function LearningMaterialsPage() {
       {filteredMaterials.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMaterials.map((material) => (
-            <MaterialCard key={material.id} material={material} onDelete={handleDeleteMaterial} />
+            <MaterialCard 
+              key={material.id} 
+              material={material} 
+              onDelete={handleDeleteMaterial}
+              onEdit={handleOpenEditDialog} 
+            />
           ))}
         </div>
       ) : (
@@ -132,4 +186,3 @@ export default function LearningMaterialsPage() {
     </div>
   );
 }
-

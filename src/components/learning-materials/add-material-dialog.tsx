@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -13,7 +13,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -26,7 +25,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle } from "lucide-react";
 import type { LearningMaterial, LearningMaterialCategory, LearningMaterialType } from "@/lib/types";
 
 const categories: LearningMaterialCategory[] = [
@@ -45,18 +43,19 @@ const addMaterialSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL." }),
   description: z.string().optional(),
   thumbnailUrl: z.string().url({ message: "Please enter a valid URL for the thumbnail." }).optional().or(z.literal('')),
-  specialties: z.string().optional(), // Comma-separated string for specialties
+  specialties: z.string().optional(), 
 });
 
-type AddMaterialFormValues = z.infer<typeof addMaterialSchema>;
+export type AddMaterialFormValues = z.infer<typeof addMaterialSchema>;
 
 interface AddMaterialDialogProps {
-  onMaterialAdded: (data: Omit<LearningMaterial, 'id'>) => void;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  currentMaterial?: LearningMaterial | null;
+  onSave: (data: AddMaterialFormValues, id?: string) => void;
 }
 
-export function AddMaterialDialog({ onMaterialAdded }: AddMaterialDialogProps) {
-  const [open, setOpen] = useState(false);
-
+export function AddMaterialDialog({ isOpen, onOpenChange, currentMaterial, onSave }: AddMaterialDialogProps) {
   const form = useForm<AddMaterialFormValues>({
     resolver: zodResolver(addMaterialSchema),
     defaultValues: {
@@ -68,38 +67,44 @@ export function AddMaterialDialog({ onMaterialAdded }: AddMaterialDialogProps) {
     },
   });
 
-  async function onSubmit(values: AddMaterialFormValues) {
-    const parsedSpecialties = values.specialties
-      ? values.specialties.split(',').map(s => s.trim()).filter(s => s)
-      : [];
-    
-    const materialData: Omit<LearningMaterial, 'id'> = {
-      title: values.title,
-      category: values.category,
-      type: values.type,
-      url: values.url,
-      description: values.description,
-      thumbnailUrl: values.thumbnailUrl,
-      specialties: parsedSpecialties,
-    };
+  useEffect(() => {
+    if (isOpen) {
+      if (currentMaterial) {
+        form.reset({
+          ...currentMaterial,
+          specialties: currentMaterial.specialties?.join(', ') || "",
+        });
+      } else {
+        form.reset({
+          title: "",
+          category: undefined,
+          type: undefined,
+          url: "",
+          description: "",
+          thumbnailUrl: "",
+          specialties: "",
+        });
+      }
+    }
+  }, [isOpen, currentMaterial, form]);
 
-    onMaterialAdded(materialData);
-    form.reset();
-    setOpen(false); 
+  const dialogTitle = currentMaterial ? "Edit Learning Material" : "Add New Learning Material";
+  const dialogDescription = currentMaterial 
+    ? "Update the details for the learning material. Click save when you're done."
+    : "Fill in the details for the new learning material. Click save when you're done.";
+  const submitButtonText = currentMaterial ? "Save Changes" : "Add Material";
+
+  async function onSubmit(values: AddMaterialFormValues) {
+    onSave(values, currentMaterial?.id);
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="w-full sm:w-auto">
-          <PlusCircle className="mr-2 h-5 w-5" /> Add New Material
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Add New Learning Material</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>
-            Fill in the details for the new learning material. Click save when you're done.
+            {dialogDescription}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -124,7 +129,7 @@ export function AddMaterialDialog({ onMaterialAdded }: AddMaterialDialogProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a category" />
@@ -146,7 +151,7 @@ export function AddMaterialDialog({ onMaterialAdded }: AddMaterialDialogProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select material type" />
@@ -220,11 +225,11 @@ export function AddMaterialDialog({ onMaterialAdded }: AddMaterialDialogProps) {
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Saving..." : "Save Material"}
+                {form.formState.isSubmitting ? "Saving..." : submitButtonText}
               </Button>
             </DialogFooter>
           </form>
@@ -233,3 +238,4 @@ export function AddMaterialDialog({ onMaterialAdded }: AddMaterialDialogProps) {
     </Dialog>
   );
 }
+
