@@ -45,6 +45,7 @@ const addMaterialSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL." }),
   description: z.string().optional(),
   thumbnailUrl: z.string().url({ message: "Please enter a valid URL for the thumbnail." }).optional().or(z.literal('')),
+  specialties: z.string().optional(), // Comma-separated string for specialties
 });
 
 type AddMaterialFormValues = z.infer<typeof addMaterialSchema>;
@@ -63,20 +64,33 @@ export function AddMaterialDialog({ onMaterialAdded }: AddMaterialDialogProps) {
       description: "",
       url: "",
       thumbnailUrl: "",
+      specialties: "",
     },
   });
 
   async function onSubmit(values: AddMaterialFormValues) {
-    onMaterialAdded(values as Omit<LearningMaterial, 'id'>); // Cast as schema ensures compatibility
+    const parsedSpecialties = values.specialties
+      ? values.specialties.split(',').map(s => s.trim()).filter(s => s)
+      : [];
+    
+    const materialData: Omit<LearningMaterial, 'id'> = {
+      title: values.title,
+      category: values.category,
+      type: values.type,
+      url: values.url,
+      description: values.description,
+      thumbnailUrl: values.thumbnailUrl,
+      specialties: parsedSpecialties,
+    };
+
+    onMaterialAdded(materialData);
     form.reset();
     setOpen(false); 
-    // In a real app, you would likely show a success toast here
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {/* This button should be conditionally rendered for admins */}
         <Button className="w-full sm:w-auto">
           <PlusCircle className="mr-2 h-5 w-5" /> Add New Material
         </Button>
@@ -170,6 +184,19 @@ export function AddMaterialDialog({ onMaterialAdded }: AddMaterialDialogProps) {
                   <FormLabel>Thumbnail URL (Optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="https://example.com/thumbnail.png" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="specialties"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Specialties (comma-separated, optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Paediatric, Internal Medicine" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -31,7 +31,7 @@ export default function LearningMaterialsPage() {
   const handleAddNewMaterial = (newMaterialData: Omit<LearningMaterial, 'id'>) => {
     const newMaterial: LearningMaterial = {
       ...newMaterialData,
-      id: `lm${Date.now()}`, // Simple unique ID generation
+      id: `lm${Date.now()}`, 
     };
     setMaterials(prevMaterials => [newMaterial, ...prevMaterials]);
     toast({
@@ -54,7 +54,8 @@ export default function LearningMaterialsPage() {
 
   const filteredMaterials = materials.filter(material => {
     const matchesSearchTerm = material.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                              (material.description && material.description.toLowerCase().includes(searchTerm.toLowerCase()));
+                              (material.description && material.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                              (material.specialties && material.specialties.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())));
     const matchesCategory = selectedCategory === "all" || material.category.toLowerCase().replace(/\s+/g, '-') === selectedCategory;
     const matchesType = selectedType === "all" || material.type === selectedType;
     return matchesSearchTerm && matchesCategory && matchesType;
@@ -69,7 +70,6 @@ export default function LearningMaterialsPage() {
             Explore a comprehensive library of videos, documents, and presentations to enhance your clinical skills.
           </p>
         </div>
-        {/* TODO: Conditionally render this based on admin role */}
         <AddMaterialDialog onMaterialAdded={handleAddNewMaterial} />
       </div>
 
@@ -79,7 +79,7 @@ export default function LearningMaterialsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input 
               type="search" 
-              placeholder="Search materials by title or topic..." 
+              placeholder="Search materials by title, topic, or specialty..." 
               className="pl-10 w-full" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -132,3 +132,4 @@ export default function LearningMaterialsPage() {
     </div>
   );
 }
+

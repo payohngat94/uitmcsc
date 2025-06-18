@@ -18,6 +18,7 @@ export type LearningMaterial = {
   url: string; // YouTube embed URL or path to PDF/slides
   description?: string;
   thumbnailUrl?: string; // For videos or a preview image
+  specialties?: string[]; // New field for specialty tags
 };
 
 export type Booking = {
@@ -50,3 +51,4 @@ export type Announcement = {
   isPinned?: boolean;
   audience?: User['role'][]; // e.g., ['student', 'educator']
 };
+

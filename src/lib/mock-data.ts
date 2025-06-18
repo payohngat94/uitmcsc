@@ -7,8 +7,9 @@ export const mockLearningMaterials: LearningMaterial[] = [
     category: 'Physical Examination',
     type: 'video',
     url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Replace with actual video
-    thumbnailUrl: 'https://placehold.co/300x200.png',
-    description: 'A comprehensive overview of basic physical examination techniques.'
+    thumbnailUrl: 'https://i.ytimg.com/vi/RwkKXCCA_0k/maxresdefault.jpg', // Example YouTube thumbnail
+    description: 'A comprehensive overview of basic physical examination techniques.',
+    specialties: ['Internal Medicine', 'General Practice']
   },
   {
     id: 'lm2',
@@ -16,7 +17,9 @@ export const mockLearningMaterials: LearningMaterial[] = [
     category: 'Focused Skill Station',
     type: 'document',
     url: '/path/to/suturing-guide.pdf', // Placeholder path
-    description: 'Step-by-step guide on various suturing methods.'
+    thumbnailUrl: 'https://placehold.co/400x225.png',
+    description: 'Step-by-step guide on various suturing methods.',
+    specialties: ['Surgery', 'Emergency Medicine']
   },
   {
     id: 'lm3',
@@ -24,8 +27,9 @@ export const mockLearningMaterials: LearningMaterial[] = [
     category: 'Early Clinical Exposure',
     type: 'slides',
     url: '/path/to/history-taking.ppt', // Placeholder path
-    thumbnailUrl: 'https://placehold.co/300x200.png',
-    description: 'Key principles and examples for effective patient history taking.'
+    thumbnailUrl: 'https://image.slidesharecdn.com/bimanualexamination-230316084329-8e73da90/75/Bimanual-examination-pptx-5-2048.jpg', // Example Slideshare thumbnail
+    description: 'Key principles and examples for effective patient history taking.',
+    specialties: ['Paediatric', 'Obstetric & Gynaecology']
   },
   {
     id: 'lm4',
@@ -33,8 +37,9 @@ export const mockLearningMaterials: LearningMaterial[] = [
     category: 'Focused Skill Station',
     type: 'video',
     url: 'https://www.youtube.com/embed/someOtherVideoID',
-    thumbnailUrl: 'https://placehold.co/300x200.png',
-    description: 'Learn the fundamentals of ECG interpretation for common cardiac conditions.'
+    thumbnailUrl: 'https://placehold.co/400x225.png',
+    description: 'Learn the fundamentals of ECG interpretation for common cardiac conditions.',
+    specialties: ['Cardiology', 'Internal Medicine']
   },
 ];
 

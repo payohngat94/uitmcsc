@@ -4,8 +4,9 @@
 import type { LearningMaterial } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { Youtube, FileText, Presentation, ExternalLink, Trash2 } from "lucide-react";
+import { Youtube, FileText, Presentation, ExternalLink, Trash2, Tag } from "lucide-react";
 import Link from "next/link";
 import {
   AlertDialog,
@@ -22,7 +23,7 @@ import { useState } from "react";
 
 interface MaterialCardProps {
   material: LearningMaterial;
-  onDelete: (id: string) => void; // Function to call when delete is confirmed
+  onDelete: (id: string) => void;
 }
 
 const categoryColors: Record<LearningMaterial['category'], string> = {
@@ -62,9 +63,18 @@ export function MaterialCard({ material, onDelete }: MaterialCardProps) {
       </CardHeader>
       <CardContent className="p-4 flex-grow">
         <CardTitle className="text-lg mb-1 line-clamp-2">{material.title}</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground line-clamp-3">
+        <CardDescription className="text-sm text-muted-foreground line-clamp-3 mb-2">
           {material.description || "No description available."}
         </CardDescription>
+        {material.specialties && material.specialties.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {material.specialties.map((specialty) => (
+              <Badge key={specialty} variant="secondary" className="text-xs">
+                <Tag className="h-3 w-3 mr-1" />{specialty}
+              </Badge>
+            ))}
+          </div>
+        )}
       </CardContent>
       <CardFooter className="p-4 border-t flex justify-between items-center">
         <div className="flex items-center text-sm text-muted-foreground">
@@ -77,7 +87,6 @@ export function MaterialCard({ material, onDelete }: MaterialCardProps) {
               View <ExternalLink className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
-          {/* TODO: Conditionally render this based on admin role */}
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm">
