@@ -26,11 +26,11 @@ export type LearningMaterialData = Omit<LearningMaterial, 'id' | 'createdAt' | '
 };
 
 export async function getLearningMaterials(): Promise<LearningMaterial[]> {
-  console.log("🚀 SERVER ACTION: getLearningMaterials - Function Entry Point 🚀");
+  console.log("SERVER ACTION: getLearningMaterials - Entry");
   try {
     const q = query(learningMaterialsCollectionRef, orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    const materials = querySnapshot.docs.map(docSnapshot => { // Renamed 'doc' to 'docSnapshot' to avoid conflict
+    const materials = querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
       return {
         id: docSnapshot.id,
@@ -39,20 +39,15 @@ export async function getLearningMaterials(): Promise<LearningMaterial[]> {
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
       } as LearningMaterial;
     });
-    console.log("✅ SERVER ACTION: getLearningMaterials - Fetched successfully ✅, Count:", materials.length);
+    console.log("SERVER ACTION: getLearningMaterials - Success, Count:", materials.length);
     return materials;
   } catch (error: any) {
-    console.error("❌ SERVER ACTION: getLearningMaterials - !!! ERROR CAUGHT !!! ❌");
-    console.error("Error fetching learning materials from Firestore (inside catch block of getLearningMaterials):");
-    const firebaseError = error as { name?: string; message?: string; code?: string };
-    const errorMessage = `Failed to fetch learning materials. Original error: Name: ${firebaseError.name || 'N/A'}, Message: ${firebaseError.message || 'N/A'}, Code: ${firebaseError.code || 'N/A'}`;
-    console.error("Detailed Firebase Error for client:", errorMessage);
+    console.error("SERVER ACTION: getLearningMaterials - ERROR:", error.name, error.message, error.code);
     console.error("Original error object (raw):", error);
-    
     if (error instanceof Error) {
-      throw error; // Re-throw the original error to be caught by the client
+      throw error; 
     }
-    throw new Error(errorMessage); // Fallback for non-Error objects
+    throw new Error(`Failed to fetch learning materials. Original error: ${error.message || 'Unknown error'}`);
   }
 }
 
@@ -112,30 +107,20 @@ export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedA
 
 
 export async function getAnnouncements(): Promise<Announcement[]> {
-  console.log("🚀 SERVER ACTION: getAnnouncements - Function Entry Point 🚀");
+  console.log("SERVER ACTION: getAnnouncements - Entry");
   try {
     const pinnedQuery = query(
       announcementsCollectionRef,
       where('isPinned', '==', true),
       orderBy('createdAt', 'desc')
     );
+    // Changed '!=' to '==' for unpinned query for robustness.
+    // This is generally a better practice and might simplify index requirements.
     const unpinnedQuery = query(
       announcementsCollectionRef,
-      // Firestore does not allow inequality filters on one field and orderBy on another if an index for that specific combination doesn't exist.
-      // To simplify and avoid needing another complex index immediately, let's fetch all non-true isPinned (which includes false and non-existent)
-      // and then filter client-side if needed, OR ensure all documents have `isPinned` set to false explicitly.
-      // For now, assuming most will be `false` if not `true`. If `isPinned` can be absent, this query needs adjustment or an index.
-      // A more robust query if `isPinned` can be absent and you need to order by `createdAt` would be to query without this `isPinned` filter for unpinned,
-      // or ensure `isPinned` always exists.
-      // For now, keeping it simple:
-      where('isPinned', '!=', true), // This gets 'false' and documents where 'isPinned' might be missing.
+      where('isPinned', '==', false), 
       orderBy('createdAt', 'desc')
     );
-
-    // If the above query causes issues due to 'isPinned' potentially not existing on all docs,
-    // a safer approach is to fetch all and sort/filter in code, or ensure 'isPinned' always has a value (true/false).
-    // Alternative: fetch all ordered by createdAt, then separate pinned ones.
-    // const allQuery = query(announcementsCollectionRef, orderBy('createdAt', 'desc'));
     
     const [pinnedSnapshot, unpinnedSnapshot] = await Promise.all([
       getDocs(pinnedQuery),
@@ -174,33 +159,30 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         content: data.content || "",
         authorId: data.authorId || "unknown_author_id",
         authorName: data.authorName || "Unknown Author",
-        isPinned: data.isPinned === true, // Ensure boolean
+        isPinned: data.isPinned === true, 
         audience: Array.isArray(data.audience) && data.audience.every(role => ['student', 'admin'].includes(role))
           ? data.audience as UserRole[]
-          : ['student', 'admin'] as UserRole[], // Default if invalid or missing
+          : ['student', 'admin'] as UserRole[],
         createdAt: createdAtDate,
         updatedAt: updatedAtDate,
       };
     };
 
     const pinnedAnnouncements = pinnedSnapshot.docs.map(transformDoc);
-    const unpinnedAnnouncements = unpinnedSnapshot.docs.map(transformDoc).filter(a => a.isPinned === false); // Ensure we only take non-pinned
+    const unpinnedAnnouncements = unpinnedSnapshot.docs.map(transformDoc);
     
-    console.log("✅ SERVER ACTION: getAnnouncements - Fetched successfully ✅, Count:", pinnedAnnouncements.length + unpinnedAnnouncements.length);
+    console.log("SERVER ACTION: getAnnouncements - Success, Count:", pinnedAnnouncements.length + unpinnedAnnouncements.length);
     return [...pinnedAnnouncements, ...unpinnedAnnouncements];
 
   } catch (error: any) {
-    console.error("❌ SERVER ACTION: getAnnouncements - !!! ERROR CAUGHT !!! ❌");
-    console.error("Error fetching announcements from Firestore (inside catch block of getAnnouncements):");
-    const firebaseError = error as { name?: string; message?: string; code?: string };
-    const errorMessage = `Failed to fetch announcements. Original error: Name: ${firebaseError.name || 'N/A'}, Message: ${firebaseError.message || 'N/A'}, Code: ${firebaseError.code || 'N/A'}`;
-    console.error("Detailed Firebase Error for client:", errorMessage);
+    console.error("SERVER ACTION: getAnnouncements - ERROR:", error.name, error.message, error.code);
     console.error("Original error object (raw):", error);
-
+    // Re-throw the original error if it's an Error instance for better client-side details
     if (error instanceof Error) {
-      throw error; // Re-throw the original error to be caught by the client
+      throw error; 
     }
-    throw new Error(errorMessage); // Fallback for non-Error objects
+    // Fallback for non-Error objects
+    throw new Error(`Failed to fetch announcements. Original error: ${error.message || 'Unknown error'}`);
   }
 }
 
@@ -266,7 +248,7 @@ export type InventoryItemData = Omit<InventoryItem, 'id' | 'createdAt' | 'update
 
 export async function getInventoryItems(): Promise<InventoryItem[]> {
   try {
-    const q = query(inventoryCollectionRef, orderBy('name', 'asc')); // Order by name for now
+    const q = query(inventoryCollectionRef, orderBy('name', 'asc'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
@@ -331,3 +313,4 @@ export async function deleteInventoryItem(id: string): Promise<void> {
     throw new Error("Failed to delete inventory item.");
   }
 }
+    
