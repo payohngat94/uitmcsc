@@ -31,35 +31,35 @@ import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/li
 const itemStatuses: InventoryItemStatus[] = ['available', 'in-use', 'reserved', 'out-of-stock', 'maintenance'];
 const itemTypes: InventoryItemType[] = ['facility', 'equipment'];
 
-const inventoryItemSchema = z.object({
+// Schema for the form itself - imageUrls is a string here
+const dialogFormSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters." }),
   itemType: z.enum(itemTypes, { required_error: "Item type is required."}).default('equipment'),
   description: z.string().optional(),
   status: z.enum(itemStatuses, { required_error: "Status is required." }),
   quantity: z.coerce.number().min(0, { message: "Quantity cannot be negative." }),
-  imageUrls: z.string().optional(), // String for comma-separated URLs from textarea
+  imageUrls: z.string().optional(), // Comma-separated URLs from textarea
   location: z.string().optional(),
 });
 
-export type InventoryItemFormValues = Omit<z.infer<typeof inventoryItemSchema>, 'imageUrls'> & {
-  imageUrls?: string[]; // Parsed array for saving
+type DialogFormValues = z.infer<typeof dialogFormSchema>;
+
+// Type for data being saved (imageUrls is an array of strings)
+export type InventoryItemFormValues = Omit<DialogFormValues, 'imageUrls'> & {
+  imageUrls?: string[];
 };
-
-// Type for the form data itself, where imageUrls is a string
-type DialogFormValues = z.infer<typeof inventoryItemSchema>;
-
 
 interface AddItemDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   currentItem?: InventoryItem | null;
-  onSave: (data: InventoryItemFormValues, id?: string) => void; // Expects parsed array
+  onSave: (data: InventoryItemFormValues, id?: string) => void;
   defaultItemType?: InventoryItemType;
 }
 
 export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave, defaultItemType }: AddItemDialogProps) {
-  const form = useForm<DialogFormValues>({ // Use DialogFormValues for form
-    resolver: zodResolver(inventoryItemSchema),
+  const form = useForm<DialogFormValues>({
+    resolver: zodResolver(dialogFormSchema),
     defaultValues: {
       name: "",
       itemType: defaultItemType || 'equipment',
@@ -97,14 +97,20 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave, defau
     }
   }, [isOpen, currentItem, form, defaultItemType]);
 
-  async function onSubmit(values: DialogFormValues) { // Receives DialogFormValues
+  async function onSubmit(values: DialogFormValues) {
+    console.log("[AddItemDialog] onSubmit - Raw values.imageUrls (from textarea):", values.imageUrls);
+
     const parsedImageUrls = values.imageUrls
-      ? values.imageUrls.split(',').map(url => url.trim()).filter(url => url)
+      ? values.imageUrls.split(',')
+          .map(url => url.trim())
+          .filter(url => url) // Keep only non-empty strings after trimming
       : [];
     
+    console.log("[AddItemDialog] onSubmit - ParsedImageUrls (array to be saved):", parsedImageUrls);
+    
     const dataToSave: InventoryItemFormValues = {
-      ...values,
-      imageUrls: parsedImageUrls,
+      ...values, // Spread all values from DialogFormValues
+      imageUrls: parsedImageUrls, // Override imageUrls with the parsed array
     };
     onSave(dataToSave, currentItem?.id);
   }
@@ -223,12 +229,12 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave, defau
               name="imageUrls"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URLs (Optional)</FormLabel>
+                  <FormLabel>Image URLs (comma-separated, optional)</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="https://example.com/image1.png, https://example.com/image2.jpg"
                       className="min-h-[80px]"
-                      {...field}
+                      {...field} // field.value will be the string from currentItem.imageUrls.join(', ') or ""
                     />
                   </FormControl>
                   <FormDescription>

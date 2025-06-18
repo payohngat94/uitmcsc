@@ -9,7 +9,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, ListFilter, Archive, Building, Package, Trash2 } from "lucide-react"; // Added Trash2
+import { Search, PlusCircle, ListFilter, Archive, Building, Package, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -86,7 +86,7 @@ export default function InventoryPage() {
   };
 
   const handleOpenDeleteDialog = (item: InventoryItem) => {
-    setSelectedItemForDetail(null); // Close detail dialog if open
+    setSelectedItemForDetail(null); 
     setIsDetailDialogOpen(false);
     setItemToDelete(item);
   };
@@ -94,7 +94,7 @@ export default function InventoryPage() {
   const handleConfirmDelete = async () => {
     if (!itemToDelete || !currentUser || currentUser.role !== 'admin') return;
     try {
-      await deleteInventoryItem(itemToDelete.id, itemToDelete.imageUrl); // Pass imageUrl for storage deletion
+      await deleteInventoryItem(itemToDelete.id); 
       toast({
         title: "Item Deleted",
         description: `"${itemToDelete.name}" has been removed.`,
@@ -123,21 +123,24 @@ export default function InventoryPage() {
       return;
     }
 
+    // formData.imageUrls should already be an array of strings here
     const itemDataForDb = {
       name: formData.name,
       itemType: formData.itemType,
       description: formData.description,
       status: formData.status,
       quantity: formData.quantity,
-      imageUrl: formData.imageUrl || null, // Use the single imageUrl
+      imageUrls: formData.imageUrls || [], // Ensure it's an array, default to empty if undefined
       location: formData.location,
     };
+    
+    console.log("[InventoryPage] handleSaveItem - itemDataForDb.imageUrls before save:", itemDataForDb.imageUrls);
 
     try {
-      if (id) { // Editing existing item
+      if (id) { 
         await updateInventoryItem(id, itemDataForDb); 
         toast({ title: "Item Updated", description: `"${itemDataForDb.name}" updated.` });
-      } else { // Adding new item
+      } else { 
         await addInventoryItem(itemDataForDb);
         toast({ title: "Item Added", description: `"${itemDataForDb.name}" added to inventory.` });
       }
@@ -292,7 +295,6 @@ export default function InventoryPage() {
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the item "{itemToDelete?.name}".
-              If an image is associated with this item, it will also be deleted from storage.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
