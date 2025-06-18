@@ -46,6 +46,12 @@ const nextConfig: NextConfig = {
         hostname: 'image.slidesharecdn.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.mcrmedical.com', // Added this hostname
+        port: '',
+        pathname: '/**',
       }
     ],
   },
