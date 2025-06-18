@@ -61,8 +61,9 @@ export function InventoryItemRow({ item, onViewDetails }: InventoryItemRowProps)
             height={40}
             className="rounded-md object-cover"
             data-ai-hint={aiHint}
+            unoptimized={true} // Added unoptimized prop
             onError={() => {
-              if (imageSrc !== ERROR_PLACEHOLDER) { // Prevent infinite loop if error placeholder also fails
+              if (imageSrc !== ERROR_PLACEHOLDER) { 
                 setImageSrc(ERROR_PLACEHOLDER);
               }
             }}
@@ -114,6 +115,7 @@ export function InventoryItemRow({ item, onViewDetails }: InventoryItemRowProps)
                   height={80}
                   className="rounded-md object-cover"
                   data-ai-hint={item.itemType === 'facility' ? "facility detail" : "equipment detail"}
+                  unoptimized={true} // Also add here if this image could be problematic
                 />
                 <div>
                   <h3 className="font-semibold">{item.name}</h3>

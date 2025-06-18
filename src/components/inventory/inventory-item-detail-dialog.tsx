@@ -2,18 +2,13 @@
 "use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import type { InventoryItem, InventoryItemStatus } from "@/lib/types";
+import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/lib/types";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Package, Tag, MapPin, BarChart, Info } from "lucide-react";
-
-interface InventoryItemDetailDialogProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  item: InventoryItem | null;
-}
+import { useState, useEffect } from "react"; // Added useState and useEffect
 
 // Consistent status styling with InventoryItemRow
 const statusColors: Record<InventoryItemStatus, string> = {
@@ -29,6 +24,33 @@ const statusVariant: Record<InventoryItemStatus, "default" | "secondary" | "dest
   reserved: "outline",
   "out-of-stock": "destructive",
   maintenance: "destructive",
+};
+
+const DetailImage = ({ src, alt, itemType }: { src: string; alt: string; itemType?: InventoryItemType }) => {
+  const DIALOG_ERROR_PLACEHOLDER = "https://placehold.co/200x150.png?text=Not+Found";
+  const [currentImageSrc, setCurrentImageSrc] = useState(src);
+  const aiHint = itemType === 'facility' ? "facility detail image" : "equipment detail image";
+
+  useEffect(() => {
+    setCurrentImageSrc(src); // Reset image src if the prop changes
+  }, [src]);
+
+  return (
+    <Image
+      src={currentImageSrc}
+      alt={alt}
+      width={200}
+      height={150}
+      className="h-[150px] w-auto max-w-[200px] rounded-md object-cover border shadow-sm"
+      data-ai-hint={aiHint}
+      unoptimized={true} // Added unoptimized prop
+      onError={() => {
+        if (currentImageSrc !== DIALOG_ERROR_PLACEHOLDER) {
+          setCurrentImageSrc(DIALOG_ERROR_PLACEHOLDER);
+        }
+      }}
+    />
+  );
 };
 
 
@@ -85,14 +107,10 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item }: Invent
                   <div className="flex space-x-4 p-4">
                     {item.imageUrls.map((url, index) => (
                       <div key={index} className="flex-shrink-0">
-                        <Image
+                        <DetailImage
                           src={url}
                           alt={`${item.name} image ${index + 1}`}
-                          width={200}
-                          height={150}
-                          className="h-[150px] w-auto max-w-[200px] rounded-md object-cover border shadow-sm"
-                          data-ai-hint="equipment detail image"
-                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/200x150.png?text=Image+Not+Found';}}
+                          itemType={item.itemType}
                         />
                       </div>
                     ))}
@@ -115,4 +133,3 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item }: Invent
     </Dialog>
   );
 }
-
