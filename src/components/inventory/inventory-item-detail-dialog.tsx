@@ -6,13 +6,15 @@ import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/li
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, Tag, MapPin, BarChart, Info, ImageOff } from "lucide-react"; // Added ImageOff
+import { Package, Tag, MapPin, BarChart, Info, ImageOff, Trash2 } from "lucide-react"; // Added Trash2
 import { useState, useEffect } from "react";
 
 interface InventoryItemDetailDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   item: InventoryItem | null;
+  isAdmin?: boolean;
+  onDeleteItem?: (item: InventoryItem) => void;
 }
 
 const statusColors: Record<InventoryItemStatus, string> = {
@@ -60,10 +62,17 @@ const DetailImageDisplay = ({ src, alt, itemType }: { src?: string; alt: string;
 };
 
 
-export function InventoryItemDetailDialog({ isOpen, onOpenChange, item }: InventoryItemDetailDialogProps) {
+export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin, onDeleteItem }: InventoryItemDetailDialogProps) {
   if (!item) return null;
 
   const formattedStatus = item.status.charAt(0).toUpperCase() + item.status.slice(1).replace(/-/g, ' ');
+
+  const handleDeleteClick = () => {
+    if (onDeleteItem) {
+      onDeleteItem(item);
+      onOpenChange(false); // Close the detail dialog after initiating delete
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -122,7 +131,14 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item }: Invent
             </div>
         </div>
 
-        <DialogFooter className="pt-4 border-t mt-auto">
+        <DialogFooter className="pt-4 border-t mt-auto flex justify-between">
+          <div>
+            {isAdmin && onDeleteItem && (
+              <Button variant="destructive" onClick={handleDeleteClick} className="mr-2">
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Item
+              </Button>
+            )}
+          </div>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>

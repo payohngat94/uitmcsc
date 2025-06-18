@@ -86,6 +86,8 @@ export default function InventoryPage() {
   };
 
   const handleOpenDeleteDialog = (item: InventoryItem) => {
+    setSelectedItemForDetail(null); // Close detail dialog if open
+    setIsDetailDialogOpen(false);
     setItemToDelete(item);
   };
 
@@ -280,6 +282,8 @@ export default function InventoryPage() {
         isOpen={isDetailDialogOpen}
         onOpenChange={setIsDetailDialogOpen}
         item={selectedItemForDetail}
+        isAdmin={currentUser?.role === 'admin'}
+        onDeleteItem={selectedItemForDetail ? () => handleOpenDeleteDialog(selectedItemForDetail) : undefined}
       />
       
       <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
