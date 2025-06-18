@@ -100,13 +100,6 @@ export default function AboutUsPage() {
         </CardContent>
       </Card>
       
-      <div className="text-center space-x-4 py-6">
-        <Button asChild size="lg">
-          <Link href="/bookings">Booking</Link>
-        </Button>
-        <Button variant="outline" size="lg" disabled>Standardized Patients (SP)</Button>
-        <Button variant="outline" size="lg" disabled>Standard Operating Procedures (SOPs)</Button>
-      </div>
     </div>
   );
 }
