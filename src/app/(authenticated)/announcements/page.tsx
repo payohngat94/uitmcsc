@@ -49,10 +49,10 @@ export default function AnnouncementsPage() {
     setIsLoading(true);
     try {
       const fetchedAnnouncements = await getAnnouncements();
-      console.log("AnnouncementsPage: fetchedAnnouncements successfully", fetchedAnnouncements.length);
+      console.log("AnnouncementsPage: fetchedAnnouncements successfully, count:", fetchedAnnouncements.length);
       setAnnouncements(fetchedAnnouncements);
     } catch (error) {
-      console.error("Error in fetchAnnouncements on page:", error);
+      console.error("Error in fetchAnnouncements on page (AnnouncementsPage):", error);
       toast({
         variant: "destructive",
         title: "Error fetching announcements",

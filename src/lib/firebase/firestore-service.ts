@@ -91,7 +91,7 @@ export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedA
 
 
 export async function getAnnouncements(): Promise<Announcement[]> {
-  console.log("Attempting to fetch announcements from Firestore..."); // Added for server-side logging
+  console.log("getAnnouncements: Attempting to fetch announcements from Firestore...");
   try {
     const pinnedQuery = query(
       announcementsCollectionRef,
@@ -100,16 +100,16 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     );
     const unpinnedQuery = query(
       announcementsCollectionRef,
-      where('isPinned', '==', false), // Firestore might optimize this to where('isPinned', '!=', true) or similar based on index
+      where('isPinned', '==', false),
       orderBy('createdAt', 'desc')
     );
 
-    console.log("Executing pinned and unpinned queries..."); // Added for server-side logging
+    console.log("getAnnouncements: Executing pinned and unpinned queries...");
     const [pinnedSnapshot, unpinnedSnapshot] = await Promise.all([
       getDocs(pinnedQuery),
       getDocs(unpinnedQuery),
     ]);
-    console.log("Queries executed. Pinned docs:", pinnedSnapshot.docs.length, "Unpinned docs:", unpinnedSnapshot.docs.length); // Added for server-side logging
+    console.log("getAnnouncements: Queries executed. Pinned docs:", pinnedSnapshot.docs.length, "Unpinned docs:", unpinnedSnapshot.docs.length);
     
     const transformDoc = (docSnapshot: import('firebase/firestore').QueryDocumentSnapshot): Announcement => {
       const data = docSnapshot.data();
@@ -132,11 +132,17 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     const pinnedAnnouncements = pinnedSnapshot.docs.map(transformDoc);
     const unpinnedAnnouncements = unpinnedSnapshot.docs.map(transformDoc);
     
-    console.log("Announcements transformed successfully."); // Added for server-side logging
+    console.log("getAnnouncements: Announcements transformed successfully.");
     return [...pinnedAnnouncements, ...unpinnedAnnouncements];
 
   } catch (error) {
-    console.error("Error fetching announcements from Firestore (inside catch block of getAnnouncements): ", error); // Detailed server-side log
+    console.error("Error fetching announcements from Firestore (inside catch block of getAnnouncements):");
+    console.error("Error Name:", (error instanceof Error ? error.name : "N/A"));
+    console.error("Error Message:", (error instanceof Error ? error.message : "N/A"));
+    if ((error as any)?.code) {
+      console.error("Firebase Error Code:", (error as any).code);
+    }
+    console.error("Full Error Object:", JSON.stringify(error, Object.getOwnPropertyNames(error))); // Stringify to see all properties
     throw new Error("Failed to fetch announcements."); // This is the error the client component will see
   }
 }
