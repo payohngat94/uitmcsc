@@ -4,17 +4,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { MaterialCard } from "@/components/learning-materials/material-card";
 import { AddMaterialDialog, type AddMaterialFormValues } from "@/components/learning-materials/add-material-dialog";
-import { CategoryCard } from "@/components/learning-materials/category-card"; // New import
+import { CategoryCard } from "@/components/learning-materials/category-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, BookOpen, PlusCircle, ArrowLeft, Layers } from "lucide-react";
+import { Search, Filter, BookOpen, PlusCircle, ArrowLeft, Layers, Tag } from "lucide-react";
 import type { LearningMaterial, LearningMaterialCategory, LearningMaterialType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { getLearningMaterials, addLearningMaterial, updateLearningMaterial, deleteLearningMaterial } from "@/lib/firebase/firestore-service";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card as ShadCNCard, CardContent as ShadCNCardContent, CardHeader as ShadCNCardHeader, CardFooter as ShadCNCardFooter } from "@/components/ui/card"; // Aliased for skeleton
+import { Card as ShadCNCard, CardContent as ShadCNCardContent, CardHeader as ShadCNCardHeader, CardFooter as ShadCNCardFooter } from "@/components/ui/card";
 
 const categories: LearningMaterialCategory[] = [
   "Early Clinical Exposure",
@@ -30,8 +30,9 @@ export default function LearningMaterialsPage() {
   const [materials, setMaterials] = useState<LearningMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedMaterialType, setSelectedMaterialType] = useState<string>("all"); // Renamed from selectedType
-  const [selectedCategoryView, setSelectedCategoryView] = useState<LearningMaterialCategory | null>(null); // New state for category view
+  const [selectedMaterialType, setSelectedMaterialType] = useState<string>("all");
+  const [selectedCategoryView, setSelectedCategoryView] = useState<LearningMaterialCategory | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string>(""); // New state for tag filter
 
   const { toast } = useToast();
   const { currentUser } = useAuth();
@@ -77,7 +78,7 @@ export default function LearningMaterialsPage() {
 
     const materialDataForDb = {
       title: formData.title,
-      category: selectedCategoryView && !formData.category ? selectedCategoryView : formData.category, // Pre-fill category if adding from a category view and not changed
+      category: selectedCategoryView && !formData.category ? selectedCategoryView : formData.category,
       type: formData.type,
       url: formData.url,
       description: formData.description,
@@ -124,20 +125,24 @@ export default function LearningMaterialsPage() {
   }, [materials, selectedCategoryView]);
 
   const filteredMaterials = useMemo(() => {
-    const sourceMaterials = selectedCategoryView ? materialsBySelectedCategory : materials; // This line seems off, should always filter from category view if selected.
-                                                                                        // Corrected: if selectedCategoryView, source is materialsBySelectedCategory
-                                                                                        // if not, this memo is for displayed materials, not categories.
-
-    if (!selectedCategoryView) return []; // This memo is for when a category IS selected.
+    if (!selectedCategoryView) return [];
 
     return materialsBySelectedCategory.filter(material => {
-      const matchesSearchTerm = material.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                (material.description && material.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                                (material.specialties && material.specialties.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())));
+      const searchLower = searchTerm.toLowerCase();
+      const tagLower = selectedTag.toLowerCase();
+
+      const matchesSearchTerm = searchTerm === "" ||
+                                material.title.toLowerCase().includes(searchLower) ||
+                                (material.description && material.description.toLowerCase().includes(searchLower));
+      
       const matchesType = selectedMaterialType === "all" || material.type === selectedMaterialType;
-      return matchesSearchTerm && matchesType;
+
+      const matchesTag = selectedTag === "" ||
+                         (material.specialties && material.specialties.some(s => s.toLowerCase().includes(tagLower)));
+      
+      return matchesSearchTerm && matchesType && matchesTag;
     });
-  }, [materialsBySelectedCategory, searchTerm, selectedMaterialType, selectedCategoryView]);
+  }, [materialsBySelectedCategory, searchTerm, selectedMaterialType, selectedCategoryView, selectedTag]);
 
 
   const categoryCounts = useMemo(() => {
@@ -157,10 +162,14 @@ export default function LearningMaterialsPage() {
     setSelectedCategoryView(category);
     setSearchTerm("");
     setSelectedMaterialType("all");
+    setSelectedTag(""); // Reset tag filter
   };
 
   const handleBackToCategories = () => {
     setSelectedCategoryView(null);
+    setSearchTerm("");
+    setSelectedMaterialType("all");
+    setSelectedTag(""); // Reset tag filter
   };
 
 
@@ -174,7 +183,7 @@ export default function LearningMaterialsPage() {
           </div>
           {currentUser?.role === 'admin' && <Skeleton className="h-10 w-48" />}
         </div>
-        <Skeleton className="h-12 w-full rounded-lg" /> {/* Filter bar skeleton */}
+        <Skeleton className="h-12 w-full rounded-lg" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <ShadCNCard key={i} className="flex flex-col h-full">
@@ -223,30 +232,39 @@ export default function LearningMaterialsPage() {
           onOpenChange={setIsMaterialDialogOpen}
           currentMaterial={materialToEdit}
           onSave={handleSaveMaterial}
-          // Pass selectedCategoryView to prefill if desired, or handle in dialog
-          // initialCategory={selectedCategoryView || undefined} 
         />
       )}
 
-      {/* Search and Filter Bar: Conditionally shown or adapted */}
       {(selectedCategoryView) && (
-        <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button variant="outline" onClick={handleBackToCategories} className="sm:mr-auto">
+        <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
+            <Button variant="outline" onClick={handleBackToCategories} className="sm:mr-auto w-full sm:w-auto">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Categories
             </Button>
-            <div className="relative flex-grow">
+            <div className="relative flex-grow w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search materials..."
+                placeholder="Search titles, descriptions..."
                 className="pl-10 w-full"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-grow">
+              <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by tag (e.g., cardiology)"
+                className="pl-10 w-full"
+                value={selectedTag}
+                onChange={(e) => setSelectedTag(e.target.value)}
+              />
+            </div>
             <Select value={selectedMaterialType} onValueChange={setSelectedMaterialType}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
                 <SelectValue placeholder="Filter by Type" />
               </SelectTrigger>
@@ -261,9 +279,7 @@ export default function LearningMaterialsPage() {
         </div>
       )}
 
-      {/* Content Display: Categories or Materials */}
       {!selectedCategoryView ? (
-        // Category View
         categories.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {categories.map(category => (
@@ -285,7 +301,6 @@ export default function LearningMaterialsPage() {
           </div>
         )
       ) : (
-        // Materials View (within a selected category)
         filteredMaterials.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMaterials.map((material) => (
@@ -310,5 +325,3 @@ export default function LearningMaterialsPage() {
     </div>
   );
 }
-
-    
