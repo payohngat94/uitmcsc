@@ -6,9 +6,6 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 
@@ -39,7 +36,6 @@ const PRIMARY_PLACEHOLDER = "https://placehold.co/40x40.png?text=No+Img";
 const ERROR_PLACEHOLDER = "https://placehold.co/40x40.png?text=Error";
 
 export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: InventoryItemRowProps) {
-  const [quantity, setQuantity] = useState(1);
   const [imageSrc, setImageSrc] = useState(PRIMARY_PLACEHOLDER);
 
   useEffect(() => {
@@ -50,10 +46,6 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
 
     setImageSrc(newSrc);
   }, [item.imageUrls, item.name]);
-
-  const handleRequest = () => {
-    alert(`Requesting ${quantity} of ${item.name}. (This is a simulation)`);
-  };
 
   const aiHint = item.itemType === 'facility' ? "facility thumbnail" : "equipment thumbnail";
 
@@ -73,9 +65,9 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
             onError={() => {
               console.warn(
                 `[InventoryItemRow] next/image component failed to load image for "${item.name}". ` +
+                `This is often due to external server policies (e.g., CORS, hotlinking protection) or an invalid URL. ` +
                 `Attempted src: "${imageSrc}". ` +
                 `Attempted firstUrl from data: "${item.imageUrls?.[0]?.trim()}". ` +
-                `This often indicates an external issue like CORS or hotlinking protection on the image server. ` +
                 `Falling back to error placeholder.`
               );
               if (imageSrc !== ERROR_PLACEHOLDER) { 
@@ -105,71 +97,7 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
       <TableCell className="text-center">{item.quantity}</TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end items-center gap-1">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                disabled={item.status === 'out-of-stock' || item.status === 'maintenance' || item.quantity === 0}
-              >
-                Request
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Request {item.name}</DialogTitle>
-                <DialogDescription>
-                  Please specify the quantity you need and any additional details.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="flex items-center gap-3">
-                  <Image
-                    key={item.imageUrls?.[0]?.trim() || PRIMARY_PLACEHOLDER} 
-                    src={item.imageUrls?.[0]?.trim() || PRIMARY_PLACEHOLDER}
-                    alt={item.name}
-                    width={80}
-                    height={80}
-                    className="rounded-md object-cover"
-                    data-ai-hint={item.itemType === 'facility' ? "facility detail" : "equipment detail"}
-                    unoptimized={true} 
-                    onError={(e) => (e.currentTarget.src = ERROR_PLACEHOLDER)}
-                  />
-                  <div>
-                    <h3 className="font-semibold">{item.name}</h3>
-                    <p className="text-sm text-muted-foreground">Available: {item.quantity}</p>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <Input 
-                    id="quantity" 
-                    type="number" 
-                    min="1" 
-                    max={item.quantity} 
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, Math.min(item.quantity, parseInt(e.target.value, 10) || 1)))}
-                    className="mt-1"
-                  />
-                </div>
-                 <div>
-                  <Label htmlFor="notes">Notes (Optional)</Label>
-                  <Input 
-                    id="notes" 
-                    placeholder="e.g., For OSCE Practice Group A"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => {
-                  const trigger = document.querySelector(`[aria-controls="radix-${item.id}-dialog-content"]`) as HTMLElement | null;
-                  trigger?.click(); 
-                }}>Cancel</Button>
-                <Button onClick={handleRequest}>Submit Request</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          {/* Request button and dialog removed */}
           {onEdit && (
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(item)}>
               <Pencil className="h-4 w-4" />

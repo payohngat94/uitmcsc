@@ -9,7 +9,8 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, ListFilter, Archive, Building, Package, Trash2 } from "lucide-react";
+import { Search, PlusCircle, ListFilter, Archive, Building, Package, Trash2, ExternalLink, AlertTriangle } from "lucide-react";
+import Link from "next/link";
 import {
   Select,
   SelectContent,
@@ -33,8 +34,13 @@ import { getInventoryItems, addInventoryItem, updateInventoryItem, deleteInvento
 import { AddItemDialog, type InventoryItemFormValues } from "@/components/inventory/add-item-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription as ShadCNAlertDescription, AlertTitle as ShadCNAlertTitle } from "@/components/ui/alert";
+
 
 const itemStatuses: InventoryItemStatus[] = ['all', 'available', 'in-use', 'reserved', 'out-of-stock', 'maintenance'];
+
+// IMPORTANT: Replace this with your actual Google Form link for booking/requesting inventory items.
+const INVENTORY_BOOKING_FORM_URL = "YOUR_GOOGLE_FORM_LINK_HERE";
 
 export default function InventoryPage() {
   const { currentUser } = useAuth();
@@ -122,15 +128,14 @@ export default function InventoryPage() {
       toast({ variant: "destructive", title: "Not Authorized", description: "Only admins can manage inventory." });
       return;
     }
-
-    // formData.imageUrls should already be an array of strings here
+    
     const itemDataForDb = {
       name: formData.name,
       itemType: formData.itemType,
       description: formData.description,
       status: formData.status,
       quantity: formData.quantity,
-      imageUrls: formData.imageUrls || [], // Ensure it's an array, default to empty if undefined
+      imageUrls: formData.imageUrls || [],
       location: formData.location,
     };
     
@@ -199,11 +204,18 @@ export default function InventoryPage() {
               Browse available {title.toLowerCase()}. Click item name for details.
             </CardDescription>
           </div>
-          {currentUser?.role === 'admin' && (
-            <Button onClick={() => handleOpenAddItemDialog(itemTypeForAdding)} className="w-full sm:w-auto">
-              <PlusCircle className="mr-2 h-5 w-5" /> Add New {itemTypeForAdding === 'facility' ? 'Facility' : 'Equipment'}
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button variant="outline" asChild className="w-full sm:w-auto">
+              <Link href={INVENTORY_BOOKING_FORM_URL} target="_blank" rel="noopener noreferrer">
+                 Book {itemTypeForAdding === 'facility' ? 'Facility' : 'Equipment'} <ExternalLink className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
-          )}
+            {currentUser?.role === 'admin' && (
+              <Button onClick={() => handleOpenAddItemDialog(itemTypeForAdding)} className="w-full sm:w-auto">
+                <PlusCircle className="mr-2 h-5 w-5" /> Add New {itemTypeForAdding === 'facility' ? 'Facility' : 'Equipment'}
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -230,7 +242,7 @@ export default function InventoryPage() {
                   <TableHead className="min-w-[250px]">Name</TableHead>
                   <TableHead className="text-center min-w-[120px]">Status</TableHead>
                   <TableHead className="text-center min-w-[100px]">Quantity</TableHead>
-                  <TableHead className="text-right min-w-[180px]">Actions</TableHead> 
+                  <TableHead className="text-right min-w-[120px]">Actions</TableHead> 
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -267,9 +279,21 @@ export default function InventoryPage() {
       <div>
         <h1 className="text-3xl font-bold font-headline mb-2">Facilities and Equipment</h1>
         <p className="text-muted-foreground">
-          Browse available facilities and simulation equipment, check their status, and manage inventory.
+          Browse available facilities and simulation equipment, check their status, and manage inventory. 
+          Use the "Book" buttons to request items via our Google Form.
         </p>
       </div>
+
+      {INVENTORY_BOOKING_FORM_URL === "YOUR_GOOGLE_FORM_LINK_HERE" && (
+        <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700">
+          <AlertTriangle className="h-5 w-5 text-yellow-600" />
+          <ShadCNAlertTitle className="font-semibold text-yellow-800">Action Required</ShadCNAlertTitle>
+          <ShadCNAlertDescription>
+            Please update the `INVENTORY_BOOKING_FORM_URL` placeholder in the code 
+            (`src/app/(authenticated)/inventory/page.tsx`) with your actual Google Form link for item bookings.
+          </ShadCNAlertDescription>
+        </Alert>
+      )}
 
       {currentUser?.role === 'admin' && (
         <AddItemDialog
