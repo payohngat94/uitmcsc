@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -63,7 +64,7 @@ export function AppSidebar() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} legacyBehavior passHref>
+              <Link href={item.href}>
                 <SidebarMenuButton
                   isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
                   tooltip={{ children: item.label, className: "bg-primary text-primary-foreground" }}
@@ -90,7 +91,7 @@ export function AppSidebar() {
             <span className="text-xs text-muted-foreground truncate">student@example.com</span>
           </div>
         </div>
-        <Link href="/" legacyBehavior passHref>
+        <Link href="/">
             <Button variant="ghost" className={cn("w-full justify-start mt-2 gap-2", open ? "" : "group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center")}>
               <LogOut className="h-5 w-5" />
               <span className={cn("truncate", open ? "" : "group-data-[collapsible=icon]:hidden")}>Logout</span>
