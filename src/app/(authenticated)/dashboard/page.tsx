@@ -16,7 +16,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <section className="mb-8">
-        <div className="relative w-full h-auto aspect-[4/1] md:aspect-[5/1] overflow-hidden rounded-lg shadow-lg">
+        <div className="relative w-full h-auto aspect-[4/1] md:aspect-[5/1] overflow-hidden rounded-lg shadow-lg bg-card">
           <Image
             src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/s9jx9215vtmm/CSC_Header.png"
             alt="UiTM Sim Centre Banner"
