@@ -1,9 +1,11 @@
 
+"use client"; // Added to enable client-side hooks
+
 import { mockAnnouncements } from "@/lib/mock-data";
 import { AnnouncementCard } from "@/components/announcements/announcement-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, Filter, Megaphone } from "lucide-react"; // Added Megaphone
+import { PlusCircle, Search, Filter, Megaphone } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,10 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@/contexts/auth-context"; // Import useAuth
+import { useAuth } from "@/contexts/auth-context";
 
 export default function AnnouncementsPage() {
-  const { currentUser } = useAuth(); // Get current user
+  const { currentUser } = useAuth();
   // In a real app, data fetching and sorting would happen here.
   const pinnedAnnouncements = mockAnnouncements
     .filter(a => a.isPinned)

@@ -1,11 +1,13 @@
 
+"use client"; // Added to enable client-side hooks
+
 import { mockInventoryItems } from "@/lib/mock-data";
 import { InventoryItemRow } from "@/components/inventory/inventory-item-row";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, ListFilter, Archive } from "lucide-react"; // Added Archive
+import { Search, PlusCircle, ListFilter, Archive } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -13,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useAuth } from "@/contexts/auth-context"; // Import useAuth
+import { useAuth } from "@/contexts/auth-context";
 
 export default function InventoryPage() {
   // In a real app, search and filter state would be managed here
