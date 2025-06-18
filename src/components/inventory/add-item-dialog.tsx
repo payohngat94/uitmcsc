@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
+  DialogDescription as DialogDescriptionComponent, // Renamed to avoid conflict with FormDescription
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -17,6 +17,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription, // Added FormDescription to import
   FormField,
   FormItem,
   FormLabel,
@@ -85,7 +86,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
   }, [isOpen, currentItem, form]);
 
   const dialogTitle = currentItem ? "Edit Inventory Item" : "Add New Inventory Item";
-  const dialogDescription = currentItem
+  const dialogDescriptionText = currentItem // Renamed variable to avoid conflict
     ? "Update the details for this inventory item."
     : "Fill in the details for the new inventory item.";
   const submitButtonText = currentItem ? "Save Changes" : "Add Item";
@@ -99,9 +100,9 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave }: Add
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
-          <DialogDescription>
-            {dialogDescription}
-          </DialogDescription>
+          <DialogDescriptionComponent> {/* Use renamed import */}
+            {dialogDescriptionText}
+          </DialogDescriptionComponent>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
