@@ -33,14 +33,14 @@ export default function AboutUsPage() {
     <div className="space-y-8">
       <Card className="shadow-lg overflow-hidden">
         <CardHeader className="bg-primary/10 p-8 text-center">
-          <div className="relative w-full h-32 md:h-40 max-w-2xl mx-auto mb-4">
+          <div className="relative w-full h-32 md:h-40 max-w-3xl mx-auto mb-4">
             <Image
-              src="https://medicine.uitm.edu.my/DoME/images/logo/logo-csc-01a-01.png"
-              alt="UiTM Sim Centre Logo"
+              src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/s9jx9215vtmm/CSC_Header.png"
+              alt="UiTM CSC Banner"
               fill
               priority
               className="object-contain"
-              data-ai-hint="Sim Centre logo"
+              data-ai-hint="CSC banner"
             />
           </div>
         </CardHeader>
