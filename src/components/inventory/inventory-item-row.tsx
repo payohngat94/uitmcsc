@@ -31,7 +31,7 @@ const statusColors: Record<InventoryItem['status'], string> = {
   available: "bg-green-500 hover:bg-green-600",
   "in-use": "bg-blue-500 hover:bg-blue-600",
   reserved: "bg-yellow-500 text-black hover:bg-yellow-600",
-  "out-of-stock": "bg-red-500 hover:bg-red-600",
+  "out-of-stock": "bg-red-500 hover:bg-red-500",
   maintenance: "bg-gray-500 hover:bg-gray-600",
 };
 
@@ -62,7 +62,7 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
       <TableCell>
         <div className="flex items-center gap-3">
           <Image
-            key={imageSrc} // Added key prop
+            key={imageSrc} 
             src={imageSrc}
             alt={item.name}
             width={40}
@@ -71,7 +71,13 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
             data-ai-hint={aiHint}
             unoptimized={true} 
             onError={() => {
-              console.error(`[InventoryItemRow] Error loading image for ${item.name}: current src was ${imageSrc}. Attempted firstUrl: ${item.imageUrls?.[0]?.trim()}`);
+              console.warn(
+                `[InventoryItemRow] next/image component failed to load image for "${item.name}". ` +
+                `Attempted src: "${imageSrc}". ` +
+                `Attempted firstUrl from data: "${item.imageUrls?.[0]?.trim()}". ` +
+                `This often indicates an external issue like CORS or hotlinking protection on the image server. ` +
+                `Falling back to error placeholder.`
+              );
               if (imageSrc !== ERROR_PLACEHOLDER) { 
                 setImageSrc(ERROR_PLACEHOLDER);
               }
@@ -119,13 +125,15 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
               <div className="space-y-4 py-4">
                 <div className="flex items-center gap-3">
                   <Image
-                    src={item.imageUrls?.[0]?.trim() || "https://placehold.co/80x80.png?text=No+Image"}
+                    key={item.imageUrls?.[0]?.trim() || PRIMARY_PLACEHOLDER} 
+                    src={item.imageUrls?.[0]?.trim() || PRIMARY_PLACEHOLDER}
                     alt={item.name}
                     width={80}
                     height={80}
                     className="rounded-md object-cover"
                     data-ai-hint={item.itemType === 'facility' ? "facility detail" : "equipment detail"}
                     unoptimized={true} 
+                    onError={(e) => (e.currentTarget.src = ERROR_PLACEHOLDER)}
                   />
                   <div>
                     <h3 className="font-semibold">{item.name}</h3>
@@ -154,7 +162,10 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline">Cancel</Button>
+                <Button variant="outline" onClick={() => {
+                  const trigger = document.querySelector(`[aria-controls="radix-${item.id}-dialog-content"]`) as HTMLElement | null;
+                  trigger?.click(); 
+                }}>Cancel</Button>
                 <Button onClick={handleRequest}>Submit Request</Button>
               </DialogFooter>
             </DialogContent>

@@ -15,14 +15,14 @@ interface InventoryItemDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   item: InventoryItem | null;
   isAdmin?: boolean;
-  onDeleteItem?: (item: InventoryItem) => void; // Changed from () => void to (item: InventoryItem) => void
+  onDeleteItem?: (item: InventoryItem) => void;
 }
 
 const statusColors: Record<InventoryItemStatus, string> = {
   available: "bg-green-500 hover:bg-green-600",
   "in-use": "bg-blue-500 hover:bg-blue-600",
   reserved: "bg-yellow-500 text-black hover:bg-yellow-600",
-  "out-of-stock": "bg-red-500 hover:bg-red-600",
+  "out-of-stock": "bg-red-500 hover:bg-red-500",
   maintenance: "bg-gray-500 hover:bg-gray-600",
 };
 const statusVariant: Record<InventoryItemStatus, "default" | "secondary" | "destructive" | "outline"> = {
@@ -56,7 +56,7 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
   return (
     <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0">
       <Image
-        key={currentSrc} // Added key prop
+        key={currentSrc} 
         src={currentSrc}
         alt={alt}
         fill 
@@ -64,7 +64,12 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
         data-ai-hint={aiHint}
         unoptimized={true}
         onError={() => {
-          console.error(`[ItemImageDisplay] Error loading image for ${itemName}, alt: ${alt}, attempted src: ${srcProp}`);
+          console.warn(
+            `[ItemImageDisplay] next/image component failed to load image for "${itemName}" (alt: "${alt}"). ` +
+            `Attempted src: "${srcProp}". ` +
+            `This often indicates an external issue like CORS or hotlinking protection on the image server. ` +
+            `Falling back to error placeholder.`
+          );
           if (currentSrc !== DIALOG_IMAGE_ERROR_PLACEHOLDER) {
             setCurrentSrc(DIALOG_IMAGE_ERROR_PLACEHOLDER);
           }
