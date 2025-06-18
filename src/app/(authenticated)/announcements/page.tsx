@@ -28,7 +28,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // AlertDialogTrigger was not used, so removed.
+} from "@/components/ui/alert-dialog";
 
 export default function AnnouncementsPage() {
   const { currentUser } = useAuth();
@@ -50,11 +50,11 @@ export default function AnnouncementsPage() {
       const fetchedAnnouncements = await getAnnouncements();
       setAnnouncements(fetchedAnnouncements);
     } catch (error) {
-      console.error("Detailed error fetching announcements:", error); // Log detailed error
+      console.error("Error in fetchAnnouncements on page:", error);
       toast({
         variant: "destructive",
         title: "Error fetching announcements",
-        description: "Could not load announcements from the database. Check console for details.",
+        description: (error instanceof Error && error.message) || "Could not load announcements. Check browser console for details from Firebase.",
       });
     } finally {
       setIsLoading(false);
@@ -84,7 +84,7 @@ export default function AnnouncementsPage() {
     try {
       await deleteAnnouncement(announcementToDelete.id);
       toast({
-        variant: "default", // Using "default" for success, destructive is usually for the action button itself
+        variant: "default",
         title: "Announcement Deleted",
         description: `"${announcementToDelete.title}" has been removed.`,
       });
@@ -93,7 +93,7 @@ export default function AnnouncementsPage() {
       toast({
         variant: "destructive",
         title: "Error Deleting Announcement",
-        description: (error as Error).message || "Could not delete the announcement.",
+        description: (error instanceof Error && error.message) || "Could not delete the announcement.",
       });
     } finally {
       setAnnouncementToDelete(null);
@@ -137,7 +137,7 @@ export default function AnnouncementsPage() {
       toast({
         variant: "destructive",
         title: id ? "Error Updating Announcement" : "Error Adding Announcement",
-        description: (error as Error).message || "An unexpected error occurred.",
+        description: (error instanceof Error && error.message) || "An unexpected error occurred.",
       });
     } finally {
       setIsAnnouncementDialogOpen(false);
@@ -159,12 +159,8 @@ export default function AnnouncementsPage() {
           
         return matchesSearch && matchesAudience;
       })
-      // relies on getAnnouncements to already sort pinned first, then by date
   }, [announcements, searchTerm, selectedAudienceFilter]);
 
-  // Pinned and regular announcements are now derived from the already sorted `filteredAnnouncements`
-  // The `getAnnouncements` function is responsible for the primary sorting (pinned first, then by date).
-  // This ensures filtering doesn't mess up the pinned-first order.
   const pinnedAnnouncements = filteredAnnouncements.filter(a => a.isPinned);
   const regularAnnouncements = filteredAnnouncements.filter(a => !a.isPinned);
 
@@ -189,7 +185,7 @@ export default function AnnouncementsPage() {
         <AddAnnouncementDialog
           isOpen={isAnnouncementDialogOpen}
           onOpenChange={setIsAnnouncementDialogOpen}
-          currentAnnouncement={announcementToEdit ? { // Pass necessary fields for the form
+          currentAnnouncement={announcementToEdit ? { 
             id: announcementToEdit.id,
             title: announcementToEdit.title,
             content: announcementToEdit.content,
@@ -292,8 +288,7 @@ export default function AnnouncementsPage() {
                   ))}
                 </div>
               ) : (
-                // This case means there are pinned announcements, but no regular ones matching filters.
-                pinnedAnnouncements.length > 0 && searchTerm && <p className="text-muted-foreground">No other announcements match your current filters.</p>
+                pinnedAnnouncements.length > 0 && (searchTerm || selectedAudienceFilter !== "all") && <p className="text-muted-foreground">No other announcements match your current filters.</p>
               )
             ) : (
               <div className="text-center py-12">
@@ -313,3 +308,5 @@ export default function AnnouncementsPage() {
     </div>
   );
 }
+
+    

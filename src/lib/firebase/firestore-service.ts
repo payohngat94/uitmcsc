@@ -16,7 +16,7 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import type { LearningMaterial, Announcement, UserRole } from '@/lib/types'; // Added Announcement, UserRole
+import type { LearningMaterial, Announcement, UserRole } from '@/lib/types';
 
 // Learning Materials Service
 const learningMaterialsCollectionRef = collection(db, 'learningMaterials');
@@ -85,7 +85,6 @@ export async function deleteLearningMaterial(id: string): Promise<void> {
 // Announcements Service
 const announcementsCollectionRef = collection(db, 'announcements');
 export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedAt' | 'authorId' | 'authorName'> & {
-  // authorId and authorName are added when creating, not expected in partial updates directly through this type
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 };
@@ -93,28 +92,42 @@ export type AnnouncementData = Omit<Announcement, 'id' | 'createdAt' | 'updatedA
 
 export async function getAnnouncements(): Promise<Announcement[]> {
   try {
-    const pinnedQuery = query(announcementsCollectionRef, where('isPinned', '==', true), orderBy('createdAt', 'desc'));
-    const unpinnedQuery = query(announcementsCollectionRef, where('isPinned', '==', false), orderBy('createdAt', 'desc'));
+    // Query for pinned announcements, ordered by creation date descending
+    const pinnedQuery = query(
+      announcementsCollectionRef,
+      where('isPinned', '==', true),
+      orderBy('createdAt', 'desc')
+    );
+    // Query for unpinned announcements, ordered by creation date descending
+    const unpinnedQuery = query(
+      announcementsCollectionRef,
+      where('isPinned', '==', false), // or where('isPinned', '!=', true) if you also have undefined isPinned
+      orderBy('createdAt', 'desc')
+    );
 
     const [pinnedSnapshot, unpinnedSnapshot] = await Promise.all([
       getDocs(pinnedQuery),
       getDocs(unpinnedQuery),
     ]);
     
-    const transformDoc = (docSnapshot: import('firebase/firestore').QueryDocumentSnapshot) => {
+    const transformDoc = (docSnapshot: import('firebase/firestore').QueryDocumentSnapshot): Announcement => {
       const data = docSnapshot.data();
-      // Ensure all fields of Announcement are present, providing defaults if necessary
+      // Fallback for createdAt if it's somehow missing or not a Timestamp (shouldn't happen with serverTimestamp)
+      const createdAtDate = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(0);
+      // Fallback for updatedAt, defaulting to createdAtDate if updatedAt is missing/invalid
+      const updatedAtDate = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : createdAtDate;
+
       return {
         id: docSnapshot.id,
-        title: data.title || "",
+        title: data.title || "Untitled Announcement",
         content: data.content || "",
-        authorId: data.authorId || "",
+        authorId: data.authorId || "unknown_author_id",
         authorName: data.authorName || "Unknown Author",
-        isPinned: data.isPinned === true, // Explicitly ensure boolean
+        isPinned: data.isPinned === true, // Ensure it's a boolean
         audience: Array.isArray(data.audience) ? data.audience as UserRole[] : [],
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(0), // Default to epoch if invalid
-        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : (data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(0)),
-      } as Announcement;
+        createdAt: createdAtDate,
+        updatedAt: updatedAtDate,
+      };
     };
 
     const pinnedAnnouncements = pinnedSnapshot.docs.map(transformDoc);
@@ -135,8 +148,8 @@ export async function addAnnouncement(
   try {
     const docRef = await addDoc(announcementsCollectionRef, {
       ...announcementData,
-      isPinned: announcementData.isPinned || false, // Ensure isPinned is explicitly set
-      audience: announcementData.audience || [],   // Ensure audience is explicitly set
+      isPinned: announcementData.isPinned || false,
+      audience: announcementData.audience || ['student'], // Default audience
       authorId: author.id,
       authorName: author.name,
       createdAt: serverTimestamp(),
@@ -171,3 +184,4 @@ export async function deleteAnnouncement(id: string): Promise<void> {
     throw new Error("Failed to delete announcement.");
   }
 }
+    
