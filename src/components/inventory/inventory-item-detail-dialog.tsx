@@ -6,7 +6,7 @@ import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/li
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Added ScrollArea and ScrollBar
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Package, Tag, MapPin, BarChart, Info, ImageOff, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -15,7 +15,7 @@ interface InventoryItemDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   item: InventoryItem | null;
   isAdmin?: boolean;
-  onDeleteItem?: (item: InventoryItem) => void;
+  onDeleteItem?: () => void; // Changed from (item: InventoryItem) => void to match usage
 }
 
 const statusColors: Record<InventoryItemStatus, string> = {
@@ -50,13 +50,12 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
   useEffect(() => {
     const newSrc = srcProp?.trim() || DIALOG_IMAGE_PLACEHOLDER;
     setCurrentSrc(newSrc);
-    // console.log(`[ItemImageDisplay] Item: ${itemName}, Alt: ${alt}, Initial src for Image component: ${newSrc}`);
   }, [srcProp, alt, itemName]);
 
   return (
     <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0">
       <Image
-        key={currentSrc} // Added key to potentially help with src changes
+        key={currentSrc} 
         src={currentSrc}
         alt={alt}
         fill
@@ -65,9 +64,8 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
         unoptimized={true}
         onError={() => {
           console.warn(
-            `[ItemImageDisplay] next/image component failed to load image for "${itemName}" (alt: "${alt}"). ` +
-            `Attempted src: "${srcProp}". ` +
-            `This often indicates an external issue like CORS or hotlinking protection on the image server. ` +
+            `[ItemImageDisplay] next/image failed to load image for "${itemName}" (alt: "${alt}"). ` +
+            `Attempted src: "${srcProp}". This may be due to external server policies (e.g., CORS, hotlinking protection) or an invalid URL. ` +
             `Falling back to error placeholder.`
           );
           if (currentSrc !== DIALOG_IMAGE_ERROR_PLACEHOLDER) {
@@ -87,7 +85,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
   
   const handleDeleteClick = () => {
     if (onDeleteItem) {
-      onDeleteItem(item);
+      onDeleteItem(); // Call the passed in function
     }
   };
 
@@ -135,10 +133,10 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
             <div className="space-y-2">
               <h4 className="font-medium">Images:</h4>
               {item.imageUrls && item.imageUrls.length > 0 ? (
-                <ScrollArea className="w-full whitespace-nowrap">
-                  <div className="flex space-x-4 pb-4">
+                <ScrollArea className="w-full whitespace-nowrap rounded-md border">
+                  <div className="flex space-x-4 p-4"> {/* Added p-4 for padding around images and space for scrollbar */}
                     {item.imageUrls.map((url, index) => (
-                      <div key={index} className="w-[240px] sm:w-[300px] flex-shrink-0"> {/* Added flex-shrink-0 here */}
+                      <div key={index} className="w-[240px] sm:w-[300px] flex-shrink-0">
                         <ItemImageDisplay 
                           srcProp={url} 
                           alt={`${item.name} - Image ${index + 1}`} 
@@ -151,7 +149,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
                   <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               ) : (
-                 <div className="flex flex-col items-center justify-center text-muted-foreground bg-secondary/30 p-6 rounded-md h-48">
+                 <div className="flex flex-col items-center justify-center text-muted-foreground bg-secondary/30 p-6 rounded-md h-48 border">
                     <ImageOff className="h-10 w-10 mb-2" />
                     <p className="text-sm">No images provided for this item.</p>
                 </div>
@@ -174,4 +172,3 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
     </Dialog>
   );
 }
-
