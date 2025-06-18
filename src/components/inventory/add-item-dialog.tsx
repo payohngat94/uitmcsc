@@ -27,9 +27,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/lib/types";
-// Removed uploadFileToFirebase import
-// Removed useToast import as it's not used directly for uploads anymore
-// Removed Image, UploadCloud, XCircle imports
 
 const itemStatuses: InventoryItemStatus[] = ['available', 'in-use', 'reserved', 'out-of-stock', 'maintenance'];
 const itemTypes: InventoryItemType[] = ['facility', 'equipment'];
@@ -40,24 +37,28 @@ const inventoryItemSchema = z.object({
   description: z.string().optional(),
   status: z.enum(itemStatuses, { required_error: "Status is required." }),
   quantity: z.coerce.number().min(0, { message: "Quantity cannot be negative." }),
-  imageUrl: z.string().url({ message: "Please enter a valid URL."}).optional().or(z.literal('')), // Reverted to string URL
+  imageUrls: z.string().optional(), // String for comma-separated URLs from textarea
   location: z.string().optional(),
 });
 
-export type InventoryItemFormValues = z.infer<typeof inventoryItemSchema>;
+export type InventoryItemFormValues = Omit<z.infer<typeof inventoryItemSchema>, 'imageUrls'> & {
+  imageUrls?: string[]; // Parsed array for saving
+};
+
+// Type for the form data itself, where imageUrls is a string
+type DialogFormValues = z.infer<typeof inventoryItemSchema>;
+
 
 interface AddItemDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   currentItem?: InventoryItem | null;
-  onSave: (data: InventoryItemFormValues, id?: string) => void;
+  onSave: (data: InventoryItemFormValues, id?: string) => void; // Expects parsed array
   defaultItemType?: InventoryItemType;
 }
 
 export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave, defaultItemType }: AddItemDialogProps) {
-  // Removed useState for selectedFile, previewUrl, isUploading
-
-  const form = useForm<InventoryItemFormValues>({
+  const form = useForm<DialogFormValues>({ // Use DialogFormValues for form
     resolver: zodResolver(inventoryItemSchema),
     defaultValues: {
       name: "",
@@ -65,7 +66,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave, defau
       description: "",
       status: 'available',
       quantity: 0,
-      imageUrl: "", // Reverted to empty string
+      imageUrls: "", // Initialize as empty string for textarea
       location: "",
     },
   });
@@ -79,7 +80,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave, defau
           description: currentItem.description || "",
           status: currentItem.status,
           quantity: currentItem.quantity,
-          imageUrl: currentItem.imageUrl || "", // Use existing imageUrl
+          imageUrls: currentItem.imageUrls?.join(', ') || "", // Join array to string for textarea
           location: currentItem.location || "",
         });
       } else {
@@ -89,18 +90,23 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave, defau
           description: "",
           status: 'available',
           quantity: 0,
-          imageUrl: "",
+          imageUrls: "",
           location: "",
         });
       }
     }
   }, [isOpen, currentItem, form, defaultItemType]);
 
-  // Removed handleFileChange and clearImageSelection
-
-  async function onSubmit(values: InventoryItemFormValues) {
-    // Removed upload logic
-    onSave(values, currentItem?.id);
+  async function onSubmit(values: DialogFormValues) { // Receives DialogFormValues
+    const parsedImageUrls = values.imageUrls
+      ? values.imageUrls.split(',').map(url => url.trim()).filter(url => url)
+      : [];
+    
+    const dataToSave: InventoryItemFormValues = {
+      ...values,
+      imageUrls: parsedImageUrls,
+    };
+    onSave(dataToSave, currentItem?.id);
   }
 
   const dialogTitle = currentItem ? "Edit Item" : "Add New Item";
@@ -110,10 +116,7 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave, defau
   const submitButtonText = currentItem ? "Save Changes" : "Add Item";
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      // Simplified onOpenChange logic
-      onOpenChange(open);
-    }}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
@@ -217,15 +220,19 @@ export function AddItemDialog({ isOpen, onOpenChange, currentItem, onSave, defau
 
             <FormField
               control={form.control}
-              name="imageUrl"
+              name="imageUrls"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Image URL (Optional)</FormLabel>
+                  <FormLabel>Image URLs (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://example.com/image.png" {...field} />
+                    <Textarea
+                      placeholder="https://example.com/image1.png, https://example.com/image2.jpg"
+                      className="min-h-[80px]"
+                      {...field}
+                    />
                   </FormControl>
                   <FormDescription>
-                    Paste the full URL of the image for this item.
+                    Paste full image URLs, separated by commas. The first image will be used as the thumbnail.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

@@ -1,7 +1,7 @@
 
 'use server';
 
-import { db } from './config'; // Storage import removed if not used elsewhere
+import { db } from './config';
 import {
   collection,
   addDoc,
@@ -13,10 +13,7 @@ import {
   query,
   orderBy,
   Timestamp,
-  // where, // Not used
-  // writeBatch, // Not used
 } from 'firebase/firestore';
-// Storage functions (ref, uploadBytes, getDownloadURL, deleteObject) removed
 import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus, InventoryItemType } from '@/lib/types';
 
 // Learning Material Categories Service
@@ -48,7 +45,6 @@ export async function getLearningMaterialCategories(): Promise<LearningMaterialC
 
 export async function addLearningMaterialCategory(categoryName: LearningMaterialCategoryName): Promise<string> {
   try {
-    // Case-insensitive check for duplicates
     const allCategoriesSnapshot = await getDocs(learningMaterialCategoriesCollectionRef);
     const lowerCaseCategoryName = categoryName.toLowerCase();
     const existingCategory = allCategoriesSnapshot.docs.find(
@@ -274,14 +270,12 @@ export async function deleteAnnouncement(id: string): Promise<void> {
   }
 }
 
-// Firebase Storage Service - REMOVED uploadFileToFirebase and deleteFileFromFirebase
-
-
 // Inventory Service
 const inventoryCollectionRef = collection(db, 'inventoryItems');
 export type InventoryItemData = Omit<InventoryItem, 'id' | 'createdAt' | 'updatedAt'> & {
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  imageUrls?: string[]; // Ensure this matches the type
 };
 
 
@@ -295,7 +289,7 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
         id: docSnapshot.id,
         ...data,
         itemType: data.itemType as InventoryItemType,
-        imageUrl: data.imageUrl || undefined, 
+        imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : [], // Handle if imageUrls is not an array
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
         updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
       } as InventoryItem;
@@ -314,7 +308,7 @@ export async function addInventoryItem(itemData: Omit<InventoryItemData, 'create
     const docRef = await addDoc(inventoryCollectionRef, {
       ...itemData,
       itemType: itemData.itemType || 'equipment', 
-      imageUrl: itemData.imageUrl || null, // Ensure imageUrl is handled as a string or null
+      imageUrls: Array.isArray(itemData.imageUrls) ? itemData.imageUrls : [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -324,18 +318,16 @@ export async function addInventoryItem(itemData: Omit<InventoryItemData, 'create
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error("Failed to add inventory item.");
+    throw new Error(`Failed to add inventory item: ${(error as Error).message}`);
   }
 }
 
 export async function updateInventoryItem(id: string, itemData: Partial<InventoryItemData>): Promise<void> {
   try {
     const itemDocRef = doc(db, 'inventoryItems', id);
-    // Ensure imageUrl is explicitly set to null if it's an empty string or undefined
-    // to avoid storing empty strings if that's not desired.
     const dataToUpdate = { ...itemData };
-    if (dataToUpdate.imageUrl === '' || dataToUpdate.imageUrl === undefined) {
-        dataToUpdate.imageUrl = null;
+    if (itemData.imageUrls !== undefined) {
+        dataToUpdate.imageUrls = Array.isArray(itemData.imageUrls) ? itemData.imageUrls : [];
     }
 
     await updateDoc(itemDocRef, {
@@ -347,21 +339,19 @@ export async function updateInventoryItem(id: string, itemData: Partial<Inventor
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error("Failed to update inventory item.");
+    throw new Error(`Failed to update inventory item: ${(error as Error).message}`);
   }
 }
 
-export async function deleteInventoryItem(id: string): Promise<void> { // Removed imageUrl parameter
+export async function deleteInventoryItem(id: string): Promise<void> {
   try {
     const itemDocRef = doc(db, 'inventoryItems', id);
     await deleteDoc(itemDocRef);
-
-    // Removed call to deleteFileFromFirebase
   } catch (error) {
     console.error("Error deleting inventory item: ", error);
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error("Failed to delete inventory item.");
+    throw new Error(`Failed to delete inventory item: ${(error as Error).message}`);
   }
 }

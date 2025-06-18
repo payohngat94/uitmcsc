@@ -50,7 +50,7 @@ export const mockInventoryItems: InventoryItem[] = [
     itemType: 'equipment',
     status: 'available',
     quantity: 5,
-    imageUrl: 'https://placehold.co/100x100.png',
+    imageUrls: ['https://placehold.co/100x100.png?text=CPR+Manikin+1', 'https://placehold.co/100x100.png?text=CPR+Manikin+2'],
     location: 'Sim Lab A',
   },
   {
@@ -59,7 +59,7 @@ export const mockInventoryItems: InventoryItem[] = [
     itemType: 'equipment',
     status: 'in-use',
     quantity: 2,
-    imageUrl: 'https://placehold.co/100x100.png',
+    imageUrls: ['https://placehold.co/100x100.png?text=ECG+Machine'],
     location: 'Sim Lab B',
   },
   {
@@ -68,7 +68,7 @@ export const mockInventoryItems: InventoryItem[] = [
     itemType: 'equipment',
     status: 'reserved',
     quantity: 10,
-    imageUrl: 'https://placehold.co/100x100.png',
+    imageUrls: [], // Example of no images
     location: 'Storage Room 1',
   },
   {
@@ -77,7 +77,7 @@ export const mockInventoryItems: InventoryItem[] = [
     itemType: 'equipment',
     status: 'available',
     quantity: 20,
-    imageUrl: 'https://placehold.co/100x100.png',
+    imageUrls: ['https://placehold.co/100x100.png?text=Stethoscope'],
     location: 'Loan Desk',
   },
 ];

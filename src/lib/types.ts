@@ -57,11 +57,11 @@ export type InventoryItemType = 'facility' | 'equipment';
 export type InventoryItem = {
   id: string;
   name: string;
-  itemType?: InventoryItemType; // Added itemType
+  itemType?: InventoryItemType;
   description?: string;
   status: InventoryItemStatus;
   quantity: number;
-  imageUrl?: string; // Reverted to single optional string URL
+  imageUrls?: string[]; // Changed from imageUrl?: string to string[]
   location?: string;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;

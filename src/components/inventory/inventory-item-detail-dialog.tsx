@@ -1,11 +1,12 @@
 
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import type { InventoryItem, InventoryItemStatus, InventoryItemType } from "@/lib/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import type { InventoryItem, InventoryItemStatus } from "@/lib/types";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Package, Tag, MapPin, BarChart, Info, ImageOff, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -32,34 +33,59 @@ const statusVariant: Record<InventoryItemStatus, "default" | "secondary" | "dest
   maintenance: "destructive",
 };
 
-// Simplified Image Display - no longer a separate component for single URL
-export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin, onDeleteItem }: InventoryItemDetailDialogProps) {
-  const DIALOG_ERROR_PLACEHOLDER = "https://placehold.co/300x200.png?text=Image+Not+Available";
-  const [currentImageSrc, setCurrentImageSrc] = useState(DIALOG_ERROR_PLACEHOLDER);
+const DIALOG_IMAGE_PLACEHOLDER = "https://placehold.co/300x200.png?text=Image+Not+Available";
+const DIALOG_IMAGE_ERROR_PLACEHOLDER = "https://placehold.co/300x200.png?text=Error+Loading";
+
+// Internal component to handle individual image loading and errors
+interface ItemImageDisplayProps {
+  src: string;
+  alt: string;
+  itemType: InventoryItem['itemType'];
+}
+function ItemImageDisplay({ src, alt, itemType }: ItemImageDisplayProps) {
+  const [currentSrc, setCurrentSrc] = useState(src || DIALOG_IMAGE_PLACEHOLDER);
+  const aiHint = itemType === 'facility' ? "facility detail image" : "equipment detail image";
 
   useEffect(() => {
-    if (item?.imageUrl) {
-      setCurrentImageSrc(item.imageUrl);
-    } else {
-      setCurrentImageSrc(DIALOG_ERROR_PLACEHOLDER);
-    }
-  }, [item, item?.imageUrl]); // item?.imageUrl added as dependency
+    setCurrentSrc(src || DIALOG_IMAGE_PLACEHOLDER);
+  }, [src]);
 
+  return (
+    <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0">
+      <Image
+        src={currentSrc}
+        alt={alt}
+        layout="fill"
+        objectFit="contain"
+        className="p-2"
+        data-ai-hint={aiHint}
+        unoptimized={true}
+        onError={() => {
+          if (currentSrc !== DIALOG_IMAGE_ERROR_PLACEHOLDER) {
+            setCurrentSrc(DIALOG_IMAGE_ERROR_PLACEHOLDER);
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+
+export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin, onDeleteItem }: InventoryItemDetailDialogProps) {
   if (!item) return null;
 
   const formattedStatus = item.status.charAt(0).toUpperCase() + item.status.slice(1).replace(/-/g, ' ');
-  const aiHint = item.itemType === 'facility' ? "facility detail image" : "equipment detail image";
-
+  
   const handleDeleteClick = () => {
     if (onDeleteItem) {
       onDeleteItem(item);
-      onOpenChange(false); // Close the detail dialog after initiating delete
+      onOpenChange(false); 
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="text-2xl flex items-center">
             <Package className="h-7 w-7 mr-3 text-primary" />
@@ -67,7 +93,8 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-grow overflow-y-auto pr-2 -mr-2 py-4 space-y-5">
+        <ScrollArea className="flex-grow py-4 pr-2 -mr-2">
+          <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center">
                 <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -97,32 +124,32 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
               </div>
             )}
             
-            <div className="space-y-1">
-              <h4 className="font-medium">Image:</h4>
-              <div className="relative w-full aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted">
-                <Image
-                  src={currentImageSrc}
-                  alt={item.name || "Inventory item image"}
-                  layout="fill"
-                  objectFit="contain"
-                  className="p-2"
-                  data-ai-hint={aiHint}
-                  unoptimized={true}
-                  onError={() => {
-                    if (currentImageSrc !== DIALOG_ERROR_PLACEHOLDER) {
-                      setCurrentImageSrc(DIALOG_ERROR_PLACEHOLDER);
-                    }
-                  }}
-                />
-              </div>
-              {!item.imageUrl && (
+            <div className="space-y-2">
+              <h4 className="font-medium">Images:</h4>
+              {item.imageUrls && item.imageUrls.length > 0 ? (
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <div className="flex space-x-4 pb-4">
+                    {item.imageUrls.map((url, index) => (
+                      <div key={index} className="w-[240px] sm:w-[300px]">
+                        <ItemImageDisplay 
+                          src={url} 
+                          alt={`${item.name} - Image ${index + 1}`} 
+                          itemType={item.itemType}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              ) : (
                  <div className="flex flex-col items-center justify-center text-muted-foreground bg-secondary/30 p-6 rounded-md h-48">
                     <ImageOff className="h-10 w-10 mb-2" />
-                    <p className="text-sm">No image URL provided for this item.</p>
+                    <p className="text-sm">No images provided for this item.</p>
                 </div>
               )}
             </div>
-        </div>
+          </div>
+        </ScrollArea>
 
         <DialogFooter className="pt-4 border-t mt-auto flex justify-between">
           <div>

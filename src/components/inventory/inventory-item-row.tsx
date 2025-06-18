@@ -10,7 +10,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
-import { Pencil, Trash2 } from "lucide-react"; // Added Pencil
+import { Pencil, Trash2 } from "lucide-react";
 
 interface InventoryItemRowProps {
   item: InventoryItem;
@@ -35,20 +35,19 @@ const statusColors: Record<InventoryItem['status'], string> = {
   maintenance: "bg-gray-500 hover:bg-gray-600",
 };
 
-const PRIMARY_PLACEHOLDER = "https://placehold.co/40x40.png";
-const ERROR_PLACEHOLDER = "https://placehold.co/40x40.png?text=NoImg"; // Changed placeholder text
+const PRIMARY_PLACEHOLDER = "https://placehold.co/40x40.png?text=No+Img";
+const ERROR_PLACEHOLDER = "https://placehold.co/40x40.png?text=Error";
 
 export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: InventoryItemRowProps) {
   const [quantity, setQuantity] = useState(1);
-  const [imageSrc, setImageSrc] = useState(item.imageUrl || PRIMARY_PLACEHOLDER);
+  const [imageSrc, setImageSrc] = useState(item.imageUrls?.[0] || PRIMARY_PLACEHOLDER);
 
   useEffect(() => {
-    setImageSrc(item.imageUrl || PRIMARY_PLACEHOLDER);
-  }, [item.imageUrl]);
+    setImageSrc(item.imageUrls?.[0] || PRIMARY_PLACEHOLDER);
+  }, [item.imageUrls]);
 
   const handleRequest = () => {
     alert(`Requesting ${quantity} of ${item.name}. (This is a simulation)`);
-    // Close dialog logic
   };
 
   const aiHint = item.itemType === 'facility' ? "facility thumbnail" : "equipment thumbnail";
@@ -113,7 +112,7 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
               <div className="space-y-4 py-4">
                 <div className="flex items-center gap-3">
                   <Image
-                    src={item.imageUrl || "https://placehold.co/80x80.png"}
+                    src={item.imageUrls?.[0] || "https://placehold.co/80x80.png?text=No+Image"}
                     alt={item.name}
                     width={80}
                     height={80}
