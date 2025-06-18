@@ -13,10 +13,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 const quickLinks = [
-  { title: "Browse Learning Materials", href: "/learning-materials", icon: BookOpen, description: "Access videos, documents, and slides." },
-  { title: "Book a Simulation Session", href: "/bookings", icon: CalendarDays, description: "Reserve your spot in the sim labs." },
-  { title: "Check Equipment Inventory", href: "/inventory", icon: Archive, description: "View available equipment and make requests." },
-  { title: "View Announcements", href: "/announcements", icon: Megaphone, description: "Stay updated with the latest news." },
+  { title: "Browse Learning Materials", href: "/learning-materials", icon: BookOpen, description: "Access videos, documents, and slides.", label: "Browse" },
+  { title: "Book a Simulation Session", href: "/bookings", icon: CalendarDays, description: "Reserve your spot in the sim labs.", label: "Book Now" },
+  { title: "Our Facilities & Equipment", href: "/inventory", icon: Archive, description: "View available equipment and make requests.", label: "View All" },
+  { title: "View Announcements", href: "/announcements", icon: Megaphone, description: "Stay updated with the latest news.", label: "View More" },
 ];
 
 export default function DashboardPage() {
