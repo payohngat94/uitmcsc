@@ -109,6 +109,7 @@ export const mockAnnouncements: Announcement[] = [
     author: 'Dr. Eva Curricula',
     createdAt: new Date(new Date().setDate(new Date().getDate() - 1)),
     isPinned: true,
+    audience: ['student']
   },
   {
     id: 'an2',
@@ -116,6 +117,7 @@ export const mockAnnouncements: Announcement[] = [
     content: 'Sim Lab B will be closed for maintenance on Friday from 2 PM to 5 PM. Please plan your bookings accordingly.',
     author: 'Lab Coordinator Team',
     createdAt: new Date(new Date().setDate(new Date().getDate() - 3)),
+    audience: ['student', 'admin']
   },
   {
     id: 'an3',
@@ -123,5 +125,6 @@ export const mockAnnouncements: Announcement[] = [
     content: 'Join us for a guest lecture by Dr. Insight on Wed, 3 PM in Auditorium Hall. Topic: Advanced Diagnostic Techniques.',
     author: 'Admin Office',
     createdAt: new Date(new Date().setDate(new Date().getDate() - 5)),
+    audience: ['student']
   },
 ];

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Filter, BookOpen, PlusCircle } from "lucide-react";
 import type { LearningMaterial, LearningMaterialCategory, LearningMaterialType } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
 
 const categories: LearningMaterialCategory[] = [
   "Early Clinical Exposure",
@@ -28,6 +29,7 @@ export default function LearningMaterialsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
   const { toast } = useToast();
+  const { currentUser } = useAuth();
 
   const [isMaterialDialogOpen, setIsMaterialDialogOpen] = useState(false);
   const [materialToEdit, setMaterialToEdit] = useState<LearningMaterial | null>(null);
@@ -110,17 +112,21 @@ export default function LearningMaterialsPage() {
             Explore a comprehensive library of videos, documents, and presentations to enhance your clinical skills.
           </p>
         </div>
-        <Button onClick={handleOpenAddDialog} className="w-full sm:w-auto">
-          <PlusCircle className="mr-2 h-5 w-5" /> Add New Material
-        </Button>
+        {currentUser?.role === 'admin' && (
+          <Button onClick={handleOpenAddDialog} className="w-full sm:w-auto">
+            <PlusCircle className="mr-2 h-5 w-5" /> Add New Material
+          </Button>
+        )}
       </div>
 
-      <AddMaterialDialog 
-        isOpen={isMaterialDialogOpen}
-        onOpenChange={setIsMaterialDialogOpen}
-        currentMaterial={materialToEdit}
-        onSave={handleSaveMaterial}
-      />
+      {currentUser?.role === 'admin' && (
+        <AddMaterialDialog 
+          isOpen={isMaterialDialogOpen}
+          onOpenChange={setIsMaterialDialogOpen}
+          currentMaterial={materialToEdit}
+          onSave={handleSaveMaterial}
+        />
+      )}
 
       <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -169,8 +175,8 @@ export default function LearningMaterialsPage() {
             <MaterialCard 
               key={material.id} 
               material={material} 
-              onDelete={handleDeleteMaterial}
-              onEdit={handleOpenEditDialog} 
+              onDelete={currentUser?.role === 'admin' ? handleDeleteMaterial : undefined}
+              onEdit={currentUser?.role === 'admin' ? handleOpenEditDialog : undefined} 
             />
           ))}
         </div>

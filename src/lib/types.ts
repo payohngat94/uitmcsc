@@ -1,10 +1,17 @@
 
 
+export type UserRole = 'admin' | 'student';
+
 export type User = {
   id: string;
   email: string;
-  role: 'student' | 'admin' | 'educator' | 'coordinator';
+  role: UserRole; 
   name?: string;
+  // Firebase User properties that we might use from auth.currentUser
+  uid: string;
+  displayName?: string | null;
+  photoURL?: string | null;
+  emailVerified: boolean;
 };
 
 export type LearningMaterialCategory = "Early Clinical Exposure" | "Focused Skill Station" | "Physical Examination" | "Procedural Skills" | "Communication Skills";
@@ -49,6 +56,6 @@ export type Announcement = {
   author: string;
   createdAt: Date;
   isPinned?: boolean;
-  audience?: User['role'][]; // e.g., ['student', 'educator']
+  audience?: UserRole[]; // e.g., ['student', 'admin']
 };
 

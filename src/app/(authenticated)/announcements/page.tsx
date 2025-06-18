@@ -1,8 +1,9 @@
+
 import { mockAnnouncements } from "@/lib/mock-data";
 import { AnnouncementCard } from "@/components/announcements/announcement-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, Filter } from "lucide-react";
+import { PlusCircle, Search, Filter, Megaphone } from "lucide-react"; // Added Megaphone
 import {
   Select,
   SelectContent,
@@ -10,8 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/contexts/auth-context"; // Import useAuth
 
 export default function AnnouncementsPage() {
+  const { currentUser } = useAuth(); // Get current user
   // In a real app, data fetching and sorting would happen here.
   const pinnedAnnouncements = mockAnnouncements
     .filter(a => a.isPinned)
@@ -30,9 +33,11 @@ export default function AnnouncementsPage() {
             Stay informed about the latest course updates, training schedules, and important notices.
           </p>
         </div>
-        <Button className="w-full sm:w-auto">
-          <PlusCircle className="mr-2 h-5 w-5" /> New Announcement (Admin)
-        </Button>
+        {currentUser?.role === 'admin' && (
+          <Button className="w-full sm:w-auto">
+            <PlusCircle className="mr-2 h-5 w-5" /> New Announcement (Admin)
+          </Button>
+        )}
       </div>
 
       <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm">
@@ -49,8 +54,7 @@ export default function AnnouncementsPage() {
             <SelectContent>
               <SelectItem value="all">All Audiences</SelectItem>
               <SelectItem value="student">Students</SelectItem>
-              <SelectItem value="educator">Educators</SelectItem>
-              <SelectItem value="coordinator">Coordinators</SelectItem>
+              <SelectItem value="admin">Admins</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -20,11 +20,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface MaterialCardProps {
   material: LearningMaterial;
-  onDelete: (id: string) => void;
-  onEdit: (material: LearningMaterial) => void;
+  onDelete?: (id: string) => void; // Made optional for non-admins
+  onEdit?: (material: LearningMaterial) => void; // Made optional for non-admins
 }
 
 const categoryColors: Record<LearningMaterial['category'], string> = {
@@ -39,10 +40,19 @@ export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) 
   const Icon = material.type === 'video' ? Youtube : material.type === 'document' ? FileText : Presentation;
   const aiHint = material.type === 'video' ? "medical video" : material.type === 'document' ? "medical document" : "medical presentation";
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { currentUser } = useAuth();
 
   const handleDeleteConfirm = () => {
-    onDelete(material.id);
+    if (onDelete) {
+      onDelete(material.id);
+    }
     setIsDeleteDialogOpen(false);
+  };
+
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit(material);
+    }
   };
 
   return (
@@ -88,30 +98,34 @@ export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) 
               View <ExternalLink className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => onEdit(material)}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the learning material titled "{material.title}".
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteConfirm}>
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {currentUser?.role === 'admin' && onEdit && (
+            <Button variant="outline" size="sm" onClick={handleEdit}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+          {currentUser?.role === 'admin' && onDelete && (
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the learning material titled "{material.title}".
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteConfirm}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </CardFooter>
     </Card>

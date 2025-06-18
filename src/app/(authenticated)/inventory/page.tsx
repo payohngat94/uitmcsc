@@ -1,10 +1,11 @@
+
 import { mockInventoryItems } from "@/lib/mock-data";
 import { InventoryItemRow } from "@/components/inventory/inventory-item-row";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, ListFilter } from "lucide-react";
+import { Search, PlusCircle, ListFilter, Archive } from "lucide-react"; // Added Archive
 import {
   Select,
   SelectContent,
@@ -12,10 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useAuth } from "@/contexts/auth-context"; // Import useAuth
 
 export default function InventoryPage() {
   // In a real app, search and filter state would be managed here
   const items = mockInventoryItems;
+  const { currentUser } = useAuth(); // Get current user
 
   return (
     <div className="space-y-8">
@@ -35,9 +38,11 @@ export default function InventoryPage() {
                 Find the tools you need for your clinical practice.
               </CardDescription>
             </div>
-            <Button className="w-full sm:w-auto">
-              <PlusCircle className="mr-2 h-5 w-5" /> Add New Item (Admin)
-            </Button>
+            {currentUser?.role === 'admin' && (
+              <Button className="w-full sm:w-auto">
+                <PlusCircle className="mr-2 h-5 w-5" /> Add New Item (Admin)
+              </Button>
+            )}
           </div>
           <div className="mt-6 flex flex-col sm:flex-row gap-4">
             <div className="relative flex-grow">
