@@ -17,7 +17,6 @@ import { getLearningMaterials, addLearningMaterial, updateLearningMaterial, dele
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card as ShadCNCard, CardContent as ShadCNCardContent, CardHeader as ShadCNCardHeader, CardFooter as ShadCNCardFooter } from "@/components/ui/card";
 
-// Removed hardcoded categories array
 const materialTypes: LearningMaterialType[] = ["video", "document", "slides"];
 
 export default function LearningMaterialsPage() {
@@ -34,7 +33,7 @@ export default function LearningMaterialsPage() {
   const { currentUser } = useAuth();
 
   const [isMaterialDialogOpen, setIsMaterialDialogOpen] = useState(false);
-  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false); // State for new dialog
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [materialToEdit, setMaterialToEdit] = useState<LearningMaterial | null>(null);
 
   const fetchAllData = async () => {
@@ -51,7 +50,7 @@ export default function LearningMaterialsPage() {
       toast({
         variant: "destructive",
         title: "Error fetching data",
-        description: (error instanceof Error && error.message) || "Could not load learning materials or categories.",
+        description: (error instanceof Error && error.message) ? error.message : "Could not load learning materials or categories.",
       });
     } finally {
       setIsLoadingMaterials(false);
@@ -68,7 +67,7 @@ export default function LearningMaterialsPage() {
        toast({
         variant: "destructive",
         title: "Error fetching categories",
-        description: (error instanceof Error && error.message) || "Could not load categories.",
+        description: (error instanceof Error && error.message) ? error.message : "Could not load categories.",
       });
     } finally {
       setIsLoadingCategories(false);
@@ -102,7 +101,8 @@ export default function LearningMaterialsPage() {
 
     const materialDataForDb = {
       title: formData.title,
-      category: selectedCategoryView && !formData.category ? selectedCategoryView : formData.category,
+      // Ensure category is set, prioritize form if available, else from selectedCategoryView
+      category: formData.category || (selectedCategoryView as LearningMaterialCategoryName),
       type: formData.type,
       url: formData.url,
       description: formData.description,
@@ -118,7 +118,7 @@ export default function LearningMaterialsPage() {
         await addLearningMaterial(materialDataForDb);
         toast({ title: "Material Added", description: `"${materialDataForDb.title}" added.` });
       }
-      fetchAllData(); // Refresh materials (and categories in case, though not directly modified here)
+      fetchAllData(); 
     } catch (error) {
       toast({
         variant: "destructive",
@@ -137,7 +137,7 @@ export default function LearningMaterialsPage() {
     try {
       await deleteLearningMaterial(id);
       toast({ variant: "default", title: "Material Deleted", description: `"${materialToDelete.title}" removed.` });
-      fetchAllData(); // Refresh materials
+      fetchAllData(); 
     } catch (error) {
       toast({ variant: "destructive", title: "Error Deleting Material", description: (error as Error).message || "Could not delete." });
     }
@@ -148,7 +148,8 @@ export default function LearningMaterialsPage() {
   }, [searchTerm, selectedTag, selectedMaterialType]);
 
   const globallyFilteredMaterials = useMemo(() => {
-    if (selectedCategoryView || !isGlobalFilterActive) return [];
+    // Only compute if no category is selected AND global filters are active.
+    if (selectedCategoryView || !isGlobalFilterActive) return []; 
     
     return materials.filter(material => {
       const searchLower = searchTerm.toLowerCase();
@@ -173,12 +174,14 @@ export default function LearningMaterialsPage() {
   }, [materials, selectedCategoryView]);
 
   const categoryScopedFilteredMaterials = useMemo(() => {
+    // Only compute if a category IS selected.
     if (!selectedCategoryView) return [];
 
     return materialsBySelectedCategory.filter(material => {
       const searchLower = searchTerm.toLowerCase();
       const tagLower = selectedTag.toLowerCase();
 
+      // Filters apply within the selected category
       const matchesSearchTerm = searchTerm.trim() === "" ||
                                 material.title.toLowerCase().includes(searchLower) ||
                                 (material.description && material.description.toLowerCase().includes(searchLower));
@@ -197,8 +200,9 @@ export default function LearningMaterialsPage() {
       acc[catDoc.name] = 0;
       return acc;
     }, {} as Record<LearningMaterialCategoryName, number>);
+    
     materials.forEach(material => {
-      if (counts[material.category] !== undefined) {
+      if (material.category && counts[material.category] !== undefined) {
         counts[material.category]++;
       }
     });
@@ -207,6 +211,10 @@ export default function LearningMaterialsPage() {
 
   const handleCategorySelect = (categoryName: LearningMaterialCategoryName) => {
     setSelectedCategoryView(categoryName);
+    // Optionally reset filters when changing category, or keep them
+    // setSearchTerm("");
+    // setSelectedTag("");
+    // setSelectedMaterialType("all");
   };
 
   const handleClearFiltersAndShowCategories = () => {
@@ -297,7 +305,7 @@ export default function LearningMaterialsPage() {
             isOpen={isCategoryDialogOpen}
             onOpenChange={setIsCategoryDialogOpen}
             onCategoryAdded={() => {
-              fetchJustCategories(); // Re-fetch categories after adding a new one
+              fetchJustCategories(); 
             }}
           />
         </>
@@ -353,11 +361,7 @@ export default function LearningMaterialsPage() {
       )}
 
       {/* Main Content Area */}
-      {isLoadingMaterials ? ( // Keep material loading skeleton separate if categories load faster
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-72 w-full rounded-lg" />)}
-        </div>
-      ) : selectedCategoryView ? (
+      {selectedCategoryView ? (
         // Viewing materials within a category
         categoryScopedFilteredMaterials.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -402,12 +406,8 @@ export default function LearningMaterialsPage() {
           </div>
         )
       ) : (
-        // Viewing category list
-        isLoadingCategories ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(3)].map((_, i) => <Skeleton key={`cat_skel_${i}`} className="h-48 w-full rounded-lg" />)}
-            </div>
-        ) : fetchedCategories.length > 0 ? (
+        // Viewing category list (no category selected, no global filters active)
+        fetchedCategories.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {fetchedCategories.map(categoryDoc => (
               <CategoryCard
@@ -423,7 +423,7 @@ export default function LearningMaterialsPage() {
             <Layers className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-2 text-xl font-semibold">No Categories Defined</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Admins can add new categories using the "Add Category" button.
+              Admins can add new categories using the "Add Category" button above.
             </p>
           </div>
         )
