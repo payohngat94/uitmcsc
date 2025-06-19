@@ -6,7 +6,7 @@ import { CheckSquare, Users, BookOpen, Lightbulb, Target, UsersRound, Phone, Mai
 import Image from "next/image";
 
 // IMPORTANT: Replace this with your actual Google Form URL for feedback
-const FEEDBACK_FORM_URL = "YOUR_FEEDBACK_GOOGLE_FORM_LINK_HERE";
+const FEEDBACK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJBYKhEOf7yfTxBAv0MXLqJo0xE0KQ2VkldnQA6BtyKM-soA/viewform";
 
 export default function AboutUsPage() {
   const keyObjectives = [
