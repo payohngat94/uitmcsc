@@ -34,6 +34,7 @@ export function LoginForm() {
   const { toast } = useToast();
   const { login } = useAuth(); // Get login function from context
   const [isClient, setIsClient] = useState(false);
+  const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -54,12 +55,36 @@ export function LoginForm() {
         title: "Login Successful",
         description: "Welcome back to UiTM CSC!",
       });
-      router.push("/dashboard"); // Redirect to dashboard on successful login
+      router.push("/dashboard"); 
     } catch (error) {
-      // Error toast is handled within the login function in AuthContext
-      // but we can still set form errors if needed for specific fields
-      form.setError("email", { type: "manual", message: " " }); // Clear previous for general error
+      form.setError("email", { type: "manual", message: " " }); 
       form.setError("password", { type: "manual", message: "Invalid credentials or login failed." });
+    }
+  }
+
+  async function handleGuestLogin() {
+    setIsGuestSubmitting(true);
+    try {
+      // Using placeholder credentials for guest.
+      // In a real app, this might be Firebase Anonymous Auth or a dedicated guest account.
+      await login("student@example.com", "password"); 
+      toast({
+        title: "Signed in as Guest",
+        description: "You are now browsing with student privileges.",
+      });
+      router.push("/dashboard");
+    } catch (error) {
+      // The login function in AuthContext already shows a generic error toast.
+      // We could add a more specific one here if needed, but it might be redundant.
+      // For now, relying on the AuthContext's toast for login failures.
+      console.error("Guest login error:", error);
+       toast({
+            variant: "destructive",
+            title: "Guest Login Failed",
+            description: "Could not sign in as guest. The guest account might not be set up.",
+        });
+    } finally {
+      setIsGuestSubmitting(false);
     }
   }
 
@@ -87,6 +112,7 @@ export function LoginForm() {
             </div>
             <Skeleton className="h-10 w-full py-3" /> {/* Button */}
             <Skeleton className="h-4 w-3/4 mx-auto" /> {/* Forgot password link */}
+            <Skeleton className="h-4 w-1/2 mx-auto" /> {/* Guest login link */}
           </div>
         ) : (
           <>
@@ -139,22 +165,27 @@ export function LoginForm() {
                 <Button 
                   type="submit" 
                   className="w-full text-base py-3" 
-                  disabled={form.formState.isSubmitting || !isClient}
+                  disabled={form.formState.isSubmitting || !isClient || isGuestSubmitting}
                 >
                   {form.formState.isSubmitting ? "Signing In..." : "Sign In"}
                 </Button>
               </form>
             </Form>
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              {/* Add link to Firebase password reset if needed */}
               Forgot your password? <a href="#" className="font-medium text-primary hover:underline">Reset here</a>
             </p>
-            {/* Add link to Sign Up page if you implement signup */}
-            {/* 
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              Don't have an account? <Link href="/signup" className="font-medium text-primary hover:underline">Sign Up</Link>
+            <p className="mt-2 text-center text-sm text-muted-foreground">
+              Sign in as a{' '}
+              <Button
+                type="button"
+                variant="link"
+                className="p-0 h-auto font-medium text-primary hover:underline disabled:opacity-70"
+                onClick={handleGuestLogin}
+                disabled={isGuestSubmitting || form.formState.isSubmitting || !isClient}
+              >
+                {isGuestSubmitting ? "Signing in..." : "guest"}
+              </Button>
             </p>
-            */}
           </>
         )}
       </CardContent>
