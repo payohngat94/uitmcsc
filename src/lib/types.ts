@@ -1,7 +1,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'admin' | 'student';
+export type UserRole = 'admin' | 'student' | 'guest'; // Added 'guest'
 
 export type User = {
   id: string;
@@ -76,6 +76,6 @@ export type Announcement = {
   createdAt: Timestamp | Date; // Firestore Timestamp or JS Date after conversion
   updatedAt?: Timestamp | Date; // Firestore Timestamp or JS Date after conversion
   isPinned?: boolean;
-  audience?: UserRole[]; // 'admin' | 'student'
+  audience?: UserRole[]; // 'admin' | 'student' | 'guest'
 };
 

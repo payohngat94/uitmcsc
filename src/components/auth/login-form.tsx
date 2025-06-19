@@ -65,23 +65,19 @@ export function LoginForm() {
   async function handleGuestLogin() {
     setIsGuestSubmitting(true);
     try {
-      // Using placeholder credentials for guest.
-      // In a real app, this might be Firebase Anonymous Auth or a dedicated guest account.
-      await login("student@example.com", "password"); 
+      // Use guest@example.com for the 'guest' role
+      await login("guest@example.com", "password"); 
       toast({
         title: "Signed in as Guest",
-        description: "You are now browsing with student privileges.",
+        description: "You are now browsing with guest privileges.", // Updated message
       });
       router.push("/dashboard");
     } catch (error) {
-      // The login function in AuthContext already shows a generic error toast.
-      // We could add a more specific one here if needed, but it might be redundant.
-      // For now, relying on the AuthContext's toast for login failures.
       console.error("Guest login error:", error);
        toast({
             variant: "destructive",
             title: "Guest Login Failed",
-            description: "Could not sign in as guest. The guest account might not be set up.",
+            description: "Could not sign in as guest. The guest account might not be set up or credentials may be incorrect.",
         });
     } finally {
       setIsGuestSubmitting(false);

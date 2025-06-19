@@ -28,13 +28,13 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Announcement, UserRole } from "@/lib/types";
 
-const audienceRoles: UserRole[] = ['student', 'admin'];
+const audienceRoles: UserRole[] = ['student', 'admin', 'guest']; // Added 'guest'
 
 const announcementSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
   content: z.string().min(10, { message: "Content must be at least 10 characters." }),
   isPinned: z.boolean().default(false),
-  audience: z.array(z.enum(audienceRoles)).default(['student']), // Default to student
+  audience: z.array(z.enum(audienceRoles)).default(['student']), 
 });
 
 export type AnnouncementFormValues = z.infer<typeof announcementSchema>;
@@ -53,7 +53,7 @@ export function AddAnnouncementDialog({ isOpen, onOpenChange, currentAnnouncemen
       title: "",
       content: "",
       isPinned: false,
-      audience: ['student'],
+      audience: ['student'], // Default audience for new announcements in UI
     },
   });
 

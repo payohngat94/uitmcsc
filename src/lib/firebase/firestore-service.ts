@@ -197,9 +197,9 @@ export async function getAnnouncements(): Promise<Announcement[]> {
         authorId: data.authorId || "unknown_author_id",
         authorName: data.authorName || "Unknown Author",
         isPinned: data.isPinned === true, 
-        audience: Array.isArray(data.audience) && data.audience.every(role => ['student', 'admin'].includes(role))
+        audience: Array.isArray(data.audience) && data.audience.every(role => ['student', 'admin', 'guest'].includes(role)) // Added 'guest'
           ? data.audience as UserRole[]
-          : ['student', 'admin'] as UserRole[],
+          : ['student', 'admin', 'guest'] as UserRole[], // Added 'guest' to fallback
         createdAt: createdAtDate,
         updatedAt: updatedAtDate,
       };
@@ -225,7 +225,8 @@ export async function addAnnouncement(
     const docRef = await addDoc(announcementsCollectionRef, {
       ...announcementData,
       isPinned: announcementData.isPinned || false,
-      audience: announcementData.audience && announcementData.audience.length > 0 ? announcementData.audience : ['student', 'admin'],
+      // Use provided audience, or default to ['student'] if not provided or empty
+      audience: announcementData.audience && announcementData.audience.length > 0 ? announcementData.audience : ['student'],
       authorId: author.id,
       authorName: author.name,
       createdAt: serverTimestamp(),

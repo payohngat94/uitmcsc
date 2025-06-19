@@ -157,7 +157,7 @@ export default function AnnouncementsPage() {
           (announcement.authorName && announcement.authorName.toLowerCase().includes(searchLower));
         
         const matchesAudience = selectedAudienceFilter === "all" || 
-          (Array.isArray(announcement.audience) && announcement.audience.includes(selectedAudienceFilter));
+          (Array.isArray(announcement.audience) && announcement.audience.includes(selectedAudienceFilter as UserRole)); // Ensure selectedAudienceFilter is treated as UserRole
           
         return matchesSearch && matchesAudience;
       })
@@ -199,7 +199,7 @@ export default function AnnouncementsPage() {
             title: announcementToEdit.title,
             content: announcementToEdit.content,
             isPinned: announcementToEdit.isPinned,
-            audience: announcementToEdit.audience || ['student', 'admin'], 
+            audience: announcementToEdit.audience || ['student'], 
           } : undefined}
           onSave={handleSaveAnnouncement}
         />
@@ -244,6 +244,7 @@ export default function AnnouncementsPage() {
               <SelectItem value="all">All Audiences</SelectItem>
               <SelectItem value="student">Students</SelectItem>
               <SelectItem value="admin">Admins</SelectItem>
+              <SelectItem value="guest">Guests</SelectItem> 
             </SelectContent>
           </Select>
         </div>

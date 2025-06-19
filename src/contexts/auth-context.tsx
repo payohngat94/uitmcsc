@@ -29,9 +29,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // Simulate role assignment
-        // In production, roles should come from Custom Claims in the ID token
-        const role: UserRole = firebaseUser.email === 'admin@example.com' ? 'admin' : 'student';
+        let role: UserRole;
+        if (firebaseUser.email === 'admin@example.com') {
+          role = 'admin';
+        } else if (firebaseUser.email === 'guest@example.com') { // Assign 'guest' role
+          role = 'guest';
+        } else {
+          role = 'student'; // Default to student
+        }
         setCurrentUser({ ...firebaseUser, role });
       } else {
         setCurrentUser(null);
