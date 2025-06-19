@@ -1,7 +1,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CheckSquare, Users, BookOpen, Lightbulb, Target, UsersRound, Phone, Mail, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { CheckSquare, Users, BookOpen, Lightbulb, Target, UsersRound, Phone, Mail, MapPin, MessageSquare, ExternalLink } from "lucide-react";
 import Image from "next/image";
+
+// IMPORTANT: Replace this with your actual Google Form URL for feedback
+const FEEDBACK_FORM_URL = "YOUR_FEEDBACK_GOOGLE_FORM_LINK_HERE";
 
 export default function AboutUsPage() {
   const keyObjectives = [
@@ -42,14 +47,14 @@ export default function AboutUsPage() {
   return (
     <div className="space-y-8">
       <Card className="shadow-lg overflow-hidden">
-        <CardHeader className="bg-card p-0 text-center"> {/* Changed background to white and removed padding */}
-          <div className="relative w-full aspect-[4/1]"> {/* Ensured full width and 4:1 aspect ratio for image container */}
+        <CardHeader className="bg-card p-0 text-center">
+          <div className="relative w-full aspect-[4/1]">
             <Image
               src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/s9jx9215vtmm/CSC_Header.png"
               alt="UiTM CSC Banner"
               fill
               priority
-              className="object-contain" // Image will fit within the container, preserving aspect ratio
+              className="object-contain"
               data-ai-hint="CSC banner"
             />
           </div>
@@ -157,6 +162,32 @@ export default function AboutUsPage() {
                 If the map above doesn't show the correct location, ensure the embed URL in the code is accurate.
               </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-headline flex items-center">
+            <MessageSquare className="mr-3 h-7 w-7 text-accent" />
+            Feedback
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center space-y-4">
+          <p className="text-foreground/90 leading-relaxed">
+            We value your experience and are always looking to improve. Your feedback helps us grow and serve you better &mdash; feel free to share your thoughts, suggestions, or report any issues. We&apos;re listening!
+          </p>
+          {FEEDBACK_FORM_URL === "YOUR_FEEDBACK_GOOGLE_FORM_LINK_HERE" ? (
+            <div className="p-3 border border-dashed border-destructive rounded-md bg-destructive/10 text-sm text-destructive/80">
+              <strong>Action Required:</strong> Please update the `FEEDBACK_FORM_URL` in the code (`src/app/(authenticated)/about-us/page.tsx`) with your actual Google Form link for feedback.
+            </div>
+          ) : (
+            <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+              <Link href={FEEDBACK_FORM_URL} target="_blank" rel="noopener noreferrer">
+                Share Your Thoughts!
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
         </CardContent>
       </Card>
       
