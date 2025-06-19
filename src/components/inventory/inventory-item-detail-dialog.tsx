@@ -7,9 +7,9 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Package, Tag, MapPin, BarChart, Info, ImageOff, Trash2 } from "lucide-react";
+import { Package, Tag, MapPin, BarChart, Info, ImageOff, Trash2, ExternalLink } from "lucide-react"; // Added ExternalLink
 import { useState, useEffect } from "react";
-import Link from "next/link"; // Import Link for completeness, though not used directly in this change for image click
+import Link from "next/link"; 
 
 interface InventoryItemDetailDialogProps {
   isOpen: boolean;
@@ -62,7 +62,7 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
       aria-label={`View larger image for ${alt}`}
     >
       <Image
-        key={currentSrc} // Added key to help React differentiate if src changes rapidly
+        key={currentSrc} 
         src={currentSrc}
         alt={alt}
         fill
@@ -96,7 +96,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
   const formattedStatus = item.status.charAt(0).toUpperCase() + item.status.slice(1).replace(/-/g, ' ');
   
   const handleDeleteClick = () => {
-    if (onDeleteItem && item) {
+    if (onDeleteItem && item?.id) { // Ensure item and item.id exist
       onDeleteItem(item.id);
     }
   };
@@ -111,7 +111,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow py-4 pr-2 -mr-2">
+        <ScrollArea className="flex-grow py-4 pr-2 -mr-2"> {/* Main scroll area for dialog content */}
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center">
@@ -145,11 +145,11 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
             <div className="space-y-2">
               <h4 className="font-medium">Images:</h4>
               {item.imageUrls && item.imageUrls.length > 0 ? (
-                <ScrollArea className="w-full rounded-md border p-1 bg-muted/20">
+                 <ScrollArea className="w-full rounded-md border p-1 bg-muted/20"> {/* ScrollArea for images */}
                   <div className="flex space-x-4 p-4">
                     {item.imageUrls.map((url, index) => (
                         <ItemImageDisplay 
-                          key={`${item.id}-image-${index}-${url}`} // More robust key
+                          key={`${item.id}-image-${index}-${url}`}
                           srcProp={url} 
                           alt={`${item.name} - Image ${index + 1}`} 
                           itemType={item.itemType}
