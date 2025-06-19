@@ -55,7 +55,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'medicine.uitm.edu.my', // Added this hostname
+        hostname: 'medicine.uitm.edu.my',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.ncbi.nlm.nih.gov', // Added this hostname
         port: '',
         pathname: '/**',
       }
