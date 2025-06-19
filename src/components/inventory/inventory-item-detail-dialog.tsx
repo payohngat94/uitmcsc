@@ -9,13 +9,14 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Package, Tag, MapPin, BarChart, Info, ImageOff, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import Link from "next/link"; // Import Link for completeness, though not used directly in this change for image click
 
 interface InventoryItemDetailDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   item: InventoryItem | null;
   isAdmin?: boolean;
-  onDeleteItem?: (itemId: string) => void; // Changed to accept itemId
+  onDeleteItem?: (itemId: string) => void;
 }
 
 const statusColors: Record<InventoryItemStatus, string> = {
@@ -42,6 +43,7 @@ interface ItemImageDisplayProps {
   itemType: InventoryItem['itemType'];
   itemName: string;
 }
+
 function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplayProps) {
   const [currentSrc, setCurrentSrc] = useState(srcProp?.trim() || DIALOG_IMAGE_PLACEHOLDER);
   const aiHint = itemType === 'facility' ? "facility detail image" : "equipment detail image";
@@ -52,13 +54,19 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
   }, [srcProp, alt, itemName]);
 
   return (
-    <div className="relative w-[240px] sm:w-[300px] aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0">
+    <a
+      href={currentSrc === DIALOG_IMAGE_PLACEHOLDER || currentSrc === DIALOG_IMAGE_ERROR_PLACEHOLDER ? undefined : currentSrc}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="relative block w-[240px] sm:w-[300px] aspect-[3/2] rounded-md overflow-hidden border shadow-sm bg-muted flex-shrink-0 cursor-pointer group"
+      aria-label={`View larger image for ${alt}`}
+    >
       <Image
-        key={currentSrc}
+        key={currentSrc} // Added key to help React differentiate if src changes rapidly
         src={currentSrc}
         alt={alt}
         fill
-        className="object-contain p-1"
+        className="object-contain p-1 transition-transform duration-300 group-hover:scale-105"
         data-ai-hint={aiHint}
         unoptimized={true}
         onError={() => {
@@ -72,7 +80,12 @@ function ItemImageDisplay({ srcProp, alt, itemType, itemName }: ItemImageDisplay
           }
         }}
       />
-    </div>
+       {(currentSrc !== DIALOG_IMAGE_PLACEHOLDER && currentSrc !== DIALOG_IMAGE_ERROR_PLACEHOLDER) && (
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 flex items-center justify-center transition-opacity duration-300">
+            <ExternalLink className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </div>
+        )}
+    </a>
   );
 }
 
@@ -98,7 +111,7 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow py-4 pr-2 -mr-2"> {/* This ScrollArea is for the whole dialog content if it overflows vertically */}
+        <ScrollArea className="flex-grow py-4 pr-2 -mr-2">
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="flex items-center">
@@ -132,11 +145,11 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
             <div className="space-y-2">
               <h4 className="font-medium">Images:</h4>
               {item.imageUrls && item.imageUrls.length > 0 ? (
-                <ScrollArea className="w-full rounded-md border p-1"> {/* ScrollArea for images */}
-                  <div className="flex space-x-4 p-4"> {/* Added p-4 for internal padding */}
+                <ScrollArea className="w-full rounded-md border p-1 bg-muted/20">
+                  <div className="flex space-x-4 p-4">
                     {item.imageUrls.map((url, index) => (
                         <ItemImageDisplay 
-                          key={index} // Ensure key is unique for siblings
+                          key={`${item.id}-image-${index}-${url}`} // More robust key
                           srcProp={url} 
                           alt={`${item.name} - Image ${index + 1}`} 
                           itemType={item.itemType}
@@ -170,4 +183,3 @@ export function InventoryItemDetailDialog({ isOpen, onOpenChange, item, isAdmin,
     </Dialog>
   );
 }
-
