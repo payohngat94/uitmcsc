@@ -121,13 +121,15 @@ export function MaterialCard({ material, onDelete, onEdit }: MaterialCardProps) 
   const isDocGoogleType = material.type === 'document' && isGoogleDocUrl(material.url);
   const googleDocEmbedUrl = isDocGoogleType ? getGoogleDocEmbedUrl(material.url) : material.url;
 
+  const processedThumbnailUrl = material.thumbnailUrl ? material.thumbnailUrl.trimEnd() : null;
+
 
   return (
     <Card className="flex flex-col h-full hover:shadow-xl transition-shadow duration-300 ease-in-out">
       <CardHeader className="p-0 relative">
         <div className="aspect-video overflow-hidden rounded-t-lg">
           <Image
-            src={material.thumbnailUrl || `https://placehold.co/400x225.png?text=${encodeURIComponent(material.title)}`}
+            src={processedThumbnailUrl || `https://placehold.co/400x225.png?text=${encodeURIComponent(material.title)}`}
             alt={material.title}
             width={400}
             height={225}
