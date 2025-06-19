@@ -69,16 +69,26 @@ export function LoginForm() {
       await login("guest@example.com", "password"); 
       toast({
         title: "Signed in as Guest",
-        description: "You are now browsing with guest privileges.", // Updated message
+        description: "You are now browsing with guest privileges.",
       });
       router.push("/dashboard");
-    } catch (error) {
-      console.error("Guest login error:", error);
-       toast({
-            variant: "destructive",
-            title: "Guest Login Failed",
-            description: "Could not sign in as guest. The guest account might not be set up or credentials may be incorrect.",
+    } catch (error: any) {
+      // The login function in AuthContext shows a toast for common auth errors (e.g., auth/invalid-credential).
+      // We log the error here for debugging.
+      // Optionally, show a different toast if the error is NOT one of those common ones.
+      console.error("Guest login attempt failed:", error);
+      if (error?.code !== 'auth/invalid-credential' && error?.code !== 'auth/wrong-password' && error?.code !== 'auth/user-not-found') {
+        toast({
+          variant: "destructive",
+          title: "Guest Login Error",
+          description: "An unexpected issue occurred. If the guest account isn't working, it may need to be set up by an administrator.",
         });
+      } else {
+        // For auth/invalid-credential, AuthContext's toast is "The email or password you entered is incorrect."
+        // which is acceptable even for a hardcoded guest login if the account is missing/misconfigured.
+        // You could add a specific console.info here if needed, e.g.
+        console.info("Guest login failed with auth/invalid-credential. Ensure guest@example.com with password 'password' exists in Firebase Auth.");
+      }
     } finally {
       setIsGuestSubmitting(false);
     }
