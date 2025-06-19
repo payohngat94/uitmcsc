@@ -16,9 +16,9 @@ export default function BookingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline mb-2">Session Bookings</h1>
+        <h1 className="text-3xl font-bold font-headline mb-2">Manage your Booking</h1>
         <p className="text-muted-foreground">
-          Schedule your simulation lab sessions using the form below and manage your existing bookings.
+          Book your next clinical experience—whether it&apos;s Simulated Patients, ECE, or FSS—seamlessly, all in one place.
         </p>
       </div>
 
@@ -56,7 +56,7 @@ export default function BookingsPage() {
             </iframe>
           )}
            <p className="mt-4 text-sm text-muted-foreground">
-              <strong>Note:</strong> If you haven't updated the placeholder link in the code yet, the form above will not be your actual booking form.
+              <strong>Note:</strong> If you haven&apos;t updated the placeholder link in the code yet, the form above will not be your actual booking form.
               To get your Google Form embed link: Open your Google Form &rarr; Click "Send" &rarr; Go to the "&lt;&gt;" (Embed HTML) tab &rarr; Copy the `src` URL from the iframe code.
             </p>
         </CardContent>
@@ -105,7 +105,7 @@ export default function BookingsPage() {
               <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-2 text-xl font-semibold">No Upcoming Bookings</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                You haven't booked any sessions yet. Use the form above to schedule one.
+                You haven&apos;t booked any sessions yet. Use the form above to schedule one.
               </p>
             </div>
           )}
