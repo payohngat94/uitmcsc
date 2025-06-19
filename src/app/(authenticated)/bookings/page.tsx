@@ -64,55 +64,8 @@ export default function BookingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl">Your Upcoming Bookings</CardTitle>
-          <CardDescription>
-            Here are your scheduled and pending simulation sessions. This list is currently based on mock data and will not automatically update from Google Form submissions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {upcomingBookings.length > 0 ? (
-            <ScrollArea className="max-h-[400px] w-full">
-              <div className="space-y-4 pr-4">
-                {upcomingBookings.map((booking) => (
-                  <Card key={booking.id} className="p-4 bg-secondary/50">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                      <div>
-                        <h3 className="font-semibold text-lg text-primary">{booking.sessionName}</h3>
-                        <div className="text-sm text-muted-foreground space-y-1 mt-1">
-                          <p className="flex items-center"><CalendarCheck className="h-4 w-4 mr-2" /> {format(booking.startTime, "EEEE, MMM d, yyyy")}</p>
-                          <p className="flex items-center"><Clock className="h-4 w-4 mr-2" /> {format(booking.startTime, "p")} - {format(booking.endTime, "p")}</p>
-                          {booking.studentName && <p className="flex items-center"><User className="h-4 w-4 mr-2" /> {booking.studentName}</p>}
-                        </div>
-                      </div>
-                      <div className="mt-3 sm:mt-0 flex flex-col items-end gap-2">
-                        <span 
-                          className={`px-3 py-1 text-xs font-medium rounded-full
-                            ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : 
-                              booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}
-                        >
-                          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                        </span>
-                        <Button variant="outline" size="sm">Manage</Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-              <ScrollBar orientation="vertical" />
-            </ScrollArea>
-          ) : (
-            <div className="text-center py-10">
-              <CalendarDays className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-2 text-xl font-semibold">No Upcoming Bookings</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                You haven&apos;t booked any sessions yet. Use the form above to schedule one.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* The "Your Upcoming Bookings" card has been removed from here */}
+      
     </div>
   );
 }
