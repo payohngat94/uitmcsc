@@ -1,16 +1,19 @@
 
-"use client"; // Added "use client" for useState
+"use client"; 
 
-import { useState } from "react"; // Added useState
+import { useState, useMemo } from "react"; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label"; // Added Label
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Added Select components
-import { ExternalLink } from "lucide-react"; // Added ExternalLink
+import { Label } from "@/components/ui/label"; 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; 
+import { ExternalLink, FileText } from "lucide-react"; 
 import Link from "next/link";
 
 // Updated URL for the FSS/ECE booking form
 const FSS_ECE_BOOKING_FORM_URL = "https://wa.me/60147140146?text=Assalamualaikum%20dan%20Selamat%20Sejahtera%2C%0A%0AIzinkan%20saya%20menempah%20sesi%20FSS%2FECE%20di%20Ward%20Simulasi.";
+
+const FSS_ASSESSMENT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfbtrVmm59t8TGxm2HbvbzwlWuFK4O8pQlr-ZPGUENPGqG1aA/viewform?pli=1&pli=1";
+const ECE_ASSESSMENT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScXs_C4R8vieckKQbEhiajJbVbhPMFAxSpiZoUcQ5oWWrLGZA/viewform?pli=1&pli=1";
 
 const sessionTypesOptions = [
   { value: "fss", label: "Focused Skill Station" },
@@ -31,9 +34,14 @@ export default function BookingsPage() {
   const [selectedSpecialty, setSelectedSpecialty] = useState<string | undefined>(undefined);
 
   const spGoogleFormEmbedUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfyb4iO2QbNwGdc5y1PJ73fgyy2tvz4hlbHeqUtQQ_0MuiUUQ/viewform?embedded=true";
-  const placeholderSpFormUrl = "https://docs.google.com/forms/d/e/YOUR_GOOGLE_FORM_EMBED_LINK_HERE"; // Kept for SP card logic
-
+  
   const isBookNowDisabled = !selectedSessionType || (selectedSessionType === 'fss' && !selectedSpecialty);
+
+  const assessmentFormUrl = useMemo(() => {
+    if (selectedSessionType === 'fss') return FSS_ASSESSMENT_FORM_URL;
+    if (selectedSessionType === 'ece') return ECE_ASSESSMENT_FORM_URL;
+    return undefined;
+  }, [selectedSessionType]);
 
   return (
     <div className="space-y-8">
@@ -47,7 +55,7 @@ export default function BookingsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl">Focused Skill Station & Early Clinical Exposure</CardTitle>
-          <CardDescription>Please choose the options below to book a session.</CardDescription>
+          <CardDescription>Please choose the options below to book a session and access relevant forms.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
@@ -57,7 +65,7 @@ export default function BookingsPage() {
               onValueChange={(value) => {
                 setSelectedSessionType(value);
                 if (value !== 'fss') {
-                  setSelectedSpecialty(undefined); // Reset specialty if not FSS
+                  setSelectedSpecialty(undefined); 
                 }
               }}
             >
@@ -88,16 +96,21 @@ export default function BookingsPage() {
             </div>
           )}
 
-          <Button asChild className="w-full" disabled={isBookNowDisabled}>
-            <Link href={FSS_ECE_BOOKING_FORM_URL} target="_blank" rel="noopener noreferrer">
-              Book Now <ExternalLink className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-          {FSS_ECE_BOOKING_FORM_URL === "YOUR_FSS_ECE_GOOGLE_FORM_LINK_HERE" && ( // This check can be removed if you are sure the URL is final
-            <p className="text-xs text-destructive/80 text-center p-2 border border-dashed border-destructive/50 rounded-md bg-destructive/10">
-                <strong>Action Required:</strong> Please update the `FSS_ECE_BOOKING_FORM_URL` in the code (`src/app/(authenticated)/bookings/page.tsx`) with your actual Google Form link for FSS/ECE bookings.
-            </p>
-           )}
+          <div className="space-y-3">
+            <Button asChild className="w-full" disabled={isBookNowDisabled}>
+              <Link href={FSS_ECE_BOOKING_FORM_URL} target="_blank" rel="noopener noreferrer">
+                Book Session <ExternalLink className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+
+            {assessmentFormUrl && (
+              <Button asChild variant="outline" className="w-full">
+                <Link href={assessmentFormUrl} target="_blank" rel="noopener noreferrer">
+                  Assessment Form <FileText className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -109,31 +122,19 @@ export default function BookingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {spGoogleFormEmbedUrl.startsWith(placeholderSpFormUrl) ? ( 
-            <div className="p-4 border border-dashed border-destructive rounded-md bg-destructive/10">
-              <h3 className="font-semibold text-destructive">Action Required: Update Google Form Link</h3>
-              <p className="text-sm text-destructive/80">
-                Please replace the placeholder URL in the code (`src/app/(authenticated)/bookings/page.tsx`) with your actual Google Form embed link for Standardize Patient bookings.
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                To get your embed link: Open your Google Form &rarr; Click "Send" &rarr; Go to the "&lt;&gt;" (Embed HTML) tab &rarr; Copy the `src` URL from the iframe code provided (ensure `?embedded=true` is at the end).
-              </p>
-            </div>
-          ) : (
-            <iframe
-              src={spGoogleFormEmbedUrl}
-              width="100%"
-              height="800px"
-              frameBorder="0"
-              marginHeight={0}
-              marginWidth={0}
-              className="rounded-md border"
-              title="Standardize Patient (SP) Booking Form"
-              aria-label="Standardize Patient (SP) Booking Form"
-            >
-              Loading booking form…
-            </iframe>
-          )}
+          <iframe
+            src={spGoogleFormEmbedUrl}
+            width="100%"
+            height="800px"
+            frameBorder="0"
+            marginHeight={0}
+            marginWidth={0}
+            className="rounded-md border"
+            title="Standardize Patient (SP) Booking Form"
+            aria-label="Standardize Patient (SP) Booking Form"
+          >
+            Loading booking form…
+          </iframe>
         </CardContent>
       </Card>
       
