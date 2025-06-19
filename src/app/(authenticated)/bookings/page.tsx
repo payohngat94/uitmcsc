@@ -10,8 +10,10 @@ import Link from "next/link";
 export default function BookingsPage() {
   const upcomingBookings = mockBookings.filter(b => b.status === 'confirmed' || b.status === 'pending');
   
-  // IMPORTANT: Replace this with your actual Google Form embed URL
-  const googleFormEmbedUrl = "https://docs.google.com/forms/d/e/YOUR_GOOGLE_FORM_EMBED_LINK_HERE/viewform?embedded=true";
+  // Updated Google Form embed URL for Standardize Patient (SP) bookings
+  const googleFormEmbedUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfyb4iO2QbNwGdc5y1PJ73fgyy2tvz4hlbHeqUtQQ_0MuiUUQ/viewform?embedded=true";
+  const placeholderFormUrl = "https://docs.google.com/forms/d/e/YOUR_GOOGLE_FORM_EMBED_LINK_HERE";
+
 
   return (
     <div className="space-y-8">
@@ -24,20 +26,20 @@ export default function BookingsPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl">Book a Simulation Session</CardTitle>
+          <CardTitle className="text-2xl">Standardize Patient (SP)</CardTitle>
           <CardDescription>
             Please fill out the form below to request a session. Ensure you use the correct Google Form embed URL.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {googleFormEmbedUrl.startsWith("https://docs.google.com/forms/d/e/YOUR_GOOGLE_FORM_EMBED_LINK_HERE") ? (
+          {googleFormEmbedUrl.startsWith(placeholderFormUrl) ? (
             <div className="p-4 border border-dashed border-destructive rounded-md bg-destructive/10">
               <h3 className="font-semibold text-destructive">Action Required: Update Google Form Link</h3>
               <p className="text-sm text-destructive/80">
-                Please replace the placeholder URL in the code (`src/app/(authenticated)/bookings/page.tsx`) with your actual Google Form embed link.
+                Please replace the placeholder URL in the code (`src/app/(authenticated)/bookings/page.tsx`) with your actual Google Form embed link for Standardize Patient bookings.
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                To get your embed link: Open your Google Form &rarr; Click "Send" &rarr; Go to the "&lt;&gt;" (Embed HTML) tab &rarr; Copy the `src` URL from the iframe code provided.
+                To get your embed link: Open your Google Form &rarr; Click "Send" &rarr; Go to the "&lt;&gt;" (Embed HTML) tab &rarr; Copy the `src` URL from the iframe code provided (ensure `?embedded=true` is at the end).
               </p>
             </div>
           ) : (
@@ -49,15 +51,15 @@ export default function BookingsPage() {
               marginHeight={0}
               marginWidth={0}
               className="rounded-md border"
-              title="Simulation Session Booking Form"
-              aria-label="Simulation Session Booking Form"
+              title="Standardize Patient (SP) Booking Form"
+              aria-label="Standardize Patient (SP) Booking Form"
             >
               Loading booking form…
             </iframe>
           )}
            <p className="mt-4 text-sm text-muted-foreground">
-              <strong>Note:</strong> If you haven&apos;t updated the placeholder link in the code yet, the form above will not be your actual booking form.
-              To get your Google Form embed link: Open your Google Form &rarr; Click "Send" &rarr; Go to the "&lt;&gt;" (Embed HTML) tab &rarr; Copy the `src` URL from the iframe code.
+              <strong>Note:</strong> If you see an "Action Required" message above, please update the placeholder link in the code.
+              To get your Google Form embed link: Open your Google Form &rarr; Click "Send" &rarr; Go to the "&lt;&gt;" (Embed HTML) tab &rarr; Copy the `src` URL from the iframe code and ensure `?embedded=true` is appended.
             </p>
         </CardContent>
       </Card>
