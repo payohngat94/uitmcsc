@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ExternalLink } from "lucide-react"; // Added ExternalLink
 import Link from "next/link";
 
-// Placeholder URL for the new FSS/ECE booking form - PLEASE UPDATE THIS
-const FSS_ECE_BOOKING_FORM_URL = "YOUR_FSS_ECE_GOOGLE_FORM_LINK_HERE";
+// Updated URL for the FSS/ECE booking form
+const FSS_ECE_BOOKING_FORM_URL = "https://wa.me/60147140146?text=Assalamualaikum%20dan%20Selamat%20Sejahtera%2C%0A%0AIzinkan%20saya%20menempah%20sesi%20FSS%2FECE%20di%20Ward%20Simulasi.";
 
 const sessionTypesOptions = [
   { value: "fss", label: "Focused Skill Station" },
@@ -93,7 +93,7 @@ export default function BookingsPage() {
               Book Now <ExternalLink className="ml-2 h-4 w-4" />
             </Link>
           </Button>
-          {FSS_ECE_BOOKING_FORM_URL === "YOUR_FSS_ECE_GOOGLE_FORM_LINK_HERE" && (
+          {FSS_ECE_BOOKING_FORM_URL === "YOUR_FSS_ECE_GOOGLE_FORM_LINK_HERE" && ( // This check can be removed if you are sure the URL is final
             <p className="text-xs text-destructive/80 text-center p-2 border border-dashed border-destructive/50 rounded-md bg-destructive/10">
                 <strong>Action Required:</strong> Please update the `FSS_ECE_BOOKING_FORM_URL` in the code (`src/app/(authenticated)/bookings/page.tsx`) with your actual Google Form link for FSS/ECE bookings.
             </p>
