@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; 
 import { ExternalLink, FileText } from "lucide-react"; 
 import Link from "next/link";
+import { useAuth } from "@/contexts/auth-context"; // Added useAuth import
 
 // Updated URL for the FSS/ECE booking form
 const FSS_ECE_BOOKING_FORM_URL = "https://wa.me/60147140146?text=Assalamualaikum%20dan%20Selamat%20Sejahtera%2C%0A%0AIzinkan%20saya%20menempah%20sesi%20FSS%2FECE%20di%20Ward%20Simulasi.";
@@ -32,6 +33,7 @@ const fssSpecialtiesOptions = [
 export default function BookingsPage() {
   const [selectedSessionType, setSelectedSessionType] = useState<string | undefined>(undefined);
   const [selectedSpecialty, setSelectedSpecialty] = useState<string | undefined>(undefined);
+  const { currentUser } = useAuth(); // Get currentUser
 
   const spGoogleFormEmbedUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfyb4iO2QbNwGdc5y1PJ73fgyy2tvz4hlbHeqUtQQ_0MuiUUQ/viewform?embedded=true";
   
@@ -103,7 +105,7 @@ export default function BookingsPage() {
               </Link>
             </Button>
 
-            {assessmentFormUrl && (
+            {currentUser?.role === 'admin' && assessmentFormUrl && (
               <Button asChild variant="outline" className="w-full">
                 <Link href={assessmentFormUrl} target="_blank" rel="noopener noreferrer">
                   Assessment Form <FileText className="ml-2 h-4 w-4" />
@@ -141,4 +143,3 @@ export default function BookingsPage() {
     </div>
   );
 }
-
