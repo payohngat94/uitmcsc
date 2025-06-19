@@ -109,7 +109,7 @@ export default function BookingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {spGoogleFormEmbedUrl.startsWith(placeholderSpFormUrl) ? ( // This condition will now always be false if spGoogleFormEmbedUrl is correctly set
+          {spGoogleFormEmbedUrl.startsWith(placeholderSpFormUrl) ? ( 
             <div className="p-4 border border-dashed border-destructive rounded-md bg-destructive/10">
               <h3 className="font-semibold text-destructive">Action Required: Update Google Form Link</h3>
               <p className="text-sm text-destructive/80">
@@ -134,10 +134,6 @@ export default function BookingsPage() {
               Loading booking form…
             </iframe>
           )}
-           <p className="mt-4 text-sm text-muted-foreground">
-              <strong>Note:</strong> If you see an "Action Required" message above for SP bookings (which shouldn't happen if the link is correct), please update the placeholder link in the code.
-              To get your Google Form embed link: Open your Google Form &rarr; Click "Send" &rarr; Go to the "&lt;&gt;" (Embed HTML) tab &rarr; Copy the `src` URL from the iframe code and ensure `?embedded=true` is appended.
-            </p>
         </CardContent>
       </Card>
       
