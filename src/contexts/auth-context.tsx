@@ -2,13 +2,13 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, signInAnonymously } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
-import type { User, UserRole } from '@/lib/types';
+import type { UserRole } from '@/lib/types';
 
-// Augment FirebaseUser with our custom role property
+// AppUser type remains the same, role is part of it
 export type AppUser = FirebaseUser & { role: UserRole };
 
 interface AuthContextType {
@@ -16,6 +16,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
+  signInAsGuestAnonymously: () => Promise<void>; // New method for anonymous guest login
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,12 +31,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         let role: UserRole;
-        if (firebaseUser.email === 'admin@example.com') {
-          role = 'admin';
-        } else if (firebaseUser.email === 'guest@example.com') { // Assign 'guest' role
+        if (firebaseUser.isAnonymous) {
           role = 'guest';
+        } else if (firebaseUser.email === 'admin@example.com') {
+          role = 'admin';
         } else {
-          role = 'student'; // Default to student
+          role = 'student'; // Default to student for other authenticated users
         }
         setCurrentUser({ ...firebaseUser, role });
       } else {
@@ -65,17 +66,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Login Failed",
         description: description,
       });
-      setLoading(false); // Ensure loading is false on error
+      setLoading(false); 
       throw error; 
     }
-    // setLoading(false) will be handled by onAuthStateChanged's effect
+  };
+
+  const signInAsGuestAnonymously = async () => {
+    setLoading(true);
+    try {
+      await signInAnonymously(auth);
+      // onAuthStateChanged will handle setting currentUser with 'guest' role
+      toast({
+        title: "Signed in as Guest",
+        description: "You are now browsing with guest privileges.",
+      });
+      router.push("/dashboard"); // Or a specific guest landing page if desired
+    } catch (error: any) {
+      console.error("Anonymous login error:", error);
+      toast({
+        variant: "destructive",
+        title: "Guest Login Failed",
+        description: error.message || "Could not sign in as guest.",
+      });
+      setLoading(false);
+      throw error;
+    }
   };
 
   const logout = async () => {
     setLoading(true);
     try {
       await signOut(auth);
-      // onAuthStateChanged will set currentUser to null
       router.push('/'); 
     } catch (error: any) {
       console.error("Logout error:", error);
@@ -85,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: error.message || "Could not log out.",
       });
     } finally {
-      setLoading(false); // Ensure loading is false after logout attempt
+      setLoading(false); 
     }
   };
 
@@ -94,6 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loading,
     login,
     logout,
+    signInAsGuestAnonymously,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -106,4 +128,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-

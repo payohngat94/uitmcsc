@@ -25,19 +25,21 @@ import {
   LogOut,
   Settings, 
   GraduationCap,
-  Info // Added Info icon
+  Info,
+  User // Icon for Guest user
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context"; 
 import { useToast } from "@/hooks/use-toast";
+import type { UserRole } from "@/lib/types";
 
-const navItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/learning-materials", icon: BookOpen, label: "Learning Materials" },
-  { href: "/bookings", icon: CalendarDays, label: "Bookings" },
-  { href: "/inventory", icon: Archive, label: "Inventory" },
-  { href: "/announcements", icon: Megaphone, label: "Announcements" },
-  { href: "/about-us", icon: Info, label: "About Us" }, // Added About Us link
+const allNavItems = [
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ['admin', 'student'] as UserRole[] },
+  { href: "/learning-materials", icon: BookOpen, label: "Learning Materials", roles: ['admin', 'student'] as UserRole[] },
+  { href: "/bookings", icon: CalendarDays, label: "Bookings", roles: ['admin', 'student', 'guest'] as UserRole[] },
+  { href: "/inventory", icon: Archive, label: "Inventory", roles: ['admin', 'student', 'guest'] as UserRole[] },
+  { href: "/announcements", icon: Megaphone, label: "Announcements", roles: ['admin', 'student'] as UserRole[] },
+  { href: "/about-us", icon: Info, label: "About Us", roles: ['admin', 'student', 'guest'] as UserRole[] },
 ];
 
 export function AppSidebar() {
@@ -53,13 +55,18 @@ export function AppSidebar() {
         title: "Logged Out",
         description: "You have been successfully logged out.",
       });
-      // Router push is handled within the logout function in AuthContext
     } catch (error) {
       // Toast for error is handled within logout function
     }
   };
   
-  const userInitial = currentUser?.email ? currentUser.email.charAt(0).toUpperCase() : "U";
+  const userInitial = currentUser?.email ? currentUser.email.charAt(0).toUpperCase() : (currentUser?.isAnonymous ? "G" : "U");
+  const userDisplayName = currentUser?.isAnonymous ? "Guest User" : (currentUser?.displayName || "User");
+  const userEmail = currentUser?.isAnonymous ? "Anonymous" : currentUser?.email;
+
+  const visibleNavItems = allNavItems.filter(item => 
+    currentUser?.role && item.roles.includes(currentUser.role)
+  );
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" side="left">
@@ -81,7 +88,7 @@ export function AppSidebar() {
 
       <SidebarContent className="flex-1 p-2">
         <SidebarMenu>
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
@@ -103,13 +110,18 @@ export function AppSidebar() {
         {currentUser && (
           <div className={cn("flex items-center gap-3 transition-all duration-200 mb-2", open ? "opacity-100" : "opacity-0 group-hover/sidebar-wrapper:opacity-100 group-data-[collapsible=icon]:opacity-0")}>
             <Avatar className="h-10 w-10 border-2 border-primary/50">
-              {/* You can use currentUser.photoURL if available */}
-              <AvatarImage src={currentUser.photoURL || "https://placehold.co/100x100.png"} alt={currentUser.displayName || "User Avatar"} data-ai-hint="user avatar" />
-              <AvatarFallback>{userInitial}</AvatarFallback>
+              {currentUser.isAnonymous ? (
+                <AvatarFallback><User /></AvatarFallback>
+              ) : (
+                <>
+                  <AvatarImage src={currentUser.photoURL || "https://placehold.co/100x100.png"} alt={userDisplayName} data-ai-hint="user avatar" />
+                  <AvatarFallback>{userInitial}</AvatarFallback>
+                </>
+              )}
             </Avatar>
             <div className="flex flex-col truncate">
-              <span className="font-semibold text-sm text-sidebar-foreground truncate">{currentUser.displayName || "User"}</span>
-              <span className="text-xs text-muted-foreground truncate">{currentUser.email}</span>
+              <span className="font-semibold text-sm text-sidebar-foreground truncate">{userDisplayName}</span>
+              <span className="text-xs text-muted-foreground truncate">{userEmail}</span>
             </div>
           </div>
         )}

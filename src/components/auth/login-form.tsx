@@ -20,7 +20,7 @@ import { GraduationCap, Mail, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import React, { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/contexts/auth-context"; // Import useAuth
+import { useAuth } from "@/contexts/auth-context";
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -32,7 +32,7 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { login } = useAuth(); // Get login function from context
+  const { login, signInAsGuestAnonymously } = useAuth(); // Get login and new guest login function
   const [isClient, setIsClient] = useState(false);
   const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
 
@@ -65,30 +65,11 @@ export function LoginForm() {
   async function handleGuestLogin() {
     setIsGuestSubmitting(true);
     try {
-      // Use guest@example.com for the 'guest' role
-      await login("guest@example.com", "password"); 
-      toast({
-        title: "Signed in as Guest",
-        description: "You are now browsing with guest privileges.",
-      });
-      router.push("/dashboard");
+      await signInAsGuestAnonymously();
+      // Toast for success is handled in AuthContext or here if specific message needed
     } catch (error: any) {
-      // The login function in AuthContext shows a toast for common auth errors (e.g., auth/invalid-credential).
-      // We log the error here for debugging.
-      // Optionally, show a different toast if the error is NOT one of those common ones.
-      console.error("Guest login attempt failed:", error);
-      if (error?.code !== 'auth/invalid-credential' && error?.code !== 'auth/wrong-password' && error?.code !== 'auth/user-not-found') {
-        toast({
-          variant: "destructive",
-          title: "Guest Login Error",
-          description: "An unexpected issue occurred. If the guest account isn't working, it may need to be set up by an administrator.",
-        });
-      } else {
-        // For auth/invalid-credential, AuthContext's toast is "The email or password you entered is incorrect."
-        // which is acceptable even for a hardcoded guest login if the account is missing/misconfigured.
-        // You could add a specific console.info here if needed, e.g.
-        console.info("Guest login failed with auth/invalid-credential. Ensure guest@example.com with password 'password' exists in Firebase Auth.");
-      }
+      // Error toast is handled in AuthContext's signInAsGuestAnonymously
+      console.error("Guest login trigger failed in form:", error);
     } finally {
       setIsGuestSubmitting(false);
     }
@@ -181,7 +162,7 @@ export function LoginForm() {
               Forgot your password? <a href="#" className="font-medium text-primary hover:underline">Reset here</a>
             </p>
             <p className="mt-2 text-center text-sm text-muted-foreground">
-              Sign in as a{' '}
+              Or{' '}
               <Button
                 type="button"
                 variant="link"
@@ -189,7 +170,7 @@ export function LoginForm() {
                 onClick={handleGuestLogin}
                 disabled={isGuestSubmitting || form.formState.isSubmitting || !isClient}
               >
-                {isGuestSubmitting ? "Signing in..." : "guest"}
+                {isGuestSubmitting ? "Signing in as guest..." : "sign in as a guest"}
               </Button>
             </p>
           </>
