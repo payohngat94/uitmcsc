@@ -48,10 +48,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // onAuthStateChanged will handle setting currentUser with role
     } catch (error: any) {
       console.error("Login error:", error);
+      let description = "An unexpected error occurred. Please try again.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        description = "The email or password you entered is incorrect. Please check your details and try again.";
+      } else if (error.message) {
+        description = error.message;
+      }
+      
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: description,
       });
       setLoading(false); // Ensure loading is false on error
       throw error; 
@@ -94,3 +101,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
