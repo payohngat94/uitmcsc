@@ -52,13 +52,11 @@ export function LoginForm() {
   async function onSubmit(values: LoginFormValues) {
     try {
       await login(values.email, values.password);
-      toast({
-        title: "Login Successful",
-        description: "Welcome back to UiTM CSC!",
-      });
+      // Success toast is now handled by the logic inside useAuth based on user status
       router.push("/dashboard"); 
     } catch (error) {
-      form.setError("email", { type: "manual", message: " " }); 
+      // Error toast is handled by the login function in useAuth.
+      // We just need to handle form-specific errors here.
       form.setError("password", { type: "manual", message: "Invalid credentials or login failed." });
     }
   }
@@ -68,6 +66,7 @@ export function LoginForm() {
     try {
       await signInAsGuestAnonymously();
     } catch (error: any) {
+      // The toast for guest login failure is handled in the auth context.
       console.error("Guest login trigger failed in form:", error);
     } finally {
       setIsGuestSubmitting(false);

@@ -60,16 +60,17 @@ export function RegisterForm() {
       await register(values.email, values.password, values.studentOrStaffId);
       toast({
         title: "Registration Successful",
-        description: "Welcome to UiTM CSC! You are now logged in.",
+        description: "Your account is pending approval. You will be able to log in once an administrator has verified your account.",
       });
-      router.push("/dashboard"); 
+      router.push("/"); 
     } catch (error: any) {
-      // The error toast is handled in the auth context, 
-      // but we can set form errors if needed.
+      // The error toast is handled in the auth context,
+      // so we just need to set form-specific errors here.
       if (error.code === 'auth/email-already-in-use') {
         form.setError("email", { type: "manual", message: "This email is already registered." });
       } else {
-        form.setError("email", { type: "manual", message: " " });
+        // For other errors, display a generic message.
+        // We attach it to a field so it becomes visible in the UI.
         form.setError("confirmPassword", { type: "manual", message: "Registration failed. Please try again." });
       }
     }

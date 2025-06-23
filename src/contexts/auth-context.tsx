@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       if (firebaseUser) {
         if (firebaseUser.isAnonymous) {
           // Anonymous users are always 'guest' with 'active' status.
@@ -64,8 +65,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle fetching the user profile and setting state.
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      const userProfile = await getUserProfile(userCredential.user.uid);
+
+      if (userProfile?.status === 'active') {
+         toast({
+          title: "Login Successful",
+          description: "Welcome back to UiTM CSC!",
+        });
+      }
+      // onAuthStateChanged will handle setting state and redirection logic will be handled by layouts
     } catch (error: any) {
       console.error("Login error:", error);
       let description = "An unexpected error occurred. Please try again.";
@@ -80,8 +89,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Login Failed",
         description: description,
       });
-      setLoading(false); 
       throw error; 
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -91,14 +101,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       await createUserProfile(userCredential.user, studentOrStaffId);
 
-      // Manually set the new user state to avoid race conditions with the onAuthStateChanged listener.
-      // This makes the registration flow more predictable and stable.
-      const newUserState: AppUser = {
-        ...userCredential.user,
-        role: 'student',
-        status: 'pending',
-      };
-      setCurrentUser(newUserState);
+      // After registration, log the user out so they can't access the app
+      // until an admin approves their account.
+      await signOut(auth);
 
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -157,6 +162,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: error.message || "Could not log out.",
       });
     } finally {
+      // setCurrentUser(null) is handled by onAuthStateChanged
       setLoading(false); 
     }
   };
