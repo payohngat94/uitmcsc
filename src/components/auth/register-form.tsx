@@ -17,12 +17,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, Mail, Key } from "lucide-react";
+import { GraduationCap, Mail, Key, User } from "lucide-react"; // Added User icon
 import { useToast } from "@/hooks/use-toast";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
 
 const registerFormSchema = z.object({
+  studentOrStaffId: z.string().min(1, { message: "Student/Staff ID is required." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string()
@@ -46,6 +47,7 @@ export function RegisterForm() {
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
+      studentOrStaffId: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -54,7 +56,7 @@ export function RegisterForm() {
 
   async function onSubmit(values: RegisterFormValues) {
     try {
-      await register(values.email, values.password);
+      await register(values.email, values.password, values.studentOrStaffId);
       toast({
         title: "Registration Successful",
         description: "Welcome to UiTM CSC! You are now logged in.",
@@ -86,6 +88,26 @@ export function RegisterForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+             <FormField
+              control={form.control}
+              name="studentOrStaffId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground/80">Student / Staff ID</FormLabel>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., 2023123456"
+                        {...field}
+                        className="pl-10"
+                      />
+                    </FormControl>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="email"

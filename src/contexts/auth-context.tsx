@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, signInAnonymously, createUserWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, signInAnonymously, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, pass: string) => Promise<void>; // Added register
+  register: (email: string, pass: string, displayName: string) => Promise<void>;
   signInAsGuestAnonymously: () => Promise<void>;
 }
 
@@ -76,11 +76,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, pass: string) => {
+  const register = async (email: string, pass: string, displayName: string) => {
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will automatically handle setting the new user with the 'student' role.
+      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+      // After creating the user, update their profile with the display name (Student/Staff ID)
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, {
+          displayName: displayName,
+        });
+      }
+      // onAuthStateChanged will automatically pick up the new user and their updated profile,
+      // and then set the correct role and update the currentUser state.
     } catch (error: any) {
       console.error("Registration error:", error);
       let description = "An unexpected error occurred during registration.";
