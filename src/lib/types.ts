@@ -1,19 +1,19 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'admin' | 'student' | 'guest'; // Added 'guest'
+export type UserRole = 'admin' | 'student' | 'guest';
+export type UserStatus = 'pending' | 'active' | 'rejected';
 
-export type User = {
-  id: string;
-  email: string;
-  role: UserRole;
-  name?: string;
-  // Firebase User properties that we might use from auth.currentUser
+// This represents the data for a user profile stored in the 'users' collection in Firestore.
+export type UserProfile = {
   uid: string;
-  displayName?: string | null;
-  photoURL?: string | null;
-  emailVerified: boolean;
+  email: string | null;
+  displayName: string | null; // This will hold the Student/Staff ID
+  role: UserRole;
+  status: UserStatus;
+  createdAt: Timestamp | Date;
 };
+
 
 // export type LearningMaterialCategory = "Early Clinical Exposure" | "Focused Skill Station" | "Physical Examination" | "Procedural Skills" | "Communication Skills"; // OLD
 export type LearningMaterialCategoryName = string; // NEW - category names are now dynamic strings
@@ -78,4 +78,3 @@ export type Announcement = {
   isPinned?: boolean;
   audience?: UserRole[]; // 'admin' | 'student' | 'guest'
 };
-

@@ -13,8 +13,59 @@ import {
   query,
   orderBy,
   Timestamp,
+  setDoc,
+  getDoc,
 } from 'firebase/firestore';
-import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus, InventoryItemType } from '@/lib/types';
+import type { User as FirebaseUser } from 'firebase/auth';
+import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus, InventoryItemType, UserProfile } from '@/lib/types';
+
+
+// User Profile Service
+const usersCollectionRef = collection(db, 'users');
+
+export async function createUserProfile(user: FirebaseUser, studentOrStaffId: string): Promise<void> {
+  const userProfileRef = doc(db, 'users', user.uid);
+  try {
+    // Create a new document in the 'users' collection with the user's UID as the document ID.
+    await setDoc(userProfileRef, {
+      uid: user.uid,
+      email: user.email,
+      displayName: studentOrStaffId, // This is the Student/Staff ID
+      role: 'student',      // All new registrations are students by default.
+      status: 'pending',    // All new registrations require admin approval.
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error creating user profile: ", error);
+    throw new Error("Failed to create user profile.");
+  }
+}
+
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  const userProfileRef = doc(db, 'users', uid);
+  try {
+    const docSnap = await getDoc(userProfileRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      // Convert Firestore Timestamps to JS Date objects
+      const profileData: UserProfile = {
+        uid: data.uid,
+        email: data.email,
+        displayName: data.displayName,
+        role: data.role,
+        status: data.status,
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+      };
+      return profileData;
+    }
+    // Return null if no profile is found for the given UID.
+    return null;
+  } catch (error) {
+    console.error("Error fetching user profile: ", error);
+    throw new Error("Failed to fetch user profile.");
+  }
+}
+
 
 // Learning Material Categories Service
 const learningMaterialCategoriesCollectionRef = collection(db, 'learningMaterialCategories');

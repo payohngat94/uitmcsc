@@ -2,14 +2,15 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, signInAnonymously, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, signInAnonymously, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
-import type { UserRole } from '@/lib/types';
+import { getUserProfile, createUserProfile } from '@/lib/firebase/firestore-service';
+import type { UserRole, UserStatus } from '@/lib/types';
 
-// AppUser type remains the same, role is part of it
-export type AppUser = FirebaseUser & { role: UserRole };
+// AppUser type now includes the user's approval status
+export type AppUser = FirebaseUser & { role: UserRole; status: UserStatus; };
 
 // --- List of Admin Emails ---
 // To add a new admin, simply add their email to this list.
@@ -20,7 +21,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, pass: string, displayName: string) => Promise<void>;
+  register: (email: string, pass: string, studentOrStaffId: string) => Promise<void>;
   signInAsGuestAnonymously: () => Promise<void>;
 }
 
@@ -33,17 +34,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        let role: UserRole;
         if (firebaseUser.isAnonymous) {
-          role = 'guest';
-        } else if (firebaseUser.email && ADMIN_EMAILS.includes(firebaseUser.email)) {
-          role = 'admin';
+          // Anonymous users are always 'guest' with 'active' status.
+          setCurrentUser({ ...firebaseUser, role: 'guest', status: 'active' });
         } else {
-          role = 'student'; // Default to student for other authenticated users
+          // For authenticated users, fetch their profile from Firestore.
+          const userProfile = await getUserProfile(firebaseUser.uid);
+          
+          if (userProfile) {
+            // User has a profile in Firestore, use that for role and status.
+            setCurrentUser({ ...firebaseUser, role: userProfile.role, status: userProfile.status });
+          } else {
+            // Fallback for users without a Firestore profile (e.g., initial admin before their profile is created).
+            const role: UserRole = firebaseUser.email && ADMIN_EMAILS.includes(firebaseUser.email) ? 'admin' : 'student';
+            // If they don't have a profile, assume they are active.
+            setCurrentUser({ ...firebaseUser, role, status: 'active' });
+          }
         }
-        setCurrentUser({ ...firebaseUser, role });
       } else {
         setCurrentUser(null);
       }
@@ -56,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting currentUser with role
+      // onAuthStateChanged will handle fetching the user profile and setting state.
     } catch (error: any) {
       console.error("Login error:", error);
       let description = "An unexpected error occurred. Please try again.";
@@ -76,18 +85,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, pass: string, displayName: string) => {
+  const register = async (email: string, pass: string, studentOrStaffId: string) => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      // After creating the user, update their profile with the display name (Student/Staff ID)
-      if (userCredential.user) {
-        await updateProfile(userCredential.user, {
-          displayName: displayName,
-        });
-      }
-      // onAuthStateChanged will automatically pick up the new user and their updated profile,
-      // and then set the correct role and update the currentUser state.
+      // After creating the user in Firebase Auth, create their profile document in Firestore.
+      // This profile will have a status of 'pending' by default.
+      await createUserProfile(userCredential.user, studentOrStaffId);
+      // onAuthStateChanged will then automatically pick up the new user and their 'pending' status.
     } catch (error: any) {
       console.error("Registration error:", error);
       let description = "An unexpected error occurred during registration.";

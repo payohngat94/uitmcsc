@@ -8,6 +8,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar, MobileSidebarTrigger } from "@/components/layout/app-sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton"; // For loading state
+import PendingApprovalPage from "@/components/auth/pending-approval-page";
 
 export default function AuthenticatedLayout({
   children,
@@ -24,8 +25,7 @@ export default function AuthenticatedLayout({
   }, [currentUser, loading, router]);
 
   if (loading) {
-    // Show a loading state while checking authentication
-    // You can customize this further e.g. a full page spinner
+    // Show a loading skeleton while checking authentication
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="space-y-4 w-full max-w-md p-8">
@@ -40,9 +40,16 @@ export default function AuthenticatedLayout({
   if (!currentUser) {
     // This case should ideally be handled by the useEffect redirect,
     // but as a fallback, don't render children if not authenticated.
-    // Or, render null, or a message, or redirect again.
     return null; 
   }
+
+  // If the user's account is pending approval, show the pending page instead of the app.
+  if (currentUser.status === 'pending') {
+    return <PendingApprovalPage />;
+  }
+
+  // If the user is rejected, we could show a different page or just log them out.
+  // For now, we'll focus on the 'pending' state.
 
   return (
     <SidebarProvider defaultOpen={true}>
