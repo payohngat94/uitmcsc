@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -32,7 +33,7 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { login, signInAsGuestAnonymously } = useAuth(); // Get login and new guest login function
+  const { login, signInAsGuestAnonymously } = useAuth();
   const [isClient, setIsClient] = useState(false);
   const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
 
@@ -66,9 +67,7 @@ export function LoginForm() {
     setIsGuestSubmitting(true);
     try {
       await signInAsGuestAnonymously();
-      // Toast for success is handled in AuthContext or here if specific message needed
     } catch (error: any) {
-      // Error toast is handled in AuthContext's signInAsGuestAnonymously
       console.error("Guest login trigger failed in form:", error);
     } finally {
       setIsGuestSubmitting(false);
@@ -90,16 +89,16 @@ export function LoginForm() {
         {!isClient ? (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Skeleton className="h-4 w-1/4" /> {/* Label */}
-              <Skeleton className="h-10 w-full" /> {/* Input */}
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-10 w-full" />
             </div>
             <div className="space-y-2">
-              <Skeleton className="h-4 w-1/4" /> {/* Label */}
-              <Skeleton className="h-10 w-full" /> {/* Input */}
+              <Skeleton className="h-4 w-1/4" />
+              <Skeleton className="h-10 w-full" />
             </div>
-            <Skeleton className="h-10 w-full py-3" /> {/* Button */}
-            <Skeleton className="h-4 w-3/4 mx-auto" /> {/* Forgot password link */}
-            <Skeleton className="h-4 w-1/2 mx-auto" /> {/* Guest login link */}
+            <Skeleton className="h-10 w-full py-3" />
+            <Skeleton className="h-4 w-3/4 mx-auto" />
+            <Skeleton className="h-4 w-1/2 mx-auto" />
           </div>
         ) : (
           <>
@@ -158,21 +157,21 @@ export function LoginForm() {
                 </Button>
               </form>
             </Form>
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              Forgot your password? <a href="#" className="font-medium text-primary hover:underline">Reset here</a>
-            </p>
-            <p className="mt-2 text-center text-sm text-muted-foreground">
-              Or{' '}
+            <div className="mt-6 text-center text-sm text-muted-foreground">
               <Button
-                type="button"
-                variant="link"
-                className="p-0 h-auto font-medium text-primary hover:underline disabled:opacity-70"
-                onClick={handleGuestLogin}
-                disabled={isGuestSubmitting || form.formState.isSubmitting || !isClient}
+                  type="button"
+                  variant="link"
+                  className="p-0 h-auto font-medium text-primary hover:underline disabled:opacity-70"
+                  onClick={handleGuestLogin}
+                  disabled={isGuestSubmitting || form.formState.isSubmitting || !isClient}
               >
-                {isGuestSubmitting ? "Signing in as guest..." : "sign in as a guest"}
+                  {isGuestSubmitting ? "Signing in as guest..." : "Sign in as a guest"}
               </Button>
-            </p>
+              <span className="mx-1">|</span>
+               <Link href="/register" className="font-medium text-primary hover:underline">
+                  Don't have an account? Sign Up
+                </Link>
+            </div>
           </>
         )}
       </CardContent>

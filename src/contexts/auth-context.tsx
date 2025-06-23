@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, signInAnonymously } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, signInAnonymously, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +16,8 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
-  signInAsGuestAnonymously: () => Promise<void>; // New method for anonymous guest login
+  register: (email: string, pass: string) => Promise<void>; // Added register
+  signInAsGuestAnonymously: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +72,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const register = async (email: string, pass: string) => {
+    setLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged will automatically handle setting the new user with the 'student' role.
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      let description = "An unexpected error occurred during registration.";
+      if (error.code === 'auth/email-already-in-use') {
+        description = "This email is already registered. Please try logging in.";
+      } else if (error.code === 'auth/weak-password') {
+        description = "The password is too weak. Please choose a stronger password.";
+      } else if (error.message) {
+        description = error.message;
+      }
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: description,
+      });
+      setLoading(false);
+      throw error;
+    }
+  };
+
   const signInAsGuestAnonymously = async () => {
     setLoading(true);
     try {
@@ -80,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Signed in as Guest",
         description: "You are now browsing with guest privileges.",
       });
-      router.push("/dashboard"); // Or a specific guest landing page if desired
+      router.push("/dashboard");
     } catch (error: any) {
       console.error("Anonymous login error:", error);
       toast({
@@ -114,6 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     currentUser,
     loading,
     login,
+    register,
     logout,
     signInAsGuestAnonymously,
   };
