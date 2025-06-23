@@ -11,6 +11,10 @@ import type { UserRole } from '@/lib/types';
 // AppUser type remains the same, role is part of it
 export type AppUser = FirebaseUser & { role: UserRole };
 
+// --- List of Admin Emails ---
+// To add a new admin, simply add their email to this list.
+const ADMIN_EMAILS = ['admin@example.com'];
+
 interface AuthContextType {
   currentUser: AppUser | null;
   loading: boolean;
@@ -34,7 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         let role: UserRole;
         if (firebaseUser.isAnonymous) {
           role = 'guest';
-        } else if (firebaseUser.email === 'admin@example.com') {
+        } else if (firebaseUser.email && ADMIN_EMAILS.includes(firebaseUser.email)) {
           role = 'admin';
         } else {
           role = 'student'; // Default to student for other authenticated users
