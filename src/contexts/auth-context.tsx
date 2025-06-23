@@ -107,20 +107,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error: any) {
       console.error("Registration error:", error);
-      let description = "An unexpected error occurred during registration.";
-      if (error.code === 'auth/email-already-in-use') {
-        description = "This email is already registered. Please try logging in.";
-      } else if (error.code === 'auth/weak-password') {
-        description = "The password is too weak. Please choose a stronger password.";
-      } else if (error.message) {
-        description = error.message;
-      }
-      toast({
-        variant: "destructive",
-        title: "Registration Failed",
-        description: description,
-      });
-      throw error; // Re-throw error so the form knows it failed.
+      // Error is re-thrown so the form component can handle all UI feedback.
+      throw error;
     } finally {
       setLoading(false);
     }

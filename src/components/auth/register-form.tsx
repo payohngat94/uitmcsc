@@ -64,15 +64,25 @@ export function RegisterForm() {
       });
       router.push("/"); 
     } catch (error: any) {
-      // The error toast is handled in the auth context,
-      // so we just need to set form-specific errors here.
+      // All UI feedback for registration errors is now handled here.
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      
       if (error.code === 'auth/email-already-in-use') {
-        form.setError("email", { type: "manual", message: "This email is already registered." });
+        errorMessage = "This email is already registered.";
+        form.setError("email", { type: "manual", message: errorMessage });
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "Password is too weak. It must be at least 6 characters.";
+        form.setError("password", { type: "manual", message: errorMessage });
       } else {
-        // For other errors, display a generic message.
-        // We attach it to a field so it becomes visible in the UI.
+        // Attach generic errors to a visible field if not specific
         form.setError("confirmPassword", { type: "manual", message: "Registration failed. Please try again." });
       }
+
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: error.message || errorMessage,
+      });
     }
   }
 
