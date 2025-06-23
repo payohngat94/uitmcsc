@@ -89,10 +89,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      // After creating the user in Firebase Auth, create their profile document in Firestore.
-      // This profile will have a status of 'pending' by default.
       await createUserProfile(userCredential.user, studentOrStaffId);
-      // onAuthStateChanged will then automatically pick up the new user and their 'pending' status.
+
+      // Manually set the new user state to avoid race conditions with the onAuthStateChanged listener.
+      // This makes the registration flow more predictable and stable.
+      const newUserState: AppUser = {
+        ...userCredential.user,
+        role: 'student',
+        status: 'pending',
+      };
+      setCurrentUser(newUserState);
+
     } catch (error: any) {
       console.error("Registration error:", error);
       let description = "An unexpected error occurred during registration.";
@@ -108,10 +115,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Registration Failed",
         description: description,
       });
+      throw error; // Re-throw error so the form knows it failed.
+    } finally {
       setLoading(false);
-      throw error;
     }
   };
+
 
   const signInAsGuestAnonymously = async () => {
     setLoading(true);
