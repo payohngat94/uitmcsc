@@ -1,71 +1,29 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
   
     // --- Helper Functions ---
-    
-    // List of admin UIDs. Add the UIDs of your admin users here.
-    // IMPORTANT: You MUST replace the placeholder with your actual admin User ID (UID) from the Firebase Console.
-    function getAdminUIDs() {
-      return [
-        'REPLACE_WITH_YOUR_ADMIN_UID_1', 
-        'REPLACE_WITH_YOUR_ADMIN_UID_2' // You can add more admin UIDs here
-      ];
+    // Checks if the user's UID is in the hardcoded list of admin UIDs.
+    // IMPORTANT: You MUST replace the placeholder with your actual admin User ID.
+    function isAdmin() {
+      return request.auth.uid in ['REPLACE_WITH_YOUR_ADMIN_UID_1'];
     }
 
+    // Checks if a user is signed in.
     function isSignedIn() {
       return request.auth != null;
     }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    // This new isAdmin function checks against the hardcoded list of UIDs.
-    // This avoids the circular read that was causing the permission error.
-    function isAdmin() {
-      return isSignedIn() && request.auth.uid in getAdminUIDs();
-    }
-    
+
     // --- Collection Rules ---
-
-    // users: Admins can manage all user profiles.
-    // A user can read their own profile.
-    // Any authenticated user can create their own profile document during sign-up.
-    match /users/{userId} {
-      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow write: if isAdmin(); // Admin can update/delete any profile
-      allow create: if isOwner(userId); // A user can create their own profile
-    }
-
-    // learningMaterialCategories: Admins can manage, any signed-in user can read.
-    match /learningMaterialCategories/{categoryId} {
+    // For any collection in the database...
+    match /{collection}/{docId} {
+      // Any signed-in user (admin, student, or guest) can read data.
       allow read: if isSignedIn();
+      
+      // Only users whose UID is in the admin list can write (create, update, delete) data.
       allow write: if isAdmin();
-    }
-    
-    // learningMaterials: Admins can manage, any signed-in user can read.
-    match /learningMaterials/{materialId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-    
-    // announcements: Admins can manage, any signed-in user can read.
-    match /announcements/{announcementId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-    
-    // inventoryItems: Admins can manage, any signed-in user (including guests) can read.
-    match /inventoryItems/{itemId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-    
-    // Default deny all other access to prevent accidental data exposure.
-    match /{document=**} {
-      allow read, write: if false;
     }
   }
 }
