@@ -37,22 +37,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       if (firebaseUser) {
-        if (firebaseUser.isAnonymous) {
-          // Anonymous users are always 'guest' with 'active' status.
-          setCurrentUser({ ...firebaseUser, role: 'guest', status: 'active' });
-        } else {
-          // For authenticated users, fetch their profile from Firestore.
-          const userProfile = await getUserProfile(firebaseUser.uid);
-          
-          if (userProfile) {
-            // User has a profile in Firestore, use that for role and status.
-            setCurrentUser({ ...firebaseUser, role: userProfile.role, status: userProfile.status });
+        try {
+          if (firebaseUser.isAnonymous) {
+            // Anonymous users are always 'guest' with 'active' status.
+            setCurrentUser({ ...firebaseUser, role: 'guest', status: 'active' });
           } else {
-            // Fallback for users without a Firestore profile (e.g., initial admin before their profile is created).
-            const role: UserRole = firebaseUser.email && ADMIN_EMAILS.includes(firebaseUser.email) ? 'admin' : 'student';
-            // If they don't have a profile, assume they are active.
-            setCurrentUser({ ...firebaseUser, role, status: 'active' });
+            // For authenticated users, fetch their profile from Firestore.
+            const userProfile = await getUserProfile(firebaseUser.uid);
+            
+            if (userProfile) {
+              // User has a profile in Firestore, use that for role and status.
+              setCurrentUser({ ...firebaseUser, role: userProfile.role, status: userProfile.status });
+            } else {
+              // Fallback for users without a Firestore profile.
+              const role: UserRole = firebaseUser.email && ADMIN_EMAILS.includes(firebaseUser.email) ? 'admin' : 'student';
+              // If they don't have a profile, assume they are active. This might be for an admin who hasn't registered through the form.
+              setCurrentUser({ ...firebaseUser, role, status: 'active' });
+            }
           }
+        } catch (error) {
+          console.error("Auth context error fetching user profile:", error);
+          toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: "Could not verify your user profile. Please try logging in again.",
+          });
+          setCurrentUser(null);
+          await signOut(auth); // Log out the user to prevent an inconsistent state
         }
       } else {
         setCurrentUser(null);
@@ -60,7 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const login = async (email: string, pass: string) => {
     setLoading(true);
@@ -96,7 +107,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (email: string, pass: string, studentOrStaffId: string) => {
-    setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       await createUserProfile(userCredential.user, studentOrStaffId);
@@ -109,8 +119,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Registration error:", error);
       // Error is re-thrown so the form component can handle all UI feedback.
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 

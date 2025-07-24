@@ -37,7 +37,7 @@ export async function createUserProfile(user: FirebaseUser, studentOrStaffId: st
     });
   } catch (error) {
     console.error("Error creating user profile: ", error);
-    throw new Error("Failed to create user profile.");
+    throw new Error(`Failed to create user profile. ${(error as Error).message}`);
   }
 }
 
@@ -62,7 +62,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     return null;
   } catch (error) {
     console.error("Error fetching user profile: ", error);
-    throw new Error("Failed to fetch user profile.");
+    throw new Error(`Failed to fetch user profile. ${(error as Error).message}`);
   }
 }
 
