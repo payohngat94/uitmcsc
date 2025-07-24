@@ -114,12 +114,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // when the app tries to read their yet-unapproved profile.
       await signOut(auth);
 
-      toast({
-        title: "Registration Successful",
-        description: "Your account is pending approval. You will be able to log in once an administrator has verified your account.",
-      });
-      router.push("/"); 
-
     } catch (error: any) {
       console.error("Registration error:", error);
       // Let the form component handle displaying the error to the user

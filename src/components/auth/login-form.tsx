@@ -18,7 +18,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap, Mail, Key } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import React, { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
@@ -32,7 +31,6 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export function LoginForm() {
   const router = useRouter();
-  const { toast } = useToast();
   const { login, signInAsGuestAnonymously } = useAuth();
   const [isClient, setIsClient] = useState(false);
   const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
@@ -52,12 +50,18 @@ export function LoginForm() {
   async function onSubmit(values: LoginFormValues) {
     try {
       await login(values.email, values.password);
-      // Success toast is now handled by the logic inside useAuth based on user status
+      // onAuthStateChanged in AuthProvider will handle navigation if login is successful
       router.push("/dashboard"); 
     } catch (error) {
-      // Error toast is handled by the login function in useAuth.
-      // We just need to handle form-specific errors here.
-      form.setError("password", { type: "manual", message: "Invalid credentials or login failed." });
+      // The error toast is handled by the `login` function in useAuth.
+      // We can set a form-specific error message here for better UI feedback.
+      form.setError("root.serverError", {
+        type: "manual",
+        message: "Invalid credentials or login failed. Please try again.",
+      });
+      form.setError("password", {
+        message: "The email or password you entered is incorrect.",
+      });
     }
   }
 
@@ -147,6 +151,9 @@ export function LoginForm() {
                     </FormItem>
                   )}
                 />
+                {form.formState.errors.root?.serverError && (
+                  <FormMessage>{form.formState.errors.root.serverError.message}</FormMessage>
+                )}
                 <Button 
                   type="submit" 
                   className="w-full text-base py-3" 
