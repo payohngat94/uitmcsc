@@ -75,21 +75,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      const userProfile = await getUserProfile(userCredential.user.uid);
-
-      if (userProfile?.status === 'active') {
-         toast({
-          title: "Login Successful",
-          description: "Welcome back to UiTM CSC!",
-        });
-      }
-      // onAuthStateChanged will handle setting state and redirection logic will be handled by layouts
+      await signInWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged will handle the rest, including setting user state and profile fetching.
     } catch (error: any) {
       console.error("Login error:", error);
       let description = "An unexpected error occurred. Please try again.";
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-        description = "The email or password you entered is incorrect. Please check your details and try again.";
+      if (error.code === 'auth/invalid-credential') {
+        description = "The email or password you entered is incorrect.";
       } else if (error.message) {
         description = error.message;
       }
@@ -99,7 +91,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Login Failed",
         description: description,
       });
-      throw error; 
+      // Rethrow the error so the form knows the submission failed.
+      throw error;
     } finally {
         setLoading(false);
     }
@@ -153,7 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       await signOut(auth);
-      router.push('/'); 
+      router.push('/');
     } catch (error: any) {
       console.error("Logout error:", error);
        toast({
