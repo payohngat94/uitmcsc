@@ -60,7 +60,7 @@ export function RegisterForm() {
       await register(values.email, values.password, values.studentOrStaffId);
       toast({
         title: "Registration Successful",
-        description: "Your account is pending approval. You will be able to log in once an administrator has verified your account.",
+        description: "Your account has been created. If you are a student, your account is pending approval. Admins are approved automatically.",
       });
       router.push("/"); 
     } catch (error: any) {

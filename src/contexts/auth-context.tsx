@@ -60,7 +60,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch (error) {
           console.error("Auth context error:", error);
           // If any other error occurs, treat user as pending to be safe.
-           setCurrentUser({ ...firebaseUser, role: 'student', status: 'pending' });
+          if (firebaseUser) {
+            setCurrentUser({ ...firebaseUser, role: 'student', status: 'pending' });
+          }
         }
       } else {
         setCurrentUser(null);
@@ -105,13 +107,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (email: string, pass: string, studentOrStaffId: string) => {
     try {
+      // Determine role based on email
+      const role: UserRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'student';
+      // Admins are auto-approved, students are pending
+      const status: UserStatus = role === 'admin' ? 'active' : 'pending';
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      await createUserProfile(userCredential.user, studentOrStaffId);
+      await createUserProfile(userCredential.user, studentOrStaffId, role, status);
 
       // After registration, log the user out so they can't access the app
-      // until an admin approves their account. This prevents the "pending"
-      // user from being in a logged-in state, which avoids the permission error
-      // when the app tries to read their yet-unapproved profile.
+      // until an admin approves their account. This is a clean UX.
       await signOut(auth);
 
     } catch (error: any) {

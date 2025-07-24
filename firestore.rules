@@ -1,35 +1,47 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // --- Helper Functions ---
-
-    // Checks if the user is authenticated.
+    // --- Helper functions ---
     function isSignedIn() {
       return request.auth != null;
     }
-
-    // Checks if the user's UID is in the hardcoded list of admins.
-    // IMPORTANT: You MUST replace the placeholder UIDs with the actual UIDs of your admin users.
-    function isAdmin() {
-      return request.auth.uid in [
-        'REPLACE_WITH_YOUR_ADMIN_UID_1'
-        // You can add more admin UIDs here, like:
-        // 'REPLACE_WITH_YOUR_ADMIN_UID_2', 
-      ];
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
     
-    // --- Collection Rules ---
-
-    // This rule applies to ALL collections in your database.
-    match /{document=**} {
-      // Any signed-in user can read any document.
-      allow read: if isSignedIn();
-      
-      // Only admins can write (create, update, delete) any document.
-      allow write: if isAdmin();
+    function getRole(userId) {
+      // It's safe to read from the users collection here because the rules below
+      // will grant the necessary access.
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
+
+    function isAdmin() {
+      // An admin is defined as a user who is signed in and has the 'admin' role in their user profile.
+      return isSignedIn() && getRole(request.auth.uid) == 'admin';
+    }
+
+    // --- Rules for collections ---
+
+    // users: 
+    // - Any signed-in user can read their own profile.
+    // - Admins can read any user's profile (needed for approving new accounts).
+    // - Users can create their own profile (on signup).
+    // - Only admins can update user profiles (to change roles/status).
+    match /users/{userId} {
+      allow read: if (isSignedIn() && isOwner(userId)) || isAdmin();
+      allow create: if isOwner(userId); // Allows a user to create their own document on signup
+      allow update, delete: if isAdmin();
+    }
+    
+    // For all other collections, any signed-in user can read, but only admins can write.
+    // This is a safe and simple default for your app's collections.
+    match /learningMaterialCategories/{docId} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /learningMaterials/{docId} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /announcements/{docId} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /inventoryItems/{docId} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+
   }
 }

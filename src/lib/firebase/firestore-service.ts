@@ -17,13 +17,13 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus, InventoryItemType, UserProfile } from '@/lib/types';
+import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus, InventoryItemType, UserProfile, UserStatus } from '@/lib/types';
 
 
 // User Profile Service
 const usersCollectionRef = collection(db, 'users');
 
-export async function createUserProfile(user: FirebaseUser, studentOrStaffId: string): Promise<void> {
+export async function createUserProfile(user: FirebaseUser, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<void> {
   const userProfileRef = doc(db, 'users', user.uid);
   try {
     // Create a new document in the 'users' collection with the user's UID as the document ID.
@@ -31,8 +31,8 @@ export async function createUserProfile(user: FirebaseUser, studentOrStaffId: st
       uid: user.uid,
       email: user.email,
       displayName: studentOrStaffId, // This is the Student/Staff ID
-      role: 'student',      // All new registrations are students by default.
-      status: 'pending',    // All new registrations require admin approval.
+      role: role,      // Role is passed in
+      status: status,    // Status is passed in
       createdAt: serverTimestamp(),
     });
   } catch (error) {
