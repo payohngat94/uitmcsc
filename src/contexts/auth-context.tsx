@@ -112,7 +112,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await createUserProfile(userCredential.user, studentOrStaffId);
 
       // After registration, log the user out so they can't access the app
-      // until an admin approves their account.
+      // until an admin approves their account. This prevents the "pending"
+      // user from being in a logged-in state, which avoids the permission error
+      // when the app tries to read their yet-unapproved profile.
       await signOut(auth);
 
     } catch (error: any) {
