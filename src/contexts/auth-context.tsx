@@ -49,21 +49,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               // User has a profile in Firestore, use that for role and status.
               setCurrentUser({ ...firebaseUser, role: userProfile.role, status: userProfile.status });
             } else {
-              // Fallback for users without a Firestore profile.
-              const role: UserRole = firebaseUser.email && ADMIN_EMAILS.includes(firebaseUser.email) ? 'admin' : 'student';
-              // If they don't have a profile, assume they are active. This might be for an admin who hasn't registered through the form.
-              setCurrentUser({ ...firebaseUser, role, status: 'active' });
+              // This case handles a logged-in user who does NOT have a firestore document.
+              // This can happen if profile creation fails or if the read is blocked by security rules.
+              // We'll treat them as a student with a 'pending' status.
+              // This prevents an app crash and ensures they land on the pending page.
+              console.warn(`No profile found for UID ${firebaseUser.uid}, or access was denied. Defaulting to 'pending' status.`);
+              setCurrentUser({ ...firebaseUser, role: 'student', status: 'pending' });
             }
           }
         } catch (error) {
-          console.error("Auth context error fetching user profile:", error);
-          toast({
-            variant: "destructive",
-            title: "Authentication Error",
-            description: "Could not verify your user profile. Please try logging in again.",
-          });
-          setCurrentUser(null);
-          await signOut(auth); // Log out the user to prevent an inconsistent state
+          console.error("Auth context error:", error);
+          // If any other error occurs, treat user as pending to be safe.
+           setCurrentUser({ ...firebaseUser, role: 'student', status: 'pending' });
         }
       } else {
         setCurrentUser(null);
@@ -117,9 +114,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // when the app tries to read their yet-unapproved profile.
       await signOut(auth);
 
+      toast({
+        title: "Registration Successful",
+        description: "Your account is pending approval. You will be able to log in once an administrator has verified your account.",
+      });
+      router.push("/"); 
+
     } catch (error: any) {
       console.error("Registration error:", error);
-      // Error is re-thrown so the form component can handle all UI feedback.
+      // Let the form component handle displaying the error to the user
       throw error;
     }
   };
