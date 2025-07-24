@@ -5,24 +5,30 @@ service cloud.firestore {
   match /databases/{database}/documents {
   
     // --- Helper Functions ---
-    // Checks if the user's UID is in the hardcoded list of admin UIDs.
-    // IMPORTANT: You MUST replace the placeholder with your actual admin User ID.
-    function isAdmin() {
-      return request.auth.uid in ['REPLACE_WITH_YOUR_ADMIN_UID_1'];
-    }
 
-    // Checks if a user is signed in.
+    // Checks if the user is authenticated.
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // Checks if the user's UID is in the hardcoded list of admins.
+    // IMPORTANT: You MUST replace the placeholder UIDs with the actual UIDs of your admin users.
+    function isAdmin() {
+      return request.auth.uid in [
+        'REPLACE_WITH_YOUR_ADMIN_UID_1'
+        // You can add more admin UIDs here, like:
+        // 'REPLACE_WITH_YOUR_ADMIN_UID_2', 
+      ];
+    }
+    
     // --- Collection Rules ---
-    // For any collection in the database...
-    match /{collection}/{docId} {
-      // Any signed-in user (admin, student, or guest) can read data.
+
+    // This rule applies to ALL collections in your database.
+    match /{document=**} {
+      // Any signed-in user can read any document.
       allow read: if isSignedIn();
       
-      // Only users whose UID is in the admin list can write (create, update, delete) data.
+      // Only admins can write (create, update, delete) any document.
       allow write: if isAdmin();
     }
   }
