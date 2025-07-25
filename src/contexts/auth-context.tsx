@@ -49,10 +49,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               // User has a profile in Firestore, use that for role and status.
               setCurrentUser({ ...firebaseUser, role: userProfile.role, status: userProfile.status });
             } else {
-              // This case handles a logged-in user who does NOT have a firestore document.
-              // This can happen if profile creation fails or if the read is blocked by security rules.
+              // This can happen if profile creation failed or if the read is blocked by security rules.
               // We'll treat them as a student with a 'pending' status.
-              // This prevents an app crash and ensures they land on the pending page.
               console.warn(`No profile found for UID ${firebaseUser.uid}, or access was denied. Defaulting to 'pending' status.`);
               setCurrentUser({ ...firebaseUser, role: 'student', status: 'pending' });
             }
@@ -70,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [toast]);
+  }, []);
 
   const login = async (email: string, pass: string) => {
     setLoading(true);
@@ -100,16 +98,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (email: string, pass: string, studentOrStaffId: string) => {
     try {
-      // Determine role based on email
+      // Step 1: Create the user in Firebase Authentication.
+      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+      const user = userCredential.user;
+
+      // This is a critical step: Determine the role and status *before* creating the profile.
       const role: UserRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'student';
-      // Admins are auto-approved, students are pending
       const status: UserStatus = role === 'admin' ? 'active' : 'pending';
 
-      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      await createUserProfile(userCredential.user, studentOrStaffId, role, status);
+      // Step 2: Create the user's profile document in Firestore.
+      // This ensures the /users/{uid} document exists before they ever try to log in.
+      await createUserProfile(user, studentOrStaffId, role, status);
 
-      // After registration, log the user out so they can't access the app
-      // until an admin approves their account. This is a clean UX.
+      // Step 3: Sign the user out. This is a good practice for registration flows
+      // that require admin approval. It forces them to the login page.
       await signOut(auth);
 
     } catch (error: any) {
