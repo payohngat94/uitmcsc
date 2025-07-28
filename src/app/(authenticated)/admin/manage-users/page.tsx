@@ -73,6 +73,10 @@ export default function ManageUsersPage() {
   }, [currentUser, router, toast]);
 
   const handleUpdateStatus = async (uid: string, newStatus: UserStatus) => {
+    if (!uid) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Cannot update user without a valid UID.' });
+        return;
+    }
     setIsUpdating(prev => ({ ...prev, [uid]: true }));
     try {
       await updateUserStatus(uid, newStatus);
@@ -170,10 +174,10 @@ export default function ManageUsersPage() {
                   filteredUsers.map(user => {
                     const { icon: StatusIcon, color, variant } = statusConfig[user.status];
                     return (
-                        <TableRow key={user.uid}>
+                        <TableRow key={user.docId}>
                         <TableCell>
-                          <div className="font-medium">{user.email}</div>
-                          <div className="text-xs text-muted-foreground">{user.uid}</div>
+                          <div className="font-medium">{user.email || 'N/A'}</div>
+                          <div className="text-xs text-muted-foreground">{user.uid || 'No UID'}</div>
                         </TableCell>
                         <TableCell>
                            <div className="font-mono text-sm">{user.studentOrStaffId}</div>
@@ -192,14 +196,14 @@ export default function ManageUsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {user.status === 'pending' && (
+                          {user.status === 'pending' && user.uid && (
                             <div className="flex gap-2 justify-end">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="border-green-600 text-green-600 hover:bg-green-100 hover:text-green-700"
-                                onClick={() => handleUpdateStatus(user.uid, 'active')}
-                                disabled={isUpdating[user.uid]}
+                                onClick={() => handleUpdateStatus(user.uid!, 'active')}
+                                disabled={isUpdating[user.uid!]}
                               >
                                 <CheckCircle className="mr-1 h-4 w-4" /> Approve
                               </Button>
@@ -207,19 +211,19 @@ export default function ManageUsersPage() {
                                 size="sm"
                                 variant="outline"
                                 className="border-red-600 text-red-600 hover:bg-red-100 hover:text-red-700"
-                                onClick={() => handleUpdateStatus(user.uid, 'rejected')}
-                                disabled={isUpdating[user.uid]}
+                                onClick={() => handleUpdateStatus(user.uid!, 'rejected')}
+                                disabled={isUpdating[user.uid!]}
                               >
                                 <XCircle className="mr-1 h-4 w-4" /> Reject
                               </Button>
                             </div>
                           )}
-                           {user.status === 'rejected' && (
+                           {user.status === 'rejected' && user.uid && (
                                <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleUpdateStatus(user.uid, 'active')}
-                                disabled={isUpdating[user.uid]}
+                                onClick={() => handleUpdateStatus(user.uid!, 'active')}
+                                disabled={isUpdating[user.uid!]}
                               >
                                 Re-approve
                               </Button>

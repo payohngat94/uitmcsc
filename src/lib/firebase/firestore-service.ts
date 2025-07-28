@@ -100,6 +100,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       }
 
       const profileData: UserProfile = {
+        docId: docSnap.id,
         uid: data.uid,
         email: data.email,
         displayName: data.displayName || data.studentOrStaffId,
@@ -139,6 +140,7 @@ export async function getAllUsers(): Promise<UserProfile[]> {
       }
 
       return {
+        docId: docSnapshot.id,
         uid: data.uid,
         email: data.email,
         displayName: data.displayName || data.studentOrStaffId,
@@ -509,5 +511,3 @@ export async function deleteInventoryItem(id: string): Promise<void> {
     throw new Error(`Failed to delete inventory item: ${(error as Error).message}`);
   }
 }
-
-    

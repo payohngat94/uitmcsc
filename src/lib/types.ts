@@ -6,7 +6,8 @@ export type UserStatus = 'pending' | 'active' | 'rejected';
 
 // This represents the data for a user profile stored in the 'users' collection in Firestore.
 export type UserProfile = {
-  uid: string;
+  docId: string; // The Firestore document ID, guaranteed to be unique.
+  uid: string | null; // The Firebase Auth UID, may be null initially.
   email: string | null;
   displayName: string | null; // This will hold the Student/Staff ID
   studentOrStaffId: string;
