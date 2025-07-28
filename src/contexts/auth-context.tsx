@@ -6,7 +6,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as F
 import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
-import { getUserProfile, createUserProfile } from '@/lib/firebase/firestore-service';
+import { getUserProfile, createUserProfile, updateUserStatus } from '@/lib/firebase/firestore-service';
 import type { UserRole, UserStatus } from '@/lib/types';
 
 // AppUser type now includes the user's approval status
@@ -38,6 +38,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       if (firebaseUser) {
         try {
+          // One-time manual approval logic for a specific user.
+          // This ensures their role and status are corrected to 'admin' and 'active'.
+          if (firebaseUser.email === 'ainuddin@uitm.edu.my') {
+            const userProfile = await getUserProfile(firebaseUser.uid);
+            if (userProfile && (userProfile.role !== 'admin' || userProfile.status !== 'active')) {
+                console.log("AuthProvider: Manually updating 'ainuddin@uitm.edu.my' to active admin.");
+                await updateUserStatus(firebaseUser.uid, 'active');
+                // We don't need to update the role here as it's defined by the ADMIN_EMAILS list,
+                // but status is important. This ensures they can log in.
+                // The role will be correctly inferred below.
+            }
+          }
+
+
           if (firebaseUser.isAnonymous) {
             // Anonymous users are always 'guest' with 'active' status.
             setCurrentUser({ ...firebaseUser, role: 'guest', status: 'active' });
