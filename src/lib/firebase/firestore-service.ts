@@ -15,6 +15,7 @@ import {
   Timestamp,
   setDoc,
   getDoc,
+  where,
 } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus, InventoryItemType, UserProfile, UserStatus } from '@/lib/types';
@@ -63,9 +64,47 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     return null;
   } catch (error) {
     console.error("Error fetching user profile: ", error);
+    if (error instanceof Error) {
+        throw error;
+    }
     throw new Error(`Failed to fetch user profile. ${(error as Error).message}`);
   }
 }
+
+// New function for admins to get all users
+export async function getAllUsers(): Promise<UserProfile[]> {
+  try {
+    const q = query(usersCollectionRef, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnapshot => {
+      const data = docSnapshot.data();
+      return {
+        uid: data.uid,
+        email: data.email,
+        displayName: data.displayName || data.studentOrStaffId,
+        studentOrStaffId: data.studentOrStaffId,
+        role: data.role,
+        status: data.status,
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    throw new Error(`Failed to fetch users. ${(error as Error).message}`);
+  }
+}
+
+// New function for admins to update a user's status
+export async function updateUserStatus(uid: string, status: UserStatus): Promise<void> {
+  const userProfileRef = doc(db, 'users', uid);
+  try {
+    await updateDoc(userProfileRef, { status: status });
+  } catch (error) {
+    console.error("Error updating user status:", error);
+    throw new Error(`Failed to update user status. ${(error as Error).message}`);
+  }
+}
+
 
 
 // Learning Material Categories Service

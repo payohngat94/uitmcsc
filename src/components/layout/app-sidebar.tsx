@@ -26,7 +26,8 @@ import {
   Settings, 
   GraduationCap,
   Info,
-  User // Icon for Guest user
+  User, // Icon for Guest user
+  UserCog, // Icon for User Management
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context"; 
@@ -38,7 +39,8 @@ const allNavItems = [
   { href: "/learning-materials", icon: BookOpen, label: "Learning Materials", roles: ['admin', 'student'] as UserRole[] },
   { href: "/bookings", icon: CalendarDays, label: "Bookings", roles: ['admin', 'student', 'guest'] as UserRole[] },
   { href: "/inventory", icon: Archive, label: "Inventory", roles: ['admin', 'student', 'guest'] as UserRole[] },
-  { href: "/announcements", icon: Megaphone, label: "Announcements", roles: ['admin', 'student'] as UserRole[] },
+  { href: "/announcements", icon: Megaphone, label: "Announcements", roles: ['admin', 'student', 'guest'] as UserRole[] }, // Guests can now view announcements
+  { href: "/admin/manage-users", icon: UserCog, label: "Manage Users", roles: ['admin'] as UserRole[] }, // Admin-only page
   { href: "/about-us", icon: Info, label: "About Us", roles: ['admin', 'student', 'guest'] as UserRole[] },
 ];
 
@@ -92,7 +94,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
+                  isActive={pathname.startsWith(item.href)}
                   tooltip={{ children: item.label, className: "bg-primary text-primary-foreground" }}
                   className="justify-start"
                   onClick={() => isMobile && setOpen(false)}

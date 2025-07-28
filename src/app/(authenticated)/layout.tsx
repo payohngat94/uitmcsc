@@ -9,6 +9,7 @@ import { AppSidebar, MobileSidebarTrigger } from "@/components/layout/app-sideba
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton"; // For loading state
 import PendingApprovalPage from "@/components/auth/pending-approval-page";
+import RejectedAccountPage from "@/components/auth/rejected-account-page"; // Import the new rejected page
 
 export default function AuthenticatedLayout({
   children,
@@ -48,8 +49,11 @@ export default function AuthenticatedLayout({
     return <PendingApprovalPage />;
   }
 
-  // If the user is rejected, we could show a different page or just log them out.
-  // For now, we'll focus on the 'pending' state.
+  // If the user's account has been rejected, show the rejected page.
+  if (currentUser.status === 'rejected') {
+    return <RejectedAccountPage />;
+  }
+
 
   return (
     <SidebarProvider defaultOpen={true}>

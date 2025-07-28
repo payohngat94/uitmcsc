@@ -1,16 +1,51 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only read and write their own profile information.
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+  
+    // Helper function to check if a user is an admin
+    function isAdmin() {
+      // Check if the requesting user's profile exists and their role is 'admin'
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Default deny all other collections for now.
-    // Add rules for other collections as needed.
-    match /{document=**} {
-      allow read, write: if false;
+    // Users can only manage their own profile.
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId || isAdmin();
+      allow create: if request.auth.uid == userId; // Allow user to create their own profile on signup
+      allow update: if request.auth.uid == userId || isAdmin(); // Admins can update any user's status
+      allow delete: if isAdmin(); // Only admins can delete user profiles
     }
+
+    // Admins can read all user profiles for the management page
+    match /users/{document=**} {
+      allow list: if isAdmin();
+    }
+    
+    // Learning Material Categories: Admins can manage, others can read.
+    match /learningMaterialCategories/{categoryId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Learning Materials: Admins can manage, others can read.
+    match /learningMaterials/{materialId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    // Announcements: Admins can manage, others can read.
+    match /announcements/{announcementId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    // Inventory: Admins can manage, others can read.
+    match /inventoryItems/{itemId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
   }
 }
