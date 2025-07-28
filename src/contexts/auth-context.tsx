@@ -7,10 +7,8 @@ import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { getUserProfile, createUserProfile } from '@/lib/firebase/firestore-service';
-import type { UserRole, UserStatus } from '@/lib/types';
+import type { AppUser, UserProfile, UserRole, UserStatus } from '@/lib/types';
 
-// AppUser type now includes the user's approval status
-export type AppUser = FirebaseUser & { role: UserRole; status: UserStatus; };
 
 // --- List of Admin Emails ---
 // To add a new admin, simply add their email to this list.
@@ -82,10 +80,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Login error:", error);
       let description = "An unexpected error occurred. Please try again.";
+      // FIX: Check error.code, which is a safe string, instead of error.message
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
         description = "The email or password you entered is incorrect.";
-      } else if (error.message) {
-        description = error.message;
       }
       
       toast({
@@ -122,6 +119,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Registration error:", error);
       // Let the form component handle displaying the error to the user
       // by returning the error object.
+      // FIX: Return the error object itself, the form will handle the message string.
       return { success: false, error };
     }
   };
@@ -142,7 +140,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({
         variant: "destructive",
         title: "Guest Login Failed",
-        description: error.message || "Could not sign in as guest.",
+        // FIX: Use error.message but ensure it's treated as a string
+        description: String(error.message) || "Could not sign in as guest.",
       });
       setLoading(false);
       throw error;
@@ -159,7 +158,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        toast({
         variant: "destructive",
         title: "Logout Failed",
-        description: error.message || "Could not log out.",
+        // FIX: Use error.message but ensure it's treated as a string
+        description: String(error.message) || "Could not log out.",
       });
     } finally {
       // setCurrentUser(null) is handled by onAuthStateChanged
