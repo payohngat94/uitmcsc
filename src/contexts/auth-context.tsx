@@ -86,17 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { success: true };
     } catch (error: any) {
       console.error("Login error:", error);
-      let description = "An unexpected error occurred. Please try again.";
-      // Handle specific Firebase auth errors
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        description = "The email or password you entered is incorrect.";
-      }
-      
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: description,
-      });
+      // Don't toast here; return the error to the form to handle
       return { success: false, error };
     } finally {
         setLoading(false);
@@ -131,12 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error: any) {
       console.error("Registration error:", error);
-      // Provide specific feedback for common errors
-      if (error.code === 'auth/email-already-in-use') {
-        // The toast is now handled in the form's onSubmit
-      } else if (error.code === 'auth/weak-password') {
-        // The toast is handled in the form's onSubmit
-      }
+      // Return the error so the form can display it
       return { success: false, error };
     }
   };

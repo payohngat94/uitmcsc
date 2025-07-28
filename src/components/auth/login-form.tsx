@@ -53,13 +53,14 @@ export function LoginForm() {
     if (result.success) {
       router.push("/dashboard");
     } else {
-      // Set an error on the form for user feedback
+      let errorMessage = "Invalid credentials or login failed. Please try again.";
+      if (result.error?.code === 'auth/invalid-credential' || result.error?.code === 'auth/user-not-found' || result.error?.code === 'auth/wrong-password') {
+        errorMessage = "The email or password you entered is incorrect.";
+        form.setError("password", { message: errorMessage });
+      }
       form.setError("root.serverError", {
         type: "manual",
-        message: "Invalid credentials or login failed. Please try again.",
-      });
-      form.setError("password", {
-        message: "The email or password you entered is incorrect.",
+        message: errorMessage,
       });
     }
   }
