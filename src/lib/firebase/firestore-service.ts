@@ -147,7 +147,6 @@ export async function getAllUsers(): Promise<UserProfile[]> {
 }
 
 export async function updateUserStatus(docId: string, status: UserStatus): Promise<void> {
-  // This function now uses the document ID, not the UID, for updates.
   const userProfileRef = doc(db, 'users', docId);
   try {
     await updateDoc(userProfileRef, { status: status });
@@ -157,6 +156,15 @@ export async function updateUserStatus(docId: string, status: UserStatus): Promi
   }
 }
 
+export async function deleteUser(docId: string): Promise<void> {
+  const userDocRef = doc(db, 'users', docId);
+  try {
+    await deleteDoc(userDocRef);
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    throw new Error(`Failed to delete user. ${(error as Error).message}`);
+  }
+}
 
 
 // Learning Material Categories Service
@@ -499,3 +507,5 @@ export async function deleteInventoryItem(id: string): Promise<void> {
     throw new Error(`Failed to delete inventory item: ${(error as Error).message}`);
   }
 }
+
+    

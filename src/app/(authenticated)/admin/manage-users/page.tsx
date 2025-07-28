@@ -13,9 +13,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CheckCircle, XCircle, Hourglass, ShieldCheck, UserCog, AlertTriangle, Users } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { CheckCircle, XCircle, Hourglass, ShieldCheck, UserCog, AlertTriangle, Users, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { getAllUsers, updateUserStatus } from '@/lib/firebase/firestore-service';
+import { getAllUsers, updateUserStatus, deleteUser } from '@/lib/firebase/firestore-service';
 import type { UserProfile, UserStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -41,15 +51,9 @@ export default function ManageUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<UserStatus | 'all'>('all');
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
 
-  useEffect(() => {
-    if (currentUser?.role !== 'admin') {
-      toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to view this page.' });
-      router.push('/dashboard');
-      return;
-    }
-
-    const fetchUsers = async () => {
+  const fetchUsers = async () => {
       setIsLoading(true);
       setError(null);
       try {
@@ -58,7 +62,6 @@ export default function ManageUsersPage() {
       } catch (err) {
         console.error("Failed to fetch users:", err);
         const errorMessage = (err instanceof Error) ? err.message : 'An unknown error occurred.';
-        // Check for specific permission denied error from our service
         if (errorMessage.includes("Firestore security rules")) {
           setError(errorMessage);
         } else {
@@ -69,6 +72,12 @@ export default function ManageUsersPage() {
       }
     };
 
+  useEffect(() => {
+    if (currentUser?.role !== 'admin') {
+      toast({ variant: 'destructive', title: 'Access Denied', description: 'You do not have permission to view this page.' });
+      router.push('/dashboard');
+      return;
+    }
     fetchUsers();
   }, [currentUser, router, toast]);
 
@@ -93,6 +102,22 @@ export default function ManageUsersPage() {
       setIsUpdating(prev => ({ ...prev, [docId]: false }));
     }
   };
+  
+  const handleDeleteUser = async () => {
+    if (!userToDelete || !userToDelete.docId) return;
+
+    try {
+        await deleteUser(userToDelete.docId);
+        setUsers(prevUsers => prevUsers.filter(user => user.docId !== userToDelete.docId));
+        toast({ title: 'Success', description: `User ${userToDelete.email} has been deleted.` });
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete user.' });
+    } finally {
+        setUserToDelete(null);
+    }
+  };
+
 
   const filteredUsers = useMemo(() => {
     if (filter === 'all') return users;
@@ -100,7 +125,7 @@ export default function ManageUsersPage() {
   }, [users, filter]);
 
   if (currentUser?.role !== 'admin') {
-    return null; // Or a dedicated access denied component
+    return null; 
   }
 
   return (
@@ -108,7 +133,7 @@ export default function ManageUsersPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
             <h1 className="text-3xl font-bold font-headline mb-2 flex items-center"><UserCog className="mr-3 h-8 w-8 text-primary" /> User Management</h1>
-            <p className="text-muted-foreground">Approve or reject new user registrations.</p>
+            <p className="text-muted-foreground">Approve, reject, or delete user registrations.</p>
         </div>
         <div className="w-full sm:w-auto">
             <Select value={filter} onValueChange={(value) => setFilter(value as UserStatus | 'all')}>
@@ -140,6 +165,23 @@ export default function ManageUsersPage() {
           </AlertDescription>
         </Alert>
       )}
+
+      <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user profile for "{userToDelete?.email}". This does not delete their authentication record, only their access to this application.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90">
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
 
       <Card className="shadow-lg">
@@ -196,38 +238,49 @@ export default function ManageUsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {user.status === 'pending' && user.docId && (
-                            <div className="flex gap-2 justify-end">
-                              <Button
+                          <div className="flex gap-2 justify-end">
+                            {user.status === 'pending' && user.docId && (
+                                <>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-green-600 text-green-600 hover:bg-green-100 hover:text-green-700"
+                                    onClick={() => handleUpdateStatus(user.docId!, 'active')}
+                                    disabled={isUpdating[user.docId!]}
+                                >
+                                    <CheckCircle className="mr-1 h-4 w-4" /> Approve
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-red-600 text-red-600 hover:bg-red-100 hover:text-red-700"
+                                    onClick={() => handleUpdateStatus(user.docId!, 'rejected')}
+                                    disabled={isUpdating[user.docId!]}
+                                >
+                                    <XCircle className="mr-1 h-4 w-4" /> Reject
+                                </Button>
+                                </>
+                            )}
+                            {user.status === 'rejected' && user.docId && (
+                                <Button
                                 size="sm"
                                 variant="outline"
-                                className="border-green-600 text-green-600 hover:bg-green-100 hover:text-green-700"
                                 onClick={() => handleUpdateStatus(user.docId!, 'active')}
                                 disabled={isUpdating[user.docId!]}
-                              >
-                                <CheckCircle className="mr-1 h-4 w-4" /> Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-red-600 text-red-600 hover:bg-red-100 hover:text-red-700"
-                                onClick={() => handleUpdateStatus(user.docId!, 'rejected')}
-                                disabled={isUpdating[user.docId!]}
-                              >
-                                <XCircle className="mr-1 h-4 w-4" /> Reject
-                              </Button>
-                            </div>
-                          )}
-                           {user.status === 'rejected' && user.docId && (
-                               <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleUpdateStatus(user.docId!, 'active')}
-                                disabled={isUpdating[user.docId!]}
-                              >
+                                >
                                 Re-approve
-                              </Button>
-                           )}
+                                </Button>
+                            )}
+                            <Button
+                                size="sm"
+                                variant="destructive"
+                                className="border-destructive text-destructive-foreground bg-destructive/90 hover:bg-destructive"
+                                onClick={() => setUserToDelete(user)}
+                                disabled={isUpdating[user.docId!]}
+                            >
+                                <Trash2 className="mr-1 h-4 w-4" /> Delete
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -248,3 +301,5 @@ export default function ManageUsersPage() {
     </div>
   );
 }
+
+    
