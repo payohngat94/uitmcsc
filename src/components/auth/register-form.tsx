@@ -62,18 +62,16 @@ export function RegisterForm() {
     const result = await register(values.email, values.password, values.studentOrStaffId);
 
     if (result.success) {
-      // The success toast is now handled in the auth context.
       router.push("/");
     } else {
       let errorMessage = "An unexpected error occurred. Please try again.";
       if (result.error?.code === 'auth/email-already-in-use') {
-        errorMessage = "This email is already registered.";
+        errorMessage = "This email is already registered. Please try logging in.";
         form.setError("email", { type: "manual", message: errorMessage });
       } else if (result.error?.code === 'auth/weak-password') {
         errorMessage = "Password is too weak. It must be at least 6 characters.";
         form.setError("password", { type: "manual", message: errorMessage });
       } else {
-        // Display a generic error at the root of the form if it's not a specific field error
         form.setError("root", { type: "manual", message: "Registration failed. Please try again." });
       }
     }
