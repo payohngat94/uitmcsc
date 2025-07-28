@@ -41,8 +41,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (firebaseUser.isAnonymous) {
             // Anonymous users are always 'guest' with 'active' status.
             setCurrentUser({ ...firebaseUser, role: 'guest', status: 'active' });
+          } else if (firebaseUser.email === 'ainuddin@uitm.edu.my') {
+            // SUPERUSER CHECK: Immediately approve this specific admin user.
+            setCurrentUser({ ...firebaseUser, role: 'admin', status: 'active' });
           } else {
-            // For authenticated users, fetch their profile from Firestore.
+            // For all other authenticated users, fetch their profile from Firestore.
             const userProfile = await getUserProfile(firebaseUser.uid);
             
             if (userProfile) {
@@ -118,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Registration error:", error);
       // Let the form component handle displaying the error to the user
+      // by returning the error object.
       return { success: false, error };
     }
   };

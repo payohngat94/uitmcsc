@@ -30,7 +30,7 @@ export async function createUserProfile(user: FirebaseUser, studentOrStaffId: st
     let finalRole = role;
     let finalStatus = status;
 
-    // Force-approve the specific admin user to bypass any potential pending status.
+    // SUPERUSER CHECK: Force-approve this specific admin user during profile creation.
     if (user.email === 'ainuddin@uitm.edu.my') {
       finalRole = 'admin';
       finalStatus = 'active';
