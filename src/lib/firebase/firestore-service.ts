@@ -83,7 +83,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     return null;
   } catch (error) {
     console.error("Error fetching user profile: ", error);
-    if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
+    if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions') || (error as any).code === 'permission-denied')) {
         console.warn(`Permission denied when fetching profile for UID ${uid}. This is an expected behavior if security rules are restrictive and the current user is not an admin. Returning null.`);
         return null;
     }
