@@ -37,7 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription as ShadCNAlertDescription, AlertTitle as ShadCNAlertTitle } from "@/components/ui/alert";
 
 
-const itemStatuses: InventoryItemStatus[] = ['all', 'available', 'in-use', 'reserved', 'out-of-stock', 'maintenance'];
+const itemStatuses: (InventoryItemStatus | 'all')[] = ['all', 'available', 'in-use', 'reserved', 'out-of-stock', 'maintenance'];
 
 // IMPORTANT: Replace this with your actual Google Form link for booking/requesting inventory items.
 const INVENTORY_BOOKING_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJBYKhEOf7yfTxBAv0MXLqJo0xE0KQ2VkldnQA6BtyKM-soA/viewform";
@@ -380,3 +380,5 @@ export default function InventoryPage() {
     </div>
   );
 }
+
+    
