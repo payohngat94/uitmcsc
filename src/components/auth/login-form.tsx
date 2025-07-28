@@ -16,11 +16,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Mail, Key, User } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
+import { Separator } from "../ui/separator";
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -31,7 +32,7 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export function LoginForm() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, signInAsGuestAnonymously } = useAuth();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -60,6 +61,19 @@ export function LoginForm() {
       });
     }
   }
+
+  const handleGuestLogin = async () => {
+    try {
+      await signInAsGuestAnonymously();
+      // The auth context will redirect to /dashboard on successful anonymous login.
+    } catch (error) {
+       form.setError("root.serverError", {
+        type: "manual",
+        message: "Guest login failed. Please try again later.",
+      });
+    }
+  };
+
 
   return (
     <div className="w-full max-w-sm">
@@ -138,7 +152,17 @@ export function LoginForm() {
                       className="w-full text-base py-3 h-12" 
                       disabled={form.formState.isSubmitting || !isClient}
                     >
-                      {form.formState.isSubmitting ? "Logging in..." : "Login"}
+                      {form.formState.isSubmitting ? "Logging in..." : "Login with Email"}
+                    </Button>
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      className="w-full text-base py-3 h-12"
+                      onClick={handleGuestLogin}
+                      disabled={form.formState.isSubmitting}
+                    >
+                      <User className="mr-2 h-5 w-5" />
+                      Sign in as Guest
                     </Button>
                      <Button 
                       type="button" 
