@@ -1,9 +1,22 @@
 import { LoginForm } from "@/components/auth/login-form";
+import Image from "next/image";
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <LoginForm />
+    <main className="grid min-h-screen w-full grid-cols-1 lg:grid-cols-2">
+      <div className="flex items-center justify-center p-6 md:p-12">
+        <LoginForm />
+      </div>
+      <div className="relative hidden lg:block">
+        <Image
+          src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/lpg5k9v0qf76/login-image-2.jpeg"
+          alt="Medical simulation training"
+          fill
+          className="object-cover"
+          data-ai-hint="medical simulation"
+          priority
+        />
+      </div>
     </main>
   );
 }

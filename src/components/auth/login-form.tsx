@@ -16,24 +16,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, Mail, Key } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/auth-context";
+import Image from "next/image";
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  password: z.string().min(1, { message: "Password is required." }),
 });
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export function LoginForm() {
   const router = useRouter();
-  const { login, signInAsGuestAnonymously } = useAuth();
+  const { login } = useAuth();
   const [isClient, setIsClient] = useState(false);
-  const [isGuestSubmitting, setIsGuestSubmitting] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -50,11 +49,8 @@ export function LoginForm() {
   async function onSubmit(values: LoginFormValues) {
     try {
       await login(values.email, values.password);
-      // onAuthStateChanged in AuthProvider will handle navigation if login is successful
       router.push("/dashboard"); 
     } catch (error) {
-      // The error toast is handled by the `login` function in useAuth.
-      // We can set a form-specific error message here for better UI feedback.
       form.setError("root.serverError", {
         type: "manual",
         message: "Invalid credentials or login failed. Please try again.",
@@ -65,30 +61,16 @@ export function LoginForm() {
     }
   }
 
-  async function handleGuestLogin() {
-    setIsGuestSubmitting(true);
-    try {
-      await signInAsGuestAnonymously();
-    } catch (error: any) {
-      // The toast for guest login failure is handled in the auth context.
-      console.error("Guest login trigger failed in form:", error);
-    } finally {
-      setIsGuestSubmitting(false);
-    }
-  }
-
   return (
-    <Card className="w-full max-w-md shadow-2xl">
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full text-primary">
-          <GraduationCap size={48} strokeWidth={1.5} />
+    <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+            <div className="flex justify-center items-center gap-2 mb-2">
+                <Image src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/3l95i2jidz5g/logo.png" alt="UiMedix Logo" width={32} height={32} data-ai-hint="logo" />
+                <h1 className="text-3xl font-bold font-headline">UiMedix</h1>
+            </div>
+            <p className="text-lg" style={{color: '#E854A5'}}>Smart Learning for Future Clinicians</p>
         </div>
-        <CardTitle className="text-3xl font-headline">UiTM CSC</CardTitle>
-        <CardDescription className="text-muted-foreground">
-          Access your clinical simulation resources.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        
         {!isClient ? (
           <div className="space-y-6">
             <div className="space-y-2">
@@ -99,33 +81,28 @@ export function LoginForm() {
               <Skeleton className="h-4 w-1/4" />
               <Skeleton className="h-10 w-full" />
             </div>
-            <Skeleton className="h-10 w-full py-3" />
+            <Skeleton className="h-12 w-full py-3" />
+            <Skeleton className="h-10 w-full" />
             <Skeleton className="h-4 w-3/4 mx-auto" />
-            <Skeleton className="h-4 w-1/2 mx-auto" />
           </div>
         ) : (
           <>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-foreground/80">Email</FormLabel>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <FormLabel>Email</FormLabel>
                         <FormControl>
                           <Input
                             type="email"
-                            placeholder="your.email@example.com"
+                            placeholder="m@example.com"
                             {...field}
-                            className="pl-10"
-                            aria-describedby={form.formState.errors.email ? "email-error" : undefined}
                           />
                         </FormControl>
-                      </div>
-                      <FormMessage id="email-error" />
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -134,53 +111,55 @@ export function LoginForm() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-foreground/80">Password</FormLabel>
-                        <div className="relative">
-                          <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <div className="flex justify-between items-center">
+                           <FormLabel>Password</FormLabel>
+                           <Link href="#" className="text-sm text-primary hover:underline">
+                                Forgot your password?
+                            </Link>
+                        </div>
                           <FormControl>
                             <Input
                               type="password"
                               placeholder="••••••••"
                               {...field}
-                              className="pl-10"
-                              aria-describedby={form.formState.errors.password ? "password-error" : undefined}
                             />
                           </FormControl>
-                        </div>
-                      <FormMessage id="password-error" />
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
                 {form.formState.errors.root?.serverError && (
                   <FormMessage>{form.formState.errors.root.serverError.message}</FormMessage>
                 )}
-                <Button 
-                  type="submit" 
-                  className="w-full text-base py-3" 
-                  disabled={form.formState.isSubmitting || !isClient || isGuestSubmitting}
-                >
-                  {form.formState.isSubmitting ? "Signing In..." : "Sign In"}
-                </Button>
+                
+                <div className="space-y-3 pt-4">
+                    <Button 
+                      type="submit" 
+                      className="w-full text-base py-3 h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white" 
+                      disabled={form.formState.isSubmitting || !isClient}
+                    >
+                      {form.formState.isSubmitting ? "Logging in..." : "Login"}
+                    </Button>
+                     <Button 
+                      type="button" 
+                      variant="outline"
+                      className="w-full text-base py-3 h-12" 
+                      disabled
+                    >
+                      Login with Google
+                    </Button>
+                </div>
+
               </form>
             </Form>
-            <div className="mt-6 text-center text-sm text-muted-foreground">
-              <Button
-                  type="button"
-                  variant="link"
-                  className="p-0 h-auto font-medium text-primary hover:underline disabled:opacity-70"
-                  onClick={handleGuestLogin}
-                  disabled={isGuestSubmitting || form.formState.isSubmitting || !isClient}
-              >
-                  {isGuestSubmitting ? "Signing in as guest..." : "Sign in as a guest"}
-              </Button>
-              <span className="mx-1">|</span>
+            <div className="mt-6 text-center text-sm">
+               <span className="text-muted-foreground">Don't have an account? </span>
                <Link href="/register" className="font-medium text-primary hover:underline">
-                  Don't have an account? Sign Up
+                  Sign up
                 </Link>
             </div>
           </>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
