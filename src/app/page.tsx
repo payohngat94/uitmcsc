@@ -1,3 +1,4 @@
+
 import { LoginForm } from "@/components/auth/login-form";
 import Image from "next/image";
 
@@ -9,7 +10,7 @@ export default function LoginPage() {
       </div>
       <div className="relative hidden lg:block">
         <Image
-          src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/eohq10i0gsc1/4dce82c5-4479-4224-8bb4-33b1259e35da.jpg"
+          src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/nxuweopebe82/IMG_0332.png"
           alt="Medical simulation training"
           fill
           className="object-cover"
