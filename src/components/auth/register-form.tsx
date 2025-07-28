@@ -62,14 +62,9 @@ export function RegisterForm() {
     const result = await register(values.email, values.password, values.studentOrStaffId);
 
     if (result.success) {
-      toast({
-        title: "Registration Successful",
-        description: "Your account has been created. If you are a student, your account is pending approval. Please log in to continue.",
-      });
+      // The success toast is now handled in the auth context.
       router.push("/");
     } else {
-      // The auth context now handles the error, but we can display a generic message here
-      // or map specific error codes from result.error if needed.
       let errorMessage = "An unexpected error occurred. Please try again.";
       if (result.error?.code === 'auth/email-already-in-use') {
         errorMessage = "This email is already registered.";
@@ -78,14 +73,9 @@ export function RegisterForm() {
         errorMessage = "Password is too weak. It must be at least 6 characters.";
         form.setError("password", { type: "manual", message: errorMessage });
       } else {
+        // Display a generic error at the root of the form if it's not a specific field error
         form.setError("root", { type: "manual", message: "Registration failed. Please try again." });
       }
-
-      toast({
-        variant: "destructive",
-        title: "Registration Failed",
-        description: result.error?.message || errorMessage,
-      });
     }
   }
 

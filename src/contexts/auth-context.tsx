@@ -7,7 +7,7 @@ import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { getUserProfile, createUserProfile } from '@/lib/firebase/firestore-service';
-import type { AppUser, UserProfile, UserRole, UserStatus } from '@/lib/types';
+import type { AppUser, UserRole, UserStatus } from '@/lib/types';
 
 
 // --- List of Admin Emails ---
@@ -80,8 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Login error:", error);
       let description = "An unexpected error occurred. Please try again.";
-      // FIX: Check error.code, which is a safe string, instead of error.message
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         description = "The email or password you entered is incorrect.";
       }
       
@@ -98,28 +97,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (email: string, pass: string, studentOrStaffId: string): Promise<{ success: boolean; error?: any }> => {
     try {
-      // Step 1: Create the user in Firebase Authentication.
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
 
-      // This is a critical step: Determine the role and status *before* creating the profile.
       const role: UserRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'student';
       const status: UserStatus = role === 'admin' ? 'active' : 'pending';
 
-      // Step 2: Create the user's profile document in Firestore.
-      // This ensures the /users/{uid} document exists before they ever try to log in.
       await createUserProfile(user, studentOrStaffId, role, status);
 
-      // Step 3: Sign the user out. This is a good practice for registration flows
-      // that require admin approval. It forces them to the login page.
       await signOut(auth);
+      
+      toast({
+        title: "Registration Successful",
+        description: "Your account has been created and is now pending approval. Please log in to continue.",
+      });
+
       return { success: true };
 
     } catch (error: any) {
       console.error("Registration error:", error);
-      // Let the form component handle displaying the error to the user
-      // by returning the error object.
-      // FIX: Return the error object itself, the form will handle the message string.
+      // IMPORTANT: Just return the error. Let the form component handle displaying it.
+      // Calling toast() here can lead to re-render loops and stack overflow.
       return { success: false, error };
     }
   };
@@ -140,7 +138,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({
         variant: "destructive",
         title: "Guest Login Failed",
-        // FIX: Use error.message but ensure it's treated as a string
         description: String(error.message) || "Could not sign in as guest.",
       });
       setLoading(false);
@@ -158,7 +155,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        toast({
         variant: "destructive",
         title: "Logout Failed",
-        // FIX: Use error.message but ensure it's treated as a string
         description: String(error.message) || "Could not log out.",
       });
     } finally {
