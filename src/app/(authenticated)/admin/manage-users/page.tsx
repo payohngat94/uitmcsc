@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const statusFilters: (UserStatus | 'all')[] = ['all', 'pending', 'active', 'rejected'];
 
@@ -37,6 +38,7 @@ export default function ManageUsersPage() {
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<UserStatus | 'all'>('all');
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
 
@@ -49,12 +51,19 @@ export default function ManageUsersPage() {
 
     const fetchUsers = async () => {
       setIsLoading(true);
+      setError(null);
       try {
         const allUsers = await getAllUsers();
         setUsers(allUsers);
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch user data.' });
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+        const errorMessage = (err instanceof Error) ? err.message : 'An unknown error occurred.';
+        // Check for specific permission denied error from our service
+        if (errorMessage.includes("Firestore security rules")) {
+          setError(errorMessage);
+        } else {
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch user data.' });
+        }
       } finally {
         setIsLoading(false);
       }
@@ -112,6 +121,22 @@ export default function ManageUsersPage() {
             </Select>
         </div>
       </div>
+      
+       {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Permission Error</AlertTitle>
+          <AlertDescription>
+            {error}
+            <div className="mt-2 text-xs bg-destructive-foreground/10 p-2 rounded">
+              <p className="font-semibold">How to fix:</p>
+              <p>In your Firebase project, go to Firestore Database -&gt; Rules and ensure your rules allow admins to read the 'users' collection. A common rule is:</p>
+              <pre className="mt-1 p-1 bg-black/10 rounded font-mono text-[10px]"><code>{`match /users/{userId} {\n  allow read: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n  allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n  allow create: if request.auth != null;\n}`}</code></pre>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
 
       <Card className="shadow-lg">
         <CardHeader>
