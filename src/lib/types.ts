@@ -9,6 +9,7 @@ export type UserProfile = {
   uid: string;
   email: string | null;
   displayName: string | null; // This will hold the Student/Staff ID
+  studentOrStaffId: string;
   role: UserRole;
   status: UserStatus;
   createdAt: Timestamp | Date;

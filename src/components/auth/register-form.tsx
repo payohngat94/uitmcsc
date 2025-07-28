@@ -25,7 +25,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const registerFormSchema = z.object({
   studentOrStaffId: z.string().min(1, { message: "Student/Staff ID is required." }),
-  email: z.string().email({ message: "Please enter a valid email address." }),
+  email: z.string().email({ message: "Please enter a valid email address." })
+    .refine(email => email.endsWith('@uitm.edu.my'), {
+      message: "Only @uitm.edu.my email is allowed."
+    }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string()
 }).refine(data => data.password === data.confirmPassword, {
@@ -75,7 +78,7 @@ export function RegisterForm() {
         form.setError("password", { type: "manual", message: errorMessage });
       } else {
         // Attach generic errors to a visible field if not specific
-        form.setError("confirmPassword", { type: "manual", message: "Registration failed. Please try again." });
+        form.setError("root", { type: "manual", message: "Registration failed. Please try again." });
       }
 
       toast({
@@ -142,7 +145,7 @@ export function RegisterForm() {
                         <FormControl>
                           <Input
                             type="email"
-                            placeholder="your.email@example.com"
+                            placeholder="your.email@uitm.edu.my"
                             {...field}
                             className="pl-10"
                           />
@@ -194,6 +197,9 @@ export function RegisterForm() {
                     </FormItem>
                   )}
                 />
+                {form.formState.errors.root && (
+                    <FormMessage>{form.formState.errors.root.message}</FormMessage>
+                )}
                 <Button 
                   type="submit" 
                   className="w-full text-base py-3" 

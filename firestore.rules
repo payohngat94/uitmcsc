@@ -1,47 +1,16 @@
-rules_version = '2';
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // --- Helper functions ---
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    function getRole(userId) {
-      // It's safe to read from the users collection here because the rules below
-      // will grant the necessary access.
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
-
-    function isAdmin() {
-      // An admin is defined as a user who is signed in and has the 'admin' role in their user profile.
-      return isSignedIn() && getRole(request.auth.uid) == 'admin';
-    }
-
-    // --- Rules for collections ---
-
-    // users: 
-    // - Any signed-in user can read their own profile.
-    // - Admins can read any user's profile (needed for approving new accounts).
-    // - Users can create their own profile (on signup).
-    // - Only admins can update user profiles (to change roles/status).
+    // Users can only read and write their own profile information.
     match /users/{userId} {
-      allow read: if (isSignedIn() && isOwner(userId)) || isAdmin();
-      allow create: if isOwner(userId); // Allows a user to create their own document on signup
-      allow update, delete: if isAdmin();
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // For all other collections, any signed-in user can read, but only admins can write.
-    // This is a safe and simple default for your app's collections.
-    match /learningMaterialCategories/{docId} { allow read: if isSignedIn(); allow write: if isAdmin(); }
-    match /learningMaterials/{docId} { allow read: if isSignedIn(); allow write: if isAdmin(); }
-    match /announcements/{docId} { allow read: if isSignedIn(); allow write: if isAdmin(); }
-    match /inventoryItems/{docId} { allow read: if isSignedIn(); allow write: if isAdmin(); }
 
+    // Default deny all other collections for now.
+    // Add rules for other collections as needed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

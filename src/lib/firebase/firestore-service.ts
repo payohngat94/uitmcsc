@@ -30,7 +30,7 @@ export async function createUserProfile(user: FirebaseUser, studentOrStaffId: st
     await setDoc(userProfileRef, {
       uid: user.uid,
       email: user.email,
-      displayName: studentOrStaffId, // This is the Student/Staff ID
+      studentOrStaffId: studentOrStaffId, // Changed from displayName
       role: role,      // Role is passed in
       status: status,    // Status is passed in
       createdAt: serverTimestamp(),
@@ -51,7 +51,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       const profileData: UserProfile = {
         uid: data.uid,
         email: data.email,
-        displayName: data.displayName,
+        displayName: data.displayName || data.studentOrStaffId, // Keep displayName for compatibility
+        studentOrStaffId: data.studentOrStaffId,
         role: data.role,
         status: data.status,
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
