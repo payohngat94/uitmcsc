@@ -447,3 +447,5 @@ export async function deleteInventoryItem(id: string): Promise<void> {
     throw new Error(`Failed to delete inventory item: ${(error as Error).message}`);
   }
 }
+
+    
