@@ -14,7 +14,7 @@ export type AppUser = FirebaseUser & { role: UserRole; status: UserStatus; };
 
 // --- List of Admin Emails ---
 // To add a new admin, simply add their email to this list.
-const ADMIN_EMAILS = ['admin@example.com'];
+const ADMIN_EMAILS = ['admin@example.com', 'ainuddin@uitm.edu.my'];
 
 interface AuthContextType {
   currentUser: AppUser | null;
