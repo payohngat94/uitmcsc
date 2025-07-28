@@ -72,17 +72,17 @@ export default function ManageUsersPage() {
     fetchUsers();
   }, [currentUser, router, toast]);
 
-  const handleUpdateStatus = async (uid: string, newStatus: UserStatus) => {
-    if (!uid) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Cannot update user without a valid UID.' });
+  const handleUpdateStatus = async (docId: string, newStatus: UserStatus) => {
+    if (!docId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Cannot update user without a valid Document ID.' });
         return;
     }
-    setIsUpdating(prev => ({ ...prev, [uid]: true }));
+    setIsUpdating(prev => ({ ...prev, [docId]: true }));
     try {
-      await updateUserStatus(uid, newStatus);
+      await updateUserStatus(docId, newStatus);
       setUsers(prevUsers =>
         prevUsers.map(user =>
-          user.uid === uid ? { ...user, status: newStatus } : user
+          user.docId === docId ? { ...user, status: newStatus } : user
         )
       );
       toast({ title: 'Success', description: `User status updated to ${newStatus}.` });
@@ -90,7 +90,7 @@ export default function ManageUsersPage() {
       console.error('Failed to update user status:', error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to update user status.' });
     } finally {
-      setIsUpdating(prev => ({ ...prev, [uid]: false }));
+      setIsUpdating(prev => ({ ...prev, [docId]: false }));
     }
   };
 
@@ -187,7 +187,7 @@ export default function ManageUsersPage() {
                            </Badge>
                         </TableCell>
                          <TableCell>
-                            {format(user.createdAt instanceof Date ? user.createdAt : new Date(), 'PPp')}
+                            {user.createdAt ? format(user.createdAt instanceof Date ? user.createdAt : new Date(), 'PPp') : 'N/A'}
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant={variant} className="items-center">
@@ -196,14 +196,14 @@ export default function ManageUsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {user.status === 'pending' && user.uid && (
+                          {user.status === 'pending' && user.docId && (
                             <div className="flex gap-2 justify-end">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="border-green-600 text-green-600 hover:bg-green-100 hover:text-green-700"
-                                onClick={() => handleUpdateStatus(user.uid!, 'active')}
-                                disabled={isUpdating[user.uid!]}
+                                onClick={() => handleUpdateStatus(user.docId!, 'active')}
+                                disabled={isUpdating[user.docId!]}
                               >
                                 <CheckCircle className="mr-1 h-4 w-4" /> Approve
                               </Button>
@@ -211,19 +211,19 @@ export default function ManageUsersPage() {
                                 size="sm"
                                 variant="outline"
                                 className="border-red-600 text-red-600 hover:bg-red-100 hover:text-red-700"
-                                onClick={() => handleUpdateStatus(user.uid!, 'rejected')}
-                                disabled={isUpdating[user.uid!]}
+                                onClick={() => handleUpdateStatus(user.docId!, 'rejected')}
+                                disabled={isUpdating[user.docId!]}
                               >
                                 <XCircle className="mr-1 h-4 w-4" /> Reject
                               </Button>
                             </div>
                           )}
-                           {user.status === 'rejected' && user.uid && (
+                           {user.status === 'rejected' && user.docId && (
                                <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleUpdateStatus(user.uid!, 'active')}
-                                disabled={isUpdating[user.uid!]}
+                                onClick={() => handleUpdateStatus(user.docId!, 'active')}
+                                disabled={isUpdating[user.docId!]}
                               >
                                 Re-approve
                               </Button>

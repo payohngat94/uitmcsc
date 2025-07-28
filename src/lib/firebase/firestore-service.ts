@@ -25,14 +25,14 @@ import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCat
 // User Profile Service
 const usersCollectionRef = collection(db, 'users');
 
-export async function createProfileIfNotExist(email: string, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<void> {
+export async function createProfileIfNotExist(email: string, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<string> {
   try {
     const q = query(usersCollectionRef, where("email", "==", email));
     const querySnapshot = await getDocs(q);
+
     if (querySnapshot.empty) {
-      // No user with this email exists, create a new profile document with an auto-generated ID.
-      // Note: This document won't have a UID from Auth until the user is successfully created and the profile is updated.
-      await addDoc(usersCollectionRef, {
+      // No user with this email exists, create a new profile document.
+      const docRef = await addDoc(usersCollectionRef, {
         uid: null, // No UID available yet
         email: email,
         studentOrStaffId: studentOrStaffId,
@@ -40,64 +40,56 @@ export async function createProfileIfNotExist(email: string, studentOrStaffId: s
         status: status,
         createdAt: serverTimestamp(),
       });
+      return docRef.id;
+    } else {
+      // A user with that email already exists. Return the ID of the existing document.
+      return querySnapshot.docs[0].id;
     }
-    // If a user with that email already exists, we do nothing.
   } catch (error) {
     console.error("Error in createProfileIfNotExist: ", error);
-    // We are suppressing the error throw to ensure the auth process can continue
-    // throw new Error(`Failed to check or create user profile. ${(error as Error).message}`);
+    throw new Error(`Failed to check or create user profile. ${(error as Error).message}`);
   }
 }
 
 
-export async function createUserProfile(user: FirebaseUser, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<void> {
-  const userProfileRef = doc(db, 'users', user.uid);
+export async function createUserProfile(docId: string, user: FirebaseUser, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<void> {
+  const userProfileRef = doc(db, 'users', docId); // Use the provided docId
   try {
-    await runTransaction(db, async (transaction) => {
-      const userProfileDoc = await transaction.get(userProfileRef);
-      if (userProfileDoc.exists()) {
-        // If a document with this UID already exists, something is wrong.
-        // This should not happen in a normal registration flow.
-        console.warn(`User profile for UID ${user.uid} already exists. Overwriting.`);
-      }
+    let finalRole = role;
+    let finalStatus = status;
 
-      let finalRole = role;
-      let finalStatus = status;
-
-      // SUPERUSER CHECK: Force-approve this specific admin user.
-      if (user.email === 'ainuddin@uitm.edu.my') {
-        finalRole = 'admin';
-        finalStatus = 'active';
-      }
-
-      transaction.set(userProfileRef, {
-        uid: user.uid,
-        email: user.email,
-        studentOrStaffId: studentOrStaffId,
-        role: finalRole,
-        status: finalStatus,
-        createdAt: serverTimestamp(),
-      });
+    // SUPERUSER CHECK: Force-approve this specific admin user.
+    if (user.email === 'ainuddin@uitm.edu.my') {
+      finalRole = 'admin';
+      finalStatus = 'active';
+    }
+      
+    await updateDoc(userProfileRef, {
+      uid: user.uid,
+      email: user.email,
+      studentOrStaffId: studentOrStaffId,
+      role: finalRole,
+      status: finalStatus,
+      // createdAt is set by createProfileIfNotExist, so we don't overwrite it here.
     });
   } catch (error) {
-    console.error("Error creating user profile in transaction: ", error);
-    throw new Error(`Failed to create user profile. ${(error as Error).message}`);
+    console.error("Error updating user profile with UID: ", error);
+    throw new Error(`Failed to update user profile. ${(error as Error).message}`);
   }
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  const userProfileRef = doc(db, 'users', uid);
+  // We now need to query by the 'uid' field, not the document ID.
+  const q = query(usersCollectionRef, where("uid", "==", uid));
   try {
-    const docSnap = await getDoc(userProfileRef);
-    if (docSnap.exists()) {
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      // Assuming uid is unique, there should only be one document.
+      const docSnap = querySnapshot.docs[0];
       const data = docSnap.data();
       
-      let status: UserStatus;
-      if (data.status) {
-        status = data.status;
-      } else {
-        status = data.role === 'admin' ? 'active' : 'pending';
-      }
+      let status: UserStatus = data.status || (data.role === 'admin' ? 'active' : 'pending');
 
       const profileData: UserProfile = {
         docId: docSnap.id,
@@ -132,15 +124,10 @@ export async function getAllUsers(): Promise<UserProfile[]> {
     return querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
       
-      let status: UserStatus;
-      if (data.status) {
-        status = data.status;
-      } else {
-        status = data.role === 'admin' ? 'active' : 'pending';
-      }
+      let status: UserStatus = data.status || (data.role === 'admin' ? 'active' : 'pending');
 
       return {
-        docId: docSnapshot.id,
+        docId: docSnapshot.id, // Use the actual document ID
         uid: data.uid,
         email: data.email,
         displayName: data.displayName || data.studentOrStaffId,
@@ -159,8 +146,9 @@ export async function getAllUsers(): Promise<UserProfile[]> {
   }
 }
 
-export async function updateUserStatus(uid: string, status: UserStatus): Promise<void> {
-  const userProfileRef = doc(db, 'users', uid);
+export async function updateUserStatus(docId: string, status: UserStatus): Promise<void> {
+  // This function now uses the document ID, not the UID, for updates.
+  const userProfileRef = doc(db, 'users', docId);
   try {
     await updateDoc(userProfileRef, { status: status });
   } catch (error) {
