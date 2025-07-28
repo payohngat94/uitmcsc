@@ -120,8 +120,11 @@ export async function getAllUsers(): Promise<UserProfile[]> {
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
       };
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching all users:", error);
+    if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission denied'))) {
+      throw new Error("Failed to fetch users due to Firestore security rules. Please ensure that admin users have permission to read the '/users' collection.");
+    }
     throw new Error(`Failed to fetch users. ${(error as Error).message}`);
   }
 }
@@ -479,5 +482,3 @@ export async function deleteInventoryItem(id: string): Promise<void> {
     throw new Error(`Failed to delete inventory item: ${(error as Error).message}`);
   }
 }
-
-    
