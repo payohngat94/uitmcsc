@@ -48,10 +48,12 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: LoginFormValues) {
-    try {
-      await login(values.email, values.password);
-      router.push("/dashboard"); 
-    } catch (error) {
+    const result = await login(values.email, values.password);
+
+    if (result.success) {
+      router.push("/dashboard");
+    } else {
+      // Set an error on the form for user feedback
       form.setError("root.serverError", {
         type: "manual",
         message: "Invalid credentials or login failed. Please try again.",
