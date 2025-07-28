@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Login error:", error);
       let description = "An unexpected error occurred. Please try again.";
-      if (error.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
         description = "The email or password you entered is incorrect.";
       } else if (error.message) {
         description = error.message;
