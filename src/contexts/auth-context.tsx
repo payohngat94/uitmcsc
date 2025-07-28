@@ -19,9 +19,9 @@ const ADMIN_EMAILS = ['admin@example.com', 'ainuddin@uitm.edu.my'];
 interface AuthContextType {
   currentUser: AppUser | null;
   loading: boolean;
-  login: (email: string, pass: string) => Promise<void>;
+  login: (email: string, pass: string) => Promise<{ success: boolean; error?: any }>;
   logout: () => Promise<void>;
-  register: (email: string, pass: string, studentOrStaffId: string) => Promise<void>;
+  register: (email: string, pass: string, studentOrStaffId: string) => Promise<{ success: boolean; error?: any }>;
   signInAsGuestAnonymously: () => Promise<void>;
 }
 
@@ -70,11 +70,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, pass: string) => {
+  const login = async (email: string, pass: string): Promise<{ success: boolean; error?: any }> => {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle the rest, including setting user state and profile fetching.
+      // onAuthStateChanged will handle the rest
+      return { success: true };
     } catch (error: any) {
       console.error("Login error:", error);
       let description = "An unexpected error occurred. Please try again.";
@@ -89,14 +90,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Login Failed",
         description: description,
       });
-      // Rethrow the error so the form knows the submission failed.
-      throw error;
+      return { success: false, error };
     } finally {
         setLoading(false);
     }
   };
 
-  const register = async (email: string, pass: string, studentOrStaffId: string) => {
+  const register = async (email: string, pass: string, studentOrStaffId: string): Promise<{ success: boolean; error?: any }> => {
     try {
       // Step 1: Create the user in Firebase Authentication.
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
@@ -113,11 +113,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Step 3: Sign the user out. This is a good practice for registration flows
       // that require admin approval. It forces them to the login page.
       await signOut(auth);
+      return { success: true };
 
     } catch (error: any) {
       console.error("Registration error:", error);
       // Let the form component handle displaying the error to the user
-      throw error;
+      return { success: false, error };
     }
   };
 

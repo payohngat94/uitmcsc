@@ -59,32 +59,32 @@ export function RegisterForm() {
   });
 
   async function onSubmit(values: RegisterFormValues) {
-    try {
-      await register(values.email, values.password, values.studentOrStaffId);
+    const result = await register(values.email, values.password, values.studentOrStaffId);
+
+    if (result.success) {
       toast({
         title: "Registration Successful",
-        description: "Your account has been created. If you are a student, your account is pending approval. Admins are approved automatically.",
+        description: "Your account has been created. If you are a student, your account is pending approval. Please log in to continue.",
       });
-      router.push("/"); 
-    } catch (error: any) {
-      // All UI feedback for registration errors is now handled here.
+      router.push("/");
+    } else {
+      // The auth context now handles the error, but we can display a generic message here
+      // or map specific error codes from result.error if needed.
       let errorMessage = "An unexpected error occurred. Please try again.";
-      
-      if (error.code === 'auth/email-already-in-use') {
+      if (result.error?.code === 'auth/email-already-in-use') {
         errorMessage = "This email is already registered.";
         form.setError("email", { type: "manual", message: errorMessage });
-      } else if (error.code === 'auth/weak-password') {
+      } else if (result.error?.code === 'auth/weak-password') {
         errorMessage = "Password is too weak. It must be at least 6 characters.";
         form.setError("password", { type: "manual", message: errorMessage });
       } else {
-        // Attach generic errors to a visible field if not specific
         form.setError("root", { type: "manual", message: "Registration failed. Please try again." });
       }
 
       toast({
         variant: "destructive",
         title: "Registration Failed",
-        description: error.message || errorMessage,
+        description: result.error?.message || errorMessage,
       });
     }
   }
