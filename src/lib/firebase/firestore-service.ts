@@ -40,7 +40,7 @@ export async function createUserProfile(user: FirebaseUser, studentOrStaffId: st
     await setDoc(userProfileRef, {
       uid: user.uid,
       email: user.email,
-      studentOrStaffId: studentOrStaffId,
+      studentOrStaffId: studentOrStaffId, // CORRECTED: Was 'staffId'
       role: finalRole,
       status: finalStatus,
       createdAt: serverTimestamp(),
@@ -72,7 +72,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
         uid: data.uid,
         email: data.email,
         displayName: data.displayName || data.studentOrStaffId, // Keep displayName for compatibility
-        studentOrStaffId: data.studentOrStaffId || data.staffId, // Added fallback for staffId
+        studentOrStaffId: data.studentOrStaffId, // CORRECTED: Removed fallback for staffId
         role: data.role,
         status: status, // Use the determined status
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
@@ -114,7 +114,7 @@ export async function getAllUsers(): Promise<UserProfile[]> {
         uid: data.uid,
         email: data.email,
         displayName: data.displayName || data.studentOrStaffId,
-        studentOrStaffId: data.studentOrStaffId || data.staffId,
+        studentOrStaffId: data.studentOrStaffId, // CORRECTED: Removed fallback
         role: data.role,
         status: status,
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
