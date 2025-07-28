@@ -79,7 +79,7 @@ export function LoginForm() {
     <div className="w-full max-w-sm">
         <div className="text-center mb-8">
             <div className="flex justify-center items-center gap-2 mb-2">
-                <Image src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/3l95i2jidz5g/logo.png" alt="UiTM CSC Logo" width={32} height={32} data-ai-hint="logo" />
+                <Image src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/943zc5n8r4hk/LogoUiTM.png" alt="UiTM CSC Logo" width={32} height={32} data-ai-hint="logo" />
                 <h1 className="text-3xl font-bold font-headline">UiTM CSC</h1>
             </div>
             <p className="text-lg text-muted-foreground">Smart Learning for Future Clinicians</p>
