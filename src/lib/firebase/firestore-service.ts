@@ -57,14 +57,24 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     const docSnap = await getDoc(userProfileRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
+      
+      // Determine status with fallback for older documents
+      let status: UserStatus;
+      if (data.status) {
+        status = data.status;
+      } else {
+        // If status field is missing, admins are active, others are pending.
+        status = data.role === 'admin' ? 'active' : 'pending';
+      }
+
       // Convert Firestore Timestamps to JS Date objects
       const profileData: UserProfile = {
         uid: data.uid,
         email: data.email,
         displayName: data.displayName || data.studentOrStaffId, // Keep displayName for compatibility
-        studentOrStaffId: data.studentOrStaffId,
+        studentOrStaffId: data.studentOrStaffId || data.staffId, // Added fallback for staffId
         role: data.role,
-        status: data.status,
+        status: status, // Use the determined status
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
       };
       return profileData;
@@ -91,13 +101,22 @@ export async function getAllUsers(): Promise<UserProfile[]> {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
+      
+      // Determine status with fallback for older documents
+      let status: UserStatus;
+      if (data.status) {
+        status = data.status;
+      } else {
+        status = data.role === 'admin' ? 'active' : 'pending';
+      }
+
       return {
         uid: data.uid,
         email: data.email,
         displayName: data.displayName || data.studentOrStaffId,
-        studentOrStaffId: data.studentOrStaffId,
+        studentOrStaffId: data.studentOrStaffId || data.staffId,
         role: data.role,
-        status: data.status,
+        status: status,
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
       };
     });
