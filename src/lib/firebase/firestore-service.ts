@@ -27,13 +27,22 @@ const usersCollectionRef = collection(db, 'users');
 export async function createUserProfile(user: FirebaseUser, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<void> {
   const userProfileRef = doc(db, 'users', user.uid);
   try {
+    let finalRole = role;
+    let finalStatus = status;
+
+    // Force-approve the specific admin user to bypass any potential pending status.
+    if (user.email === 'ainuddin@uitm.edu.my') {
+      finalRole = 'admin';
+      finalStatus = 'active';
+    }
+
     // Create a new document in the 'users' collection with the user's UID as the document ID.
     await setDoc(userProfileRef, {
       uid: user.uid,
       email: user.email,
-      studentOrStaffId: studentOrStaffId, // Changed from displayName
-      role: role,      // Role is passed in
-      status: status,    // Status is passed in
+      studentOrStaffId: studentOrStaffId,
+      role: finalRole,
+      status: finalStatus,
       createdAt: serverTimestamp(),
     });
   } catch (error) {
@@ -64,6 +73,10 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     return null;
   } catch (error) {
     console.error("Error fetching user profile: ", error);
+    if (error instanceof Error && error.message.includes('permission-denied')) {
+        console.warn(`Permission denied when fetching profile for UID ${uid}. This is expected if security rules are restrictive.`);
+        return null;
+    }
     if (error instanceof Error) {
         throw error;
     }
