@@ -16,6 +16,7 @@ import {
   setDoc,
   getDoc,
   where,
+  runTransaction,
 } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCategoryName, Announcement, UserRole, InventoryItem, InventoryItemStatus, InventoryItemType, UserProfile, UserStatus } from '@/lib/types';
@@ -24,29 +25,62 @@ import type { LearningMaterial, LearningMaterialCategoryDoc, LearningMaterialCat
 // User Profile Service
 const usersCollectionRef = collection(db, 'users');
 
+export async function createProfileIfNotExist(email: string, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<void> {
+  try {
+    const q = query(usersCollectionRef, where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+      // No user with this email exists, create a new profile document with an auto-generated ID.
+      // Note: This document won't have a UID from Auth until the user is successfully created and the profile is updated.
+      await addDoc(usersCollectionRef, {
+        uid: null, // No UID available yet
+        email: email,
+        studentOrStaffId: studentOrStaffId,
+        role: role,
+        status: status,
+        createdAt: serverTimestamp(),
+      });
+    }
+    // If a user with that email already exists, we do nothing.
+  } catch (error) {
+    console.error("Error in createProfileIfNotExist: ", error);
+    // We are suppressing the error throw to ensure the auth process can continue
+    // throw new Error(`Failed to check or create user profile. ${(error as Error).message}`);
+  }
+}
+
+
 export async function createUserProfile(user: FirebaseUser, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<void> {
   const userProfileRef = doc(db, 'users', user.uid);
   try {
-    let finalRole = role;
-    let finalStatus = status;
+    await runTransaction(db, async (transaction) => {
+      const userProfileDoc = await transaction.get(userProfileRef);
+      if (userProfileDoc.exists()) {
+        // If a document with this UID already exists, something is wrong.
+        // This should not happen in a normal registration flow.
+        console.warn(`User profile for UID ${user.uid} already exists. Overwriting.`);
+      }
 
-    // SUPERUSER CHECK: Force-approve this specific admin user during profile creation.
-    if (user.email === 'ainuddin@uitm.edu.my') {
-      finalRole = 'admin';
-      finalStatus = 'active';
-    }
+      let finalRole = role;
+      let finalStatus = status;
 
-    // Create a new document in the 'users' collection with the user's UID as the document ID.
-    await setDoc(userProfileRef, {
-      uid: user.uid,
-      email: user.email,
-      studentOrStaffId: studentOrStaffId, // CORRECTED: Was 'staffId'
-      role: finalRole,
-      status: finalStatus,
-      createdAt: serverTimestamp(),
+      // SUPERUSER CHECK: Force-approve this specific admin user.
+      if (user.email === 'ainuddin@uitm.edu.my') {
+        finalRole = 'admin';
+        finalStatus = 'active';
+      }
+
+      transaction.set(userProfileRef, {
+        uid: user.uid,
+        email: user.email,
+        studentOrStaffId: studentOrStaffId,
+        role: finalRole,
+        status: finalStatus,
+        createdAt: serverTimestamp(),
+      });
     });
   } catch (error) {
-    console.error("Error creating user profile: ", error);
+    console.error("Error creating user profile in transaction: ", error);
     throw new Error(`Failed to create user profile. ${(error as Error).message}`);
   }
 }
@@ -58,32 +92,28 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (docSnap.exists()) {
       const data = docSnap.data();
       
-      // Determine status with fallback for older documents
       let status: UserStatus;
       if (data.status) {
         status = data.status;
       } else {
-        // If status field is missing, admins are active, others are pending.
         status = data.role === 'admin' ? 'active' : 'pending';
       }
 
-      // Convert Firestore Timestamps to JS Date objects
       const profileData: UserProfile = {
         uid: data.uid,
         email: data.email,
-        displayName: data.displayName || data.studentOrStaffId, // Keep displayName for compatibility
-        studentOrStaffId: data.studentOrStaffId, // CORRECTED: Removed fallback for staffId
+        displayName: data.displayName || data.studentOrStaffId,
+        studentOrStaffId: data.studentOrStaffId,
         role: data.role,
-        status: status, // Use the determined status
+        status: status,
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
       };
       return profileData;
     }
-    // Return null if no profile is found for the given UID.
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching user profile: ", error);
-    if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions') || (error as any).code === 'permission-denied')) {
+    if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission denied'))) {
         console.warn(`Permission denied when fetching profile for UID ${uid}. This is an expected behavior if security rules are restrictive and the current user is not an admin. Returning null.`);
         return null;
     }
@@ -94,7 +124,6 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   }
 }
 
-// New function for admins to get all users
 export async function getAllUsers(): Promise<UserProfile[]> {
   try {
     const q = query(usersCollectionRef, orderBy('createdAt', 'desc'));
@@ -102,7 +131,6 @@ export async function getAllUsers(): Promise<UserProfile[]> {
     return querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
       
-      // Determine status with fallback for older documents
       let status: UserStatus;
       if (data.status) {
         status = data.status;
@@ -114,7 +142,7 @@ export async function getAllUsers(): Promise<UserProfile[]> {
         uid: data.uid,
         email: data.email,
         displayName: data.displayName || data.studentOrStaffId,
-        studentOrStaffId: data.studentOrStaffId, // CORRECTED: Removed fallback
+        studentOrStaffId: data.studentOrStaffId,
         role: data.role,
         status: status,
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
@@ -129,7 +157,6 @@ export async function getAllUsers(): Promise<UserProfile[]> {
   }
 }
 
-// New function for admins to update a user's status
 export async function updateUserStatus(uid: string, status: UserStatus): Promise<void> {
   const userProfileRef = doc(db, 'users', uid);
   try {
@@ -482,3 +509,5 @@ export async function deleteInventoryItem(id: string): Promise<void> {
     throw new Error(`Failed to delete inventory item: ${(error as Error).message}`);
   }
 }
+
+    

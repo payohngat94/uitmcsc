@@ -6,7 +6,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as F
 import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
-import { getUserProfile, createUserProfile } from '@/lib/firebase/firestore-service';
+import { getUserProfile, createUserProfile, createProfileIfNotExist } from '@/lib/firebase/firestore-service';
 import type { AppUser, UserRole, UserStatus } from '@/lib/types';
 
 
@@ -37,28 +37,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (firebaseUser) {
         try {
           if (firebaseUser.isAnonymous) {
-            // Anonymous users are always 'guest' with 'active' status.
             setCurrentUser({ ...firebaseUser, role: 'guest', status: 'active' });
           } else if (firebaseUser.email === 'ainuddin@uitm.edu.my') {
-            // SUPERUSER CHECK: Immediately approve this specific admin user.
             setCurrentUser({ ...firebaseUser, role: 'admin', status: 'active' });
           } else {
-            // For all other authenticated users, fetch their profile from Firestore.
             const userProfile = await getUserProfile(firebaseUser.uid);
             
             if (userProfile) {
-              // User has a profile in Firestore, use that for role and status.
               setCurrentUser({ ...firebaseUser, role: userProfile.role, status: userProfile.status });
             } else {
-              // This can happen if profile creation failed or if the read is blocked by security rules.
-              // We'll treat them as a student with a 'pending' status.
               console.warn(`No profile found for UID ${firebaseUser.uid}, or access was denied. Defaulting to 'pending' status.`);
               setCurrentUser({ ...firebaseUser, role: 'student', status: 'pending' });
             }
           }
         } catch (error) {
           console.error("Auth context error:", error);
-          // If any other error occurs, treat user as pending to be safe.
           if (firebaseUser) {
             setCurrentUser({ ...firebaseUser, role: 'student', status: 'pending' });
           }
@@ -75,7 +68,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle the rest
       return { success: true };
     } catch (error: any) {
       console.error("Login error:", error);
@@ -96,15 +88,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (email: string, pass: string, studentOrStaffId: string): Promise<{ success: boolean; error?: any }> => {
+    const role: UserRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'student';
+    const status: UserStatus = role === 'admin' ? 'active' : 'pending';
+
+    // Step 1: Ensure a profile document exists, creating one if it doesn't.
+    // This happens regardless of whether the auth creation succeeds or fails.
+    await createProfileIfNotExist(email, studentOrStaffId, role, status);
+
     try {
+      // Step 2: Attempt to create the user in Firebase Auth.
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
 
-      const role: UserRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'student';
-      const status: UserStatus = role === 'admin' ? 'active' : 'pending';
-
+      // Step 3: Create the definitive user profile linked to the new UID.
       await createUserProfile(user, studentOrStaffId, role, status);
 
+      // Step 4: Sign the user out to enforce the pending approval flow.
       await signOut(auth);
       
       toast({
@@ -116,8 +115,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     } catch (error: any) {
       console.error("Registration error:", error);
-      // IMPORTANT: Just return the error. Let the form component handle displaying it.
-      // Calling toast() here can lead to re-render loops and stack overflow.
+      // Even if Auth fails (e.g., email exists), the profile document was still created in Step 1.
+      // We return the error to be handled by the form.
       return { success: false, error };
     }
   };
@@ -127,7 +126,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       await signInAnonymously(auth);
-      // onAuthStateChanged will handle setting currentUser with 'guest' role
       toast({
         title: "Signed in as Guest",
         description: "You are now browsing with guest privileges.",
@@ -158,7 +156,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: String(error.message) || "Could not log out.",
       });
     } finally {
-      // setCurrentUser(null) is handled by onAuthStateChanged
       setLoading(false); 
     }
   };
@@ -182,3 +179,5 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
+    
