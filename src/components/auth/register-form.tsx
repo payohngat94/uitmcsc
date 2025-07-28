@@ -221,5 +221,3 @@ export function RegisterForm() {
     </Card>
   );
 }
-
-    
