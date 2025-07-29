@@ -76,6 +76,12 @@ const nextConfig: NextConfig = {
         hostname: 'post.healthline.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.prod.website-files.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
