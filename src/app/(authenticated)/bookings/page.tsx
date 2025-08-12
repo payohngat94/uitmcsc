@@ -31,7 +31,7 @@ const fssSpecialtiesOptions = [
 ];
 
 // IMPORTANT: Replace this placeholder with your actual Google Calendar embed URL.
-const GOOGLE_CALENDAR_EMBED_URL = "YOUR_GOOGLE_CALENDAR_EMBED_URL_HERE";
+const GOOGLE_CALENDAR_EMBED_URL = "https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FSingapore&showPrint=0&title=FSS%20Booking%20Cal&src=ajRzczNuc3BqYTl1bW9ta3VwbHVsdjdwdG9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%23d50000";
 
 export default function BookingsPage() {
   const [selectedSessionType, setSelectedSessionType] = useState<string | undefined>(undefined);
