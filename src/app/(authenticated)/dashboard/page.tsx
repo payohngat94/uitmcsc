@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { BookOpen, CalendarDays, Archive, Megaphone, CheckCircle, AlertTriangle, Pin, Info } from "lucide-react";
+import { BookOpen, CalendarDays, Archive, Megaphone, CheckCircle, AlertTriangle, Pin, Info, MessageSquare, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import { getAnnouncements } from "@/lib/firebase/firestore-service";
 import type { Announcement } from "@/lib/types";
@@ -18,6 +18,8 @@ const quickLinks = [
   { title: "Our Facilities & Equipment", href: "/inventory", icon: Archive, description: "View available equipment and make requests.", label: "View All" },
   { title: "View Announcements", href: "/announcements", icon: Megaphone, description: "Stay updated with the latest news.", label: "View More" },
 ];
+
+const FEEDBACK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJBYKhEOf7yfTxBAv0MXLqJo0xE0KQ2VkldnQA6BtyKM-soA/viewform";
 
 export default function DashboardPage() {
   const [pinnedAnnouncements, setPinnedAnnouncements] = useState<Announcement[]>([]);
@@ -153,26 +155,21 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center"><CheckCircle className="h-6 w-6 text-green-600 mr-2" />Your Activity</CardTitle>
-            <CardDescription>Summary of your recent bookings and learning progress.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-md">
-              <div>
-                <h3 className="font-semibold text-green-700">Physical Exam Practice</h3>
-                <p className="text-sm text-muted-foreground">Confirmed for: Tomorrow, 2 PM - 4 PM, Sim Lab 1</p>
-              </div>
-              <Button variant="ghost" size="sm" asChild><Link href="/bookings">View</Link></Button>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-secondary rounded-md">
-               <div>
-                <h3 className="font-semibold text-primary">Learning Module: ECG Basics</h3>
-                <p className="text-sm text-muted-foreground">Status: 75% completed</p>
-              </div>
-              <Button variant="ghost" size="sm" asChild><Link href="/learning-materials">Continue</Link></Button>
-            </div>
-          </CardContent>
+            <CardHeader>
+                <CardTitle className="flex items-center"><MessageSquare className="h-6 w-6 text-accent mr-2" />Feedback</CardTitle>
+                <CardDescription>We value your experience and are always looking to improve.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center text-center space-y-4 h-full pt-0">
+                <p className="text-foreground/90 leading-relaxed text-sm">
+                    Your feedback helps us grow and serve you better &mdash; feel free to share your thoughts, suggestions, or report any issues. We&apos;re listening!
+                </p>
+                <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground mt-auto">
+                    <Link href={FEEDBACK_FORM_URL} target="_blank" rel="noopener noreferrer">
+                        Share Your Thoughts
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                    </Link>
+                </Button>
+            </CardContent>
         </Card>
       </section>
     </div>
