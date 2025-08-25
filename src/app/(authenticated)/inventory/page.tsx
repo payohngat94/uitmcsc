@@ -42,6 +42,10 @@ const itemStatuses: (InventoryItemStatus | 'all')[] = ['all', 'available', 'in-u
 // IMPORTANT: Replace this with your actual Google Form link for booking/requesting inventory items.
 const INVENTORY_BOOKING_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJBYKhEOf7yfTxBAv0MXLqJo0xE0KQ2VkldnQA6BtyKM-soA/viewform";
 
+// Power Apps Embed URL
+const POWER_APPS_CATALOGUE_URL = "https://apps.powerapps.com/play/e/default-cdcbb0e2-9fea-4f54-8670-672707797ada/a/710c40fc-888d-4334-b27c-ada26afc344c?tenantId=cdcbb0e2-9fea-4f54-8670-672707797ada&hint=f833cb8b-743a-4f50-a6e4-415111f31c78&source=sharebutton&sourcetime=1756153640663";
+
+
 export default function InventoryPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -376,9 +380,30 @@ export default function InventoryPage() {
         "The inventory is currently empty of equipment. Admins can add new equipment.",
         "No equipment matches your current filters."
       )}
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl">Power Apps Catalogue</CardTitle>
+          <CardDescription>
+            Browse the full catalogue in our Power App.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <iframe
+            src={POWER_APPS_CATALOGUE_URL}
+            width="100%"
+            height="800px"
+            frameBorder="0"
+            allowFullScreen
+            className="rounded-md border"
+            title="Power Apps Catalogue"
+            aria-label="Power Apps Catalogue"
+          >
+            Loading catalogue…
+          </iframe>
+        </CardContent>
+      </Card>
       
     </div>
   );
 }
-
-    
