@@ -167,14 +167,6 @@ export function LoginForm() {
                       <User className="mr-2 h-5 w-5" />
                       Sign in as Guest
                     </Button>
-                     <Button 
-                      type="button" 
-                      variant="outline"
-                      className="w-full text-base py-3 h-12" 
-                      disabled
-                    >
-                      Login with Google
-                    </Button>
                 </div>
 
               </form>
