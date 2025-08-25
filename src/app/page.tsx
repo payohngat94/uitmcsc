@@ -13,7 +13,7 @@ export default function LoginPage() {
           src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/1mdeuq8a54eb/Clinical_(1).jpg"
           alt="Medical simulation training"
           fill
-          className="object-cover"
+          className="object-cover object-left"
           data-ai-hint="medical simulation"
           priority
         />
