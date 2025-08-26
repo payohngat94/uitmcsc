@@ -166,12 +166,12 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        <Card>
+        <Card className="flex flex-col">
             <CardHeader>
                 <CardTitle className="flex items-center"><MessageSquare className="h-6 w-6 text-accent mr-2" />Feedback</CardTitle>
                 <CardDescription>We value your experience and are always looking to improve.</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center text-center space-y-4 h-full pt-0">
+            <CardContent className="flex flex-col flex-grow items-center justify-center text-center space-y-4">
                 <p className="text-foreground/90 leading-relaxed text-sm">
                     Your feedback helps us grow and serve you better &mdash; feel free to share your thoughts, suggestions, or report any issues. We&apos;re listening!
                 </p>
