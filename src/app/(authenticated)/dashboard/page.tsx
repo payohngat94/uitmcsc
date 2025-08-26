@@ -17,7 +17,7 @@ const allQuickLinks = [
   { title: "Browse Learning Materials", href: "/learning-materials", icon: BookOpen, description: "Access videos, documents, and slides.", label: "Browse", roles: ['admin', 'student'] },
   { title: "Book a Simulation Session", href: "/bookings", icon: CalendarDays, description: "Reserve your spot in the sim labs.", label: "Book Now", roles: ['admin', 'student'] },
   { title: "Our Facilities & Equipment", href: "/inventory", icon: Archive, description: "View available equipment and make requests.", label: "View All", roles: ['admin', 'student', 'guest'] },
-  { title: "View Announcements", href: "/announcements", icon: Megaphone, description: "Stay updated with the latest news.", label: "View More", roles: ['admin', 'student', 'guest'] },
+  { title: "View Announcements", href: "/announcements", icon: Megaphone, description: "Stay updated with the latest news.", label: "View More", roles: ['admin', 'student'] },
 ];
 
 const FEEDBACK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJBYKhEOf7yfTxBAv0MXLqJo0xE0KQ2VkldnQA6BtyKM-soA/viewform";
@@ -33,32 +33,36 @@ export default function DashboardPage() {
   );
 
   useEffect(() => {
-    const fetchPinnedAnnouncements = async () => {
-      setIsLoadingAnnouncements(true);
-      try {
-        const allAnnouncements = await getAnnouncements();
-        const pinned = allAnnouncements
-          .filter(ann => ann.isPinned)
-          .sort((a, b) => {
-            const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt || 0).getTime();
-            const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt || 0).getTime();
-            return dateB - dateA;
+    if (currentUser?.role !== 'guest') {
+      const fetchPinnedAnnouncements = async () => {
+        setIsLoadingAnnouncements(true);
+        try {
+          const allAnnouncements = await getAnnouncements();
+          const pinned = allAnnouncements
+            .filter(ann => ann.isPinned)
+            .sort((a, b) => {
+              const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt || 0).getTime();
+              const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt || 0).getTime();
+              return dateB - dateA;
+            });
+          setPinnedAnnouncements(pinned);
+        } catch (error) {
+          console.error("Dashboard: Failed to fetch announcements", error);
+          toast({
+            variant: "destructive",
+            title: "Error Fetching Updates",
+            description: "Could not load the latest pinned announcements.",
           });
-        setPinnedAnnouncements(pinned);
-      } catch (error) {
-        console.error("Dashboard: Failed to fetch announcements", error);
-        toast({
-          variant: "destructive",
-          title: "Error Fetching Updates",
-          description: "Could not load the latest pinned announcements.",
-        });
-      } finally {
-        setIsLoadingAnnouncements(false);
-      }
-    };
+        } finally {
+          setIsLoadingAnnouncements(false);
+        }
+      };
 
-    fetchPinnedAnnouncements();
-  }, [toast]);
+      fetchPinnedAnnouncements();
+    } else {
+      setIsLoadingAnnouncements(false);
+    }
+  }, [toast, currentUser?.role]);
 
   return (
     <div className="space-y-8">
@@ -107,58 +111,60 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center"><Pin className="h-6 w-6 text-primary mr-2" />Important Updates</CardTitle>
-            <CardDescription>Latest pinned announcements and critical information.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {isLoadingAnnouncements ? (
-              <>
-                <div className="flex items-start p-3 bg-secondary/50 rounded-md">
-                  <Skeleton className="h-5 w-5 mr-3 mt-1 shrink-0 rounded-full" />
-                  <div className="w-full">
-                    <Skeleton className="h-5 w-3/4 mb-1.5" />
-                    <Skeleton className="h-4 w-full" />
+        {currentUser?.role !== 'guest' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center"><Pin className="h-6 w-6 text-primary mr-2" />Important Updates</CardTitle>
+              <CardDescription>Latest pinned announcements and critical information.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isLoadingAnnouncements ? (
+                <>
+                  <div className="flex items-start p-3 bg-secondary/50 rounded-md">
+                    <Skeleton className="h-5 w-5 mr-3 mt-1 shrink-0 rounded-full" />
+                    <div className="w-full">
+                      <Skeleton className="h-5 w-3/4 mb-1.5" />
+                      <Skeleton className="h-4 w-full" />
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start p-3 bg-secondary/50 rounded-md">
-                  <Skeleton className="h-5 w-5 mr-3 mt-1 shrink-0 rounded-full" />
-                  <div className="w-full">
-                    <Skeleton className="h-5 w-2/3 mb-1.5" />
-                    <Skeleton className="h-4 w-4/5" />
+                  <div className="flex items-start p-3 bg-secondary/50 rounded-md">
+                    <Skeleton className="h-5 w-5 mr-3 mt-1 shrink-0 rounded-full" />
+                    <div className="w-full">
+                      <Skeleton className="h-5 w-2/3 mb-1.5" />
+                      <Skeleton className="h-4 w-4/5" />
+                    </div>
                   </div>
-                </div>
-              </>
-            ) : pinnedAnnouncements.length > 0 ? (
-              pinnedAnnouncements.slice(0, 3).map(announcement => ( // Display up to 3 pinned announcements
-                <div key={announcement.id} className="flex items-start p-3 bg-primary/10 rounded-md hover:bg-primary/20 transition-colors">
-                  <Pin className="h-5 w-5 text-primary mr-3 mt-1 shrink-0" />
-                  <div>
-                    <h3 className="font-semibold text-primary">{announcement.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{announcement.content}</p>
-                     <Link href="/announcements" className="text-xs text-primary hover:underline mt-1 inline-block">
-                      Read more
-                    </Link>
+                </>
+              ) : pinnedAnnouncements.length > 0 ? (
+                pinnedAnnouncements.slice(0, 3).map(announcement => ( // Display up to 3 pinned announcements
+                  <div key={announcement.id} className="flex items-start p-3 bg-primary/10 rounded-md hover:bg-primary/20 transition-colors">
+                    <Pin className="h-5 w-5 text-primary mr-3 mt-1 shrink-0" />
+                    <div>
+                      <h3 className="font-semibold text-primary">{announcement.title}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{announcement.content}</p>
+                       <Link href="/announcements" className="text-xs text-primary hover:underline mt-1 inline-block">
+                        Read more
+                      </Link>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-6">
+                  <Info className="mx-auto h-10 w-10 text-muted-foreground" />
+                  <p className="mt-2 text-sm text-muted-foreground">No pinned announcements at the moment.</p>
+                  <Button variant="link" asChild className="mt-1">
+                    <Link href="/announcements">View all announcements</Link>
+                  </Button>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-6">
-                <Info className="mx-auto h-10 w-10 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">No pinned announcements at the moment.</p>
-                <Button variant="link" asChild className="mt-1">
-                  <Link href="/announcements">View all announcements</Link>
-                </Button>
-              </div>
-            )}
-            {pinnedAnnouncements.length > 3 && (
-               <Button variant="outline" asChild className="w-full mt-2">
-                  <Link href="/announcements">View all pinned announcements</Link>
-                </Button>
-            )}
-          </CardContent>
-        </Card>
+              )}
+              {pinnedAnnouncements.length > 3 && (
+                 <Button variant="outline" asChild className="w-full mt-2">
+                    <Link href="/announcements">View all pinned announcements</Link>
+                  </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
             <CardHeader>
