@@ -11,12 +11,13 @@ import { getAnnouncements } from "@/lib/firebase/firestore-service";
 import type { Announcement } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
 
-const quickLinks = [
-  { title: "Browse Learning Materials", href: "/learning-materials", icon: BookOpen, description: "Access videos, documents, and slides.", label: "Browse" },
-  { title: "Book a Simulation Session", href: "/bookings", icon: CalendarDays, description: "Reserve your spot in the sim labs.", label: "Book Now" },
-  { title: "Our Facilities & Equipment", href: "/inventory", icon: Archive, description: "View available equipment and make requests.", label: "View All" },
-  { title: "View Announcements", href: "/announcements", icon: Megaphone, description: "Stay updated with the latest news.", label: "View More" },
+const allQuickLinks = [
+  { title: "Browse Learning Materials", href: "/learning-materials", icon: BookOpen, description: "Access videos, documents, and slides.", label: "Browse", roles: ['admin', 'student'] },
+  { title: "Book a Simulation Session", href: "/bookings", icon: CalendarDays, description: "Reserve your spot in the sim labs.", label: "Book Now", roles: ['admin', 'student'] },
+  { title: "Our Facilities & Equipment", href: "/inventory", icon: Archive, description: "View available equipment and make requests.", label: "View All", roles: ['admin', 'student', 'guest'] },
+  { title: "View Announcements", href: "/announcements", icon: Megaphone, description: "Stay updated with the latest news.", label: "View More", roles: ['admin', 'student', 'guest'] },
 ];
 
 const FEEDBACK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJBYKhEOf7yfTxBAv0MXLqJo0xE0KQ2VkldnQA6BtyKM-soA/viewform";
@@ -25,6 +26,11 @@ export default function DashboardPage() {
   const [pinnedAnnouncements, setPinnedAnnouncements] = useState<Announcement[]>([]);
   const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(true);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+
+  const quickLinks = allQuickLinks.filter(link => 
+    currentUser?.role && link.roles.includes(currentUser.role)
+  );
 
   useEffect(() => {
     const fetchPinnedAnnouncements = async () => {

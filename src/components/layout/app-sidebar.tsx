@@ -35,12 +35,12 @@ import { useToast } from "@/hooks/use-toast";
 import type { UserRole } from "@/lib/types";
 
 const allNavItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ['admin', 'student'] as UserRole[] },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ['admin', 'student', 'guest'] as UserRole[] },
   { href: "/learning-materials", icon: BookOpen, label: "Learning Materials", roles: ['admin', 'student'] as UserRole[] },
   { href: "/bookings", icon: CalendarDays, label: "Bookings", roles: ['admin', 'student', 'guest'] as UserRole[] },
   { href: "/inventory", icon: Archive, label: "Inventory", roles: ['admin', 'student', 'guest'] as UserRole[] },
-  { href: "/announcements", icon: Megaphone, label: "Announcements", roles: ['admin', 'student', 'guest'] as UserRole[] }, // Guests can now view announcements
-  { href: "/admin/manage-users", icon: UserCog, label: "Manage Users", roles: ['admin'] as UserRole[] }, // Admin-only page
+  { href: "/announcements", icon: Megaphone, label: "Announcements", roles: ['admin', 'student', 'guest'] as UserRole[] },
+  { href: "/admin/manage-users", icon: UserCog, label: "Manage Users", roles: ['admin'] as UserRole[] },
   { href: "/about-us", icon: Info, label: "About Us", roles: ['admin', 'student', 'guest'] as UserRole[] },
 ];
 
