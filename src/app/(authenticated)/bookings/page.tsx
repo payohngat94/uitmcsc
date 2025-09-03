@@ -51,7 +51,7 @@ export default function BookingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline mb-2">Manage your Booking</h1>
+        <h1 className="text-3xl font-bold font-headline mb-2">Manage your DOPS Assessment</h1>
         <p className="text-muted-foreground">
           Book your next clinical experience—whether it's Simulated Patients, ECE, or FSS—seamlessly, all in one place.
         </p>
@@ -91,7 +91,7 @@ export default function BookingsPage() {
               <Select value={selectedSpecialty} onValueChange={setSelectedSpecialty}>
                 <SelectTrigger id="specialty-select" className="w-full">
                   <SelectValue placeholder="Choose specialty for FSS..." />
-                </SelectTrigger>
+                </Trigger>
                 <SelectContent>
                   {fssSpecialtiesOptions.map(spec => (
                     <SelectItem key={spec.value} value={spec.value}>{spec.label}</SelectItem>
