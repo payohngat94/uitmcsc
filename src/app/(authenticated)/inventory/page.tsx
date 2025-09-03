@@ -183,10 +183,6 @@ export default function InventoryPage() {
     return globallyFilteredItems.filter(item => item.itemType === 'facility');
   }, [globallyFilteredItems]);
 
-  const equipmentItems = useMemo(() => {
-    return globallyFilteredItems.filter(item => item.itemType === 'equipment' || !item.itemType); 
-  }, [globallyFilteredItems]);
-
 
   const renderInventorySection = (
     title: string,
@@ -370,15 +366,6 @@ export default function InventoryPage() {
         "facility",
         "The inventory is currently empty of facilities. Admins can add new facilities.",
         "No facilities match your current filters."
-      )}
-
-      {renderInventorySection(
-        "Available Equipment",
-        Package,
-        equipmentItems,
-        "equipment",
-        "The inventory is currently empty of equipment. Admins can add new equipment.",
-        "No equipment matches your current filters."
       )}
 
       <Card className="shadow-lg">
