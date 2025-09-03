@@ -1,3 +1,4 @@
+
 "use client"; 
 
 import { useState, useMemo } from "react"; 
@@ -23,10 +24,10 @@ const sessionTypesOptions = [
 
 const fssSpecialtiesOptions = [
   { value: "paediatrics", label: "Paediatrics" },
-  { value: "og", label: "Obstetric and Gynaecology" },
-  { value: "medicine", label: "Medicine" },
-  { value: "surgery", label: "Surgery" },
-  { value: "emergency", label: "Emergency" },
+  { value: "og", label: "Obstetrics and Gynaecology" },
+  { value: "medicine", label: "Internal Medicine" },
+  { value: "surgery", label: "General Surgery" },
+  { value: "emergency", label: "Emergency Medicine" },
 ];
 
 // IMPORTANT: Replace this placeholder with your actual Google Calendar embed URL.
