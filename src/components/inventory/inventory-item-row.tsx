@@ -42,7 +42,7 @@ export function InventoryItemRow({ item, onViewDetails, onEdit, onDelete }: Inve
     const firstUrl = item.imageUrls?.[0]?.trim();
     const newSrc = firstUrl || PRIMARY_PLACEHOLDER;
     
-    console.log(`[InventoryItemRow] Item: "${item.name}" item.imageUrls: ${JSON.stringify(item.imageUrls)} Attempting to use first URL: "${firstUrl}" Image src set to: "${newSrc}"`);
+    // console.log(`[InventoryItemRow] Item: "${item.name}" item.imageUrls: ${JSON.stringify(item.imageUrls)} Attempting to use first URL: "${firstUrl}" Image src set to: "${newSrc}"`);
 
     setImageSrc(newSrc);
   }, [item.imageUrls, item.name]);

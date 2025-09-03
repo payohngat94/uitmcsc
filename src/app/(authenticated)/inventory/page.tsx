@@ -3,7 +3,7 @@
 
 import * as React from "react"; 
 import { useState, useEffect, useMemo } from "react";
-import { InventoryItemRow } from "@/components/inventory/inventory-item-row";
+import { FacilityCard } from "@/components/inventory/facility-card";
 import { InventoryItemDetailDialog } from "@/components/inventory/inventory-item-detail-dialog";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -220,43 +220,28 @@ export default function InventoryPage() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-4 p-2 border-b">
-                <Skeleton className="h-10 w-10 rounded-md" />
-                <div className="space-y-2 flex-grow">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-                <Skeleton className="h-6 w-24 rounded-full" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-8 w-20 rounded-md" />
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <Skeleton className="aspect-video w-full rounded-t-lg" />
+                <CardContent className="p-4">
+                  <Skeleton className="h-5 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2" />
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : items.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[250px]">Name</TableHead>
-                  <TableHead className="text-center min-w-[120px]">Status</TableHead>
-                  <TableHead className="text-center min-w-[100px]">Quantity</TableHead>
-                  <TableHead className="text-right min-w-[120px]">Actions</TableHead> 
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <InventoryItemRow
-                    key={item.id}
-                    item={item}
-                    onViewDetails={handleOpenDetailDialog}
-                    onEdit={currentUser?.role === 'admin' ? () => handleOpenEditDialog(item) : undefined}
-                    onDelete={currentUser?.role === 'admin' ? () => handleOpenDeleteDialog(item) : undefined}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {items.map((item) => (
+              <FacilityCard
+                key={item.id}
+                item={item}
+                onViewDetails={handleOpenDetailDialog}
+                onEdit={currentUser?.role === 'admin' ? () => handleOpenEditDialog(item) : undefined}
+                onDelete={currentUser?.role === 'admin' ? () => handleOpenDeleteDialog(item) : undefined}
+              />
+            ))}
           </div>
         ) : (
            <div className="text-center py-12">
