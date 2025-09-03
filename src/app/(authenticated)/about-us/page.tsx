@@ -55,7 +55,10 @@ export default function AboutUsPage() {
               The Clinical Simulation Centre (CSC) is a dedicated learning hub that provides a safe, structured 
               environment for medical training. Initially designed for undergraduate students, the CSC now plays 
               a pivotal role in postgraduate specialist training and also supports the professional development 
-              of healthcare personnel including nurses and assistant medical officers. By integrating 
+              of healthcare personnel including nurses and assistant medical officers.
+            </p>
+            <p>
+              By integrating 
               simulation-based learning, the CSC bridges the gap between theory and practice, allowing 
               participants to rehearse clinical scenarios, refine decision-making, and strengthen teamwork 
               in a risk-free setting. Its scope spans the entire spectrum of medical education—from 
