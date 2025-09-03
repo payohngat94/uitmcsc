@@ -12,23 +12,13 @@ export default function AboutUsPage() {
   const keyObjectives = [
     {
       icon: Target,
-      title: "Acquisition of Clinical Skills",
-      description: "Equip undergraduate students with task-based clinical skills.",
+      title: "Improve Clinical Practice & Patient Safety",
+      description: "To provide experiential learning through simulation to improve clinical practice and patient safety.",
     },
     {
       icon: Lightbulb,
-      title: "Integration of Knowledge",
-      description: "Establish links between preclinical and clinical years to reinforce understanding.",
-    },
-    {
-      icon: UsersRound,
-      title: "Understanding Clinical Roles",
-      description: "Familiarize students with the roles of house officers and clinical team members in the ward processes.",
-    },
-    {
-      icon: BookOpen,
-      title: "Effective Communication",
-      description: "Develop effective communication skills, including referrals and handovers.",
+      title: "Innovate Clinical Teaching",
+      description: "To develop innovative clinical teaching modalities to promote educational objectives of the faculty.",
     },
   ];
 
