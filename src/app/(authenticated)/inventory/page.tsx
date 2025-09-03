@@ -281,7 +281,7 @@ export default function InventoryPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline mb-2">Facilities and Equipment</h1>
+        <h1 className="text-3xl font-bold font-headline mb-2">Facilities & Manikin</h1>
         <p className="text-muted-foreground">
           Browse available facilities and simulation equipment, check their status, and manage inventory. 
           Use the "Book" buttons to request items via our Google Form.
