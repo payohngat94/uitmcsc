@@ -96,13 +96,13 @@ export default function DashboardPage() {
           {quickLinks.map((link) => (
             <Card key={link.href} className="hover:shadow-lg transition-shadow duration-300">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">{link.title}</CardTitle>
+                <CardTitle className="text-lg font-medium">{link.href === '/bookings' ? 'FSS/SP' : link.title}</CardTitle>
                 <link.icon className="h-6 w-6 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">{link.description}</p>
                 <Button variant="outline" asChild className="w-full">
-                  <Link href={link.href}>Go to {link.label || link.title.split(" ")[0]}</Link>
+                  <Link href={link.href}>Go to {link.href === '/bookings' ? 'FSS/SP' : (link.label || link.title.split(" ")[0])}</Link>
                 </Button>
               </CardContent>
             </Card>
