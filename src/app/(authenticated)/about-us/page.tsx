@@ -75,6 +75,22 @@ export default function AboutUsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-headline flex items-center">
+            <Users className="mr-3 h-7 w-7 text-accent" />
+            Beyond Student Use
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-foreground/90">
+            The CSC is not limited to student use; it is open to workshops, conferences, and micro-credentialing 
+            programs for both UiTM staff and the public, promoting continuous learning and skill development in 
+            the medical field.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-headline flex items-center">
             <CheckSquare className="mr-3 h-7 w-7 text-primary" />
             Key Objectives of the CSC
           </CardTitle>
@@ -92,22 +108,6 @@ export default function AboutUsPage() {
               </div>
             </div>
           ))}
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-headline flex items-center">
-            <Users className="mr-3 h-7 w-7 text-accent" />
-            Beyond Student Use
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-foreground/90">
-            The CSC is not limited to student use; it is open to workshops, conferences, and micro-credentialing 
-            programs for both UiTM staff and the public, promoting continuous learning and skill development in 
-            the medical field.
-          </p>
         </CardContent>
       </Card>
 
