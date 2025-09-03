@@ -63,10 +63,7 @@ export default function AboutUsPage() {
               participants to rehearse clinical scenarios, refine decision-making, and strengthen teamwork 
               in a risk-free setting. Its scope spans the entire spectrum of medical education—from 
               pre-clinical foundations to advanced clinical care—while also promoting innovative teaching 
-              methods such as hybrid learning (online modules combined with onsite skill training). In addition 
-              to student use, the CSC hosts workshops, conferences, and micro-credentialing programs for 
-              UiTM staff and the wider community, reinforcing its role as a centre for lifelong learning 
-              and professional growth.
+              methods such as hybrid learning (online modules combined with onsite skill training).
             </p>
           </div>
         </CardContent>
@@ -81,9 +78,7 @@ export default function AboutUsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-foreground/90">
-            The CSC is not limited to student use; it is open to workshops, conferences, and micro-credentialing 
-            programs for both UiTM staff and the public, promoting continuous learning and skill development in 
-            the medical field.
+            In addition to student use, the CSC hosts workshops, conferences, and micro-credentialing programs for UiTM staff and the wider community, reinforcing its role as a centre for lifelong learning and professional growth.
           </p>
         </CardContent>
       </Card>
