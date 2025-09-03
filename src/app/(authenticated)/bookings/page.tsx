@@ -90,7 +90,7 @@ export default function BookingsPage() {
               <Select value={selectedSpecialty} onValueChange={setSelectedSpecialty}>
                 <SelectTrigger id="specialty-select" className="w-full">
                   <SelectValue placeholder="Choose specialty for FSS..." />
-                </Trigger>
+                </SelectTrigger>
                 <SelectContent>
                   {fssSpecialtiesOptions.map(spec => (
                     <SelectItem key={spec.value} value={spec.value}>{spec.label}</SelectItem>
