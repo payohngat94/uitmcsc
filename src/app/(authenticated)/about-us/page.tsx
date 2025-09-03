@@ -52,15 +52,18 @@ export default function AboutUsPage() {
         <CardContent className="p-6 md:p-8">
           <div className="space-y-6 text-foreground/90 mt-6">
             <p>
-              The Clinical Simulation Centre (CSC) serves as an additional learning space for medical students, 
-              offering a secure environment for practicing and understanding challenging concepts from pre-clinical 
-              to clinical years. Its purpose is to enhance students' comprehension and application of medical knowledge.
-            </p>
-            <p>
-              The CSC facilitates a bridge between theoretical learning and practical experience by providing 
-              simulated scenarios that connect clinical education to real-world situations. It offers learning 
-              modules covering the entire medical school curriculum, promoting a hybrid approach with online 
-              learning followed by onsite skill training.
+              The Clinical Simulation Centre (CSC) is a dedicated learning hub that provides a safe, structured 
+              environment for medical training. Initially designed for undergraduate students, the CSC now plays 
+              a pivotal role in postgraduate specialist training and also supports the professional development 
+              of healthcare personnel including nurses and assistant medical officers. By integrating 
+              simulation-based learning, the CSC bridges the gap between theory and practice, allowing 
+              participants to rehearse clinical scenarios, refine decision-making, and strengthen teamwork 
+              in a risk-free setting. Its scope spans the entire spectrum of medical education—from 
+              pre-clinical foundations to advanced clinical care—while also promoting innovative teaching 
+              methods such as hybrid learning (online modules combined with onsite skill training). In addition 
+              to student use, the CSC hosts workshops, conferences, and micro-credentialing programs for 
+              UiTM staff and the wider community, reinforcing its role as a centre for lifelong learning 
+              and professional growth.
             </p>
           </div>
         </CardContent>
