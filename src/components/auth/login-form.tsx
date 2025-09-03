@@ -83,7 +83,7 @@ export function LoginForm() {
         <div className="text-center mb-8">
             <div className="flex flex-col items-center gap-2 mb-4">
                 <Image src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/943zc5n8r4hk/LogoUiTM.png" alt="UiTM CSC Logo" width={80} height={80} data-ai-hint="logo" />
-                <h1 className="text-2xl font-bold font-headline">Clinical Simulation Centre, Faculty of Medicine, UiTM</h1>
+                <h1 className="text-2xl font-bold font-headline bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Clinical Simulation Centre, Faculty of Medicine, UiTM</h1>
             </div>
         </div>
         
