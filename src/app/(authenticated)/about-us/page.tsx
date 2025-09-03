@@ -50,11 +50,7 @@ export default function AboutUsPage() {
           </div>
         </CardHeader>
         <CardContent className="p-6 md:p-8">
-          <blockquote className="relative p-4 text-xl italic border-l-4 border-primary bg-primary/5 text-primary rounded-md my-6 shadow">
-            <p className="mb-0">"Your gateway to building individual skills and shared medical knowledge"</p>
-          </blockquote>
-
-          <div className="space-y-6 text-foreground/90">
+          <div className="space-y-6 text-foreground/90 mt-6">
             <p>
               The Clinical Simulation Centre (CSC) serves as an additional learning space for medical students, 
               offering a secure environment for practicing and understanding challenging concepts from pre-clinical 
