@@ -30,9 +30,6 @@ const fssSpecialtiesOptions = [
   { value: "emergency", label: "Emergency Medicine" },
 ];
 
-// IMPORTANT: Replace this placeholder with your actual Google Calendar embed URL.
-const GOOGLE_CALENDAR_EMBED_URL = "https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=Asia%2FSingapore&showPrint=0&title=FSS%20Booking%20Cal&src=ajRzczNuc3BqYTl1bW9ta3VwbHVsdjdwdG9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ&color=%23d50000";
-
 export default function BookingsPage() {
   const [selectedSessionType, setSelectedSessionType] = useState<string | undefined>(undefined);
   const [selectedSpecialty, setSelectedSpecialty] = useState<string | undefined>(undefined);
@@ -116,48 +113,6 @@ export default function BookingsPage() {
               </Button>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl flex items-center"><Calendar className="mr-3 h-7 w-7 text-primary" />Focused Skill Station Availability</CardTitle>
-          <CardDescription>
-            View the calendar below to see available slots for FSS sessions.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {GOOGLE_CALENDAR_EMBED_URL === "YOUR_GOOGLE_CALENDAR_EMBED_URL_HERE" ? (
-             <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-800">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              <AlertTitle className="font-semibold">Configuration Required</AlertTitle>
-              <AlertDescription>
-                To display the calendar, please update the `GOOGLE_CALENDAR_EMBED_URL` in the code
-                at `src/app/(authenticated)/bookings/page.tsx` with your Google Calendar embed link.
-                <a 
-                  href="https://support.google.com/calendar/answer/41207?hl=en" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="block text-xs underline mt-2"
-                >
-                  Learn how to get your embed URL
-                </a>
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <iframe
-              src={GOOGLE_CALENDAR_EMBED_URL}
-              width="100%"
-              height="600"
-              frameBorder="0"
-              scrolling="no"
-              className="rounded-md border"
-              title="Focused Skill Station Availability Calendar"
-              aria-label="Focused Skill Station Availability Calendar"
-            >
-              Loading calendar...
-            </iframe>
-          )}
         </CardContent>
       </Card>
 
