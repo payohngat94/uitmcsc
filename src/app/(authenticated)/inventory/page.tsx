@@ -9,7 +9,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, PlusCircle, ListFilter, Archive, Building, Package, Trash2, ExternalLink, AlertTriangle } from "lucide-react";
+import { Search, PlusCircle, ListFilter, Archive, Building, Package, Trash2, ExternalLink, AlertTriangle, AppWindow } from "lucide-react";
 import Link from "next/link";
 import {
   Select,
@@ -355,24 +355,25 @@ export default function InventoryPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl">Power Apps Catalogue</CardTitle>
+          <CardTitle className="text-2xl flex items-center">
+            <Package className="mr-3 h-7 w-7 text-primary" />
+            Manikin Manager
+          </CardTitle>
           <CardDescription>
-            Browse the full catalogue in our Power App.
+            Access the Manikin Manager application or book a manikin directly.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <iframe
-            src={POWER_APPS_CATALOGUE_URL}
-            width="100%"
-            height="800px"
-            frameBorder="0"
-            allowFullScreen
-            className="rounded-md border"
-            title="Power Apps Catalogue"
-            aria-label="Power Apps Catalogue"
-          >
-            Loading catalogue…
-          </iframe>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Button asChild size="lg" className="w-full">
+              <Link href={POWER_APPS_CATALOGUE_URL} target="_blank" rel="noopener noreferrer">
+                <AppWindow className="mr-2 h-5 w-5" /> Open Manikin Manager
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="w-full">
+               <Link href={INVENTORY_BOOKING_FORM_URL} target="_blank" rel="noopener noreferrer">
+                 Book Manikin <ExternalLink className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
         </CardContent>
       </Card>
       
