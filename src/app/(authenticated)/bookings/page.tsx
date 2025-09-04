@@ -11,8 +11,17 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context"; 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Updated URL for the FSS/ECE booking form
-const FSS_ECE_BOOKING_FORM_URL = "https://wa.me/60147140146?text=Assalamualaikum%20dan%20Selamat%20Sejahtera%2C%0A%0AIzinkan%20saya%20menempah%20sesi%20FSS%2FECE%20di%20Ward%20Simulasi.";
+// Default URL for ECE or when no FSS specialty is selected
+const ECE_BOOKING_FORM_URL = "https://wa.me/60147140146?text=Assalamualaikum%20dan%20Selamat%20Sejahtera%2C%0A%0AIzinkan%20saya%20menempah%20sesi%20FSS%2FECE%20di%20Ward%20Simulasi.";
+
+// URLs for FSS based on specialty
+const fssBookingUrls: Record<string, string> = {
+  paediatrics: "https://wa.me/60102367127?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
+  og: "https://wa.me/60199541163?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
+  medicine: "https://wa.me/60136064148?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
+  surgery: "https://wa.me/60123550154?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
+  emergency: "https://wa.me/60173742498?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
+};
 
 const FSS_ASSESSMENT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfbtrVmm59t8TGxm2HbvbzwlWuFK4O8pQlr-ZPGUENPGqG1aA/viewform?pli=1&pli=1";
 const ECE_ASSESSMENT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScXs_C4R8vieckKQbEhiajJbVbhPMFAxSpiZoUcQ5oWWrLGZA/viewform?pli=1&pli=1";
@@ -38,6 +47,17 @@ export default function BookingsPage() {
   const spGoogleFormEmbedUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfyb4iO2QbNwGdc5y1PJ73fgyy2tvz4hlbHeqUtQQ_0MuiUUQ/viewform?embedded=true";
   
   const isBookNowDisabled = !selectedSessionType || (selectedSessionType === 'fss' && !selectedSpecialty);
+
+  const bookingUrl = useMemo(() => {
+    if (selectedSessionType === 'fss' && selectedSpecialty && fssBookingUrls[selectedSpecialty]) {
+      return fssBookingUrls[selectedSpecialty];
+    }
+    if (selectedSessionType === 'ece') {
+      return ECE_BOOKING_FORM_URL;
+    }
+    // Fallback URL if FSS is selected but specialty is not
+    return ECE_BOOKING_FORM_URL;
+  }, [selectedSessionType, selectedSpecialty]);
 
   const assessmentFormUrl = useMemo(() => {
     if (selectedSessionType === 'fss') return FSS_ASSESSMENT_FORM_URL;
@@ -100,7 +120,7 @@ export default function BookingsPage() {
 
           <div className="space-y-3">
             <Button asChild className="w-full" disabled={isBookNowDisabled}>
-              <Link href={FSS_ECE_BOOKING_FORM_URL} target="_blank" rel="noopener noreferrer">
+              <Link href={bookingUrl} target="_blank" rel="noopener noreferrer">
                 Book Session <ExternalLink className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -143,3 +163,4 @@ export default function BookingsPage() {
     </div>
   );
 }
+
