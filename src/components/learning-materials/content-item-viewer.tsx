@@ -58,15 +58,17 @@ const getGoogleEmbedUrl = (url: string): string => {
     try {
         const urlObj = new URL(url);
         const pathParts = urlObj.pathname.split('/');
+        // Find the 'd' part of the URL, the ID is next
         const docIdIndex = pathParts.findIndex(part => part === 'd') + 1;
         if (docIdIndex > 0 && pathParts[docIdIndex]) {
             const docId = pathParts[docIdIndex];
             if (urlObj.pathname.includes('/presentation/d/')) {
                  return `https://docs.google.com/presentation/d/${docId}/embed?start=false&loop=false&delayms=3000`;
             }
+            // Default to document preview embed
             return `https://docs.google.com/document/d/${docId}/preview`;
         }
-    } catch (e) { /* Fall through */ }
+    } catch (e) { /* Fall through and return original URL on error */ }
     return url;
 };
 
@@ -81,9 +83,25 @@ const typeInfo: Record<ContentItemType, { label: string, icon: React.ElementType
 function ItemPlayer({ item }: { item: ContentItem }) {
     const [isLoading, setIsLoading] = useState(true);
     let embedUrl = "";
-    if (item.type === 'video') embedUrl = getYouTubeEmbedUrl(item.url);
-    else if (isGoogleDocUrl(item.url)) embedUrl = getGoogleEmbedUrl(item.url);
-    else embedUrl = item.url;
+    if (item.type === 'video') {
+      embedUrl = getYouTubeEmbedUrl(item.url);
+    } else if (isGoogleDocUrl(item.url)) {
+      embedUrl = getGoogleEmbedUrl(item.url);
+    } else {
+      // For non-embeddable types, show a message and a link
+      return (
+        <div className="aspect-video w-full relative bg-muted rounded-lg border flex flex-col items-center justify-center p-4">
+          <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+          <p className="text-center font-semibold">This content cannot be embedded.</p>
+          <p className="text-center text-sm text-muted-foreground mb-4">Click the button below to open it in a new tab.</p>
+          <Button asChild>
+            <Link href={item.url} target="_blank" rel="noopener noreferrer">
+              Open Content <ExternalLink className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      );
+    }
 
     return (
         <div className="aspect-video w-full relative bg-muted rounded-lg border">
@@ -201,12 +219,7 @@ export function ContentItemViewer({
   }, [isOpen, items]);
   
   const handlePlay = (item: ContentItem) => {
-      // For videos and google docs, we can embed them. For others, open in new tab.
-      if (item.type === 'video' || isGoogleDocUrl(item.url)) {
-          setSelectedItem(item);
-      } else {
-          window.open(item.url, '_blank', 'noopener,noreferrer');
-      }
+      setSelectedItem(item);
   };
 
   return (
