@@ -10,7 +10,7 @@ export default function LoginPage() {
       </div>
       <div className="relative hidden lg:block">
         <Image
-          src="https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/ui-t-m-c-s-c-9rprso/assets/wlapg7jkc8qj/CSC_Photocollage.png"
+          src="https://res.cloudinary.com/dzu92rfh8/image/upload/v1758269802/CSC_Photocollage_2_vej81z.png"
           alt="Medical simulation training"
           fill
           className="object-cover"
