@@ -17,30 +17,75 @@ export type UserProfile = {
 };
 
 
-// export type LearningMaterialCategory = "Early Clinical Exposure" | "Focused Skill Station" | "Physical Examination" | "Procedural Skills" | "Communication Skills"; // OLD
-export type LearningMaterialCategoryName = string; // NEW - category names are now dynamic strings
+// --- NEW LEARNING MATERIALS STRUCTURE ---
+
+export type ContentItemType = 'video' | 'document' | 'slides';
+
+// Represents a single piece of content (e.g., one video, one PDF).
+export type ContentItem = {
+  id: string; // Firestore document ID
+  topicId: string; // Foreign key to the 'topics' collection
+  type: ContentItemType;
+  title: string;
+  url: string;
+  description?: string;
+  thumbnailUrl?: string; // Optional thumbnail for the specific item
+  createdAt?: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
+};
+
+// Summary of available resources within a topic.
+// Stored within a Topic document to reduce queries.
+export type TopicResourceSummary = {
+  hasVideo: boolean;
+  hasDocument: boolean;
+  hasSlides: boolean;
+  videoCount: number;
+  documentCount: number;
+  slidesCount: number;
+};
+
+// Represents a single learning topic (e.g., "Arterial Blood Gas Sampling").
+export type Topic = {
+  id: string; // Firestore document ID
+  title: string;
+  tags?: string[]; // For specialties like "Emergency Medicine"
+  yearLevels?: number[]; // e.g., [3, 4, 5]
+  description?: string;
+  thumbnailUrl?: string; // A general thumbnail for the topic
+  resourceSummary: TopicResourceSummary;
+  createdAt?: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
+};
+
+
+// --- OLD TYPES (to be deprecated/removed) ---
+
+export type LearningMaterialCategoryName = string; 
 
 export type LearningMaterialCategoryDoc = {
   id: string;
   name: LearningMaterialCategoryName;
   createdAt?: Timestamp | Date;
-  // could add description, icon, color etc. in future
 };
 
 export type LearningMaterialType = 'video' | 'document' | 'slides';
 
 export type LearningMaterial = {
-  id: string; // Firestore document ID
+  id: string; 
   title: string;
-  category: LearningMaterialCategoryName; // NEW - uses the dynamic string name
+  category: LearningMaterialCategoryName; 
   type: LearningMaterialType;
   url: string;
   description?: string;
   thumbnailUrl?: string;
   specialties?: string[];
-  createdAt?: Timestamp | Date; // Can be Firestore Timestamp or JS Date after conversion
-  updatedAt?: Timestamp | Date; // Can be Firestore Timestamp or JS Date after conversion
+  createdAt?: Timestamp | Date; 
+  updatedAt?: Timestamp | Date; 
 };
+
+
+// --- OTHER TYPES ---
 
 export type Booking = {
   id:string;
@@ -63,20 +108,20 @@ export type InventoryItem = {
   description?: string;
   status: InventoryItemStatus;
   quantity: number;
-  imageUrls?: string[]; // Changed from imageUrl?: string to string[]
+  imageUrls?: string[]; 
   location?: string;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
 };
 
 export type Announcement = {
-  id: string; // Firestore document ID
+  id: string; 
   title: string;
   content: string;
-  authorId: string; // UID of the user who created it
-  authorName: string; // Display name of the user
-  createdAt: Timestamp | Date; // Firestore Timestamp or JS Date after conversion
-  updatedAt?: Timestamp | Date; // Firestore Timestamp or JS Date after conversion
+  authorId: string; 
+  authorName: string; 
+  createdAt: Timestamp | Date; 
+  updatedAt?: Timestamp | Date; 
   isPinned?: boolean;
-  audience?: UserRole[]; // 'admin' | 'student' | 'guest'
+  audience?: UserRole[]; 
 };
