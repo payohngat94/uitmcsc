@@ -31,7 +31,11 @@ import type {
   UserStatus,
   Topic,
   ContentItem,
-  ContentItemType
+  ContentItemType,
+  Session,
+  AttendanceRecord,
+  SessionAggregate,
+  Station,
 } from '@/lib/types';
 
 
@@ -481,6 +485,71 @@ export async function deleteInventoryItem(id: string): Promise<void> {
     throw new Error(`Failed to delete inventory item. ${(error as Error).message}`);
   }
 }
+
+// --- Attendance System Service ---
+const stationsCollectionRef = collection(db, 'stations');
+const sessionsCollectionRef = collection(db, 'sessions');
+
+export async function getStations(): Promise<Station[]> {
+  const querySnapshot = await getDocs(query(stationsCollectionRef, orderBy('name', 'asc')));
+  return querySnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Station));
+}
+
+export async function addStation(stationData: Omit<Station, 'id' | 'createdAt'>): Promise<string> {
+  const docRef = await addDoc(stationsCollectionRef, {
+    ...stationData,
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function addSession(sessionData: Omit<Session, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const docRef = await addDoc(sessionsCollectionRef, {
+        ...sessionData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    });
+    // Also create an initial aggregate document
+    await setDoc(doc(db, 'sessionAggregates', docRef.id), {
+        headcount: 0,
+        totalMinutes: 0,
+        averageMinutes: 0,
+    });
+    return docRef.id;
+}
+
+
+export async function getSessionsWithAttendance(): Promise<Session[]> {
+    const sessionQuery = query(sessionsCollectionRef, orderBy('sessionDateTime', 'desc'));
+    const sessionSnapshot = await getDocs(sessionQuery);
+
+    const sessions: Session[] = [];
+    for (const sessionDoc of sessionSnapshot.docs) {
+        const sessionData = sessionDoc.data() as Omit<Session, 'id'>;
+        const attendanceCollectionRef = collection(db, 'sessions', sessionDoc.id, 'attendance');
+        const aggregatesDocRef = doc(db, 'sessionAggregates', sessionDoc.id);
+
+        const [attendanceSnapshot, aggregatesSnap] = await Promise.all([
+            getDocs(attendanceCollectionRef),
+            getDoc(aggregatesDocRef)
+        ]);
+
+        const attendance = attendanceSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord));
+        const aggregates = aggregatesSnap.exists() ? aggregatesSnap.data() as SessionAggregate : { headcount: 0, totalMinutes: 0, averageMinutes: 0 };
+        
+        sessions.push({
+            id: sessionDoc.id,
+            ...sessionData,
+            sessionDateTime: (sessionData.sessionDateTime as Timestamp).toDate(),
+            createdAt: (sessionData.createdAt as Timestamp).toDate(),
+            updatedAt: (sessionData.updatedAt as Timestamp).toDate(),
+            attendance,
+            aggregates,
+        } as Session);
+    }
+    return sessions;
+}
+
 
 // --- Deprecated Learning Material functions ---
 const materialsCollectionRef = collection(db, 'learningMaterials');

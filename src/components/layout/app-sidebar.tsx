@@ -28,6 +28,7 @@ import {
   Info,
   User, // Icon for Guest user
   UserCog, // Icon for User Management
+  QrCode, // Icon for Attendance
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context"; 
@@ -40,6 +41,7 @@ const allNavItems = [
   { href: "/bookings", icon: CalendarDays, label: "Focused Skill Station / Standardized Patient", roles: ['admin', 'student'] as UserRole[] },
   { href: "/inventory", icon: Archive, label: "Facilities & Manikin", roles: ['admin', 'student', 'guest'] as UserRole[] },
   { href: "/announcements", icon: Megaphone, label: "Announcements", roles: ['admin', 'student'] as UserRole[] },
+  { href: "/attendance", icon: QrCode, label: "Attendance", roles: ['admin', 'student'] as UserRole[] },
   { href: "/admin/manage-users", icon: UserCog, label: "Manage Users", roles: ['admin'] as UserRole[] },
   { href: "/about-us", icon: Info, label: "About Us", roles: ['admin', 'student', 'guest'] as UserRole[] },
 ];
