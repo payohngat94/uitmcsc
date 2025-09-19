@@ -29,7 +29,7 @@ export function CategoryCard({ categoryName, materialCount, onCategoryClick }: C
         <p className="text-sm text-muted-foreground">{materialCount} {materialCount === 1 ? 'topic' : 'topics'} available in this category.</p>
       </CardContent>
       <CardFooter>
-        <Button variant="ghost" className="w-full justify-start p-0">
+        <Button variant="ghost" className="w-full justify-center p-0">
             View Topics &rarr;
         </Button>
       </CardFooter>
