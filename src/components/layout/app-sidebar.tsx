@@ -37,7 +37,7 @@ import type { UserRole } from "@/lib/types";
 const allNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ['admin', 'student', 'guest'] as UserRole[] },
   { href: "/learning-materials", icon: BookOpen, label: "Learning Materials", roles: ['admin', 'student'] as UserRole[] },
-  { href: "/bookings", icon: CalendarDays, label: "FSS/SP", roles: ['admin', 'student'] as UserRole[] },
+  { href: "/bookings", icon: CalendarDays, label: "Focused Skill Station / Standardized Patient", roles: ['admin', 'student'] as UserRole[] },
   { href: "/inventory", icon: Archive, label: "Facilities & Manikin", roles: ['admin', 'student', 'guest'] as UserRole[] },
   { href: "/announcements", icon: Megaphone, label: "Announcements", roles: ['admin', 'student'] as UserRole[] },
   { href: "/admin/manage-users", icon: UserCog, label: "Manage Users", roles: ['admin'] as UserRole[] },
