@@ -492,7 +492,14 @@ const sessionsCollectionRef = collection(db, 'sessions');
 
 export async function getStations(): Promise<Station[]> {
   const querySnapshot = await getDocs(query(stationsCollectionRef, orderBy('name', 'asc')));
-  return querySnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Station));
+  return querySnapshot.docs.map(d => {
+      const data = d.data();
+      return {
+          id: d.id,
+          ...data,
+          createdAt: (data.createdAt as Timestamp)?.toDate(),
+      } as Station;
+  });
 }
 
 export async function addStation(stationData: Omit<Station, 'id' | 'createdAt'>): Promise<string> {
@@ -523,7 +530,7 @@ export async function getSessionsWithAttendance(): Promise<Session[]> {
     const sessionQuery = query(sessionsCollectionRef, orderBy('sessionDateTime', 'desc'));
     const sessionSnapshot = await getDocs(sessionQuery);
 
-    const sessions: Session[] = [];
+    const sessions: any[] = [];
     for (const sessionDoc of sessionSnapshot.docs) {
         const sessionData = sessionDoc.data() as Omit<Session, 'id'>;
         const attendanceCollectionRef = collection(db, 'sessions', sessionDoc.id, 'attendance');
@@ -534,7 +541,16 @@ export async function getSessionsWithAttendance(): Promise<Session[]> {
             getDoc(aggregatesDocRef)
         ]);
 
-        const attendance = attendanceSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord));
+        const attendance = attendanceSnapshot.docs.map(d => {
+            const attData = d.data();
+            return {
+                id: d.id,
+                ...attData,
+                checkInTime: (attData.checkInTime as Timestamp)?.toDate(),
+                checkOutTime: (attData.checkOutTime as Timestamp)?.toDate(),
+            };
+        });
+
         const aggregates = aggregatesSnap.exists() ? aggregatesSnap.data() as SessionAggregate : { headcount: 0, totalMinutes: 0, averageMinutes: 0 };
         
         sessions.push({
@@ -545,7 +561,7 @@ export async function getSessionsWithAttendance(): Promise<Session[]> {
             updatedAt: (sessionData.updatedAt as Timestamp).toDate(),
             attendance,
             aggregates,
-        } as Session);
+        });
     }
     return sessions;
 }
