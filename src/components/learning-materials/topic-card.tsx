@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { Youtube, FileText, Presentation, Plus, Pencil, Trash2, Tag, Calendar, MoreVertical } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 interface TopicCardProps {
   topic: Topic;
@@ -17,15 +17,15 @@ interface TopicCardProps {
   onDeleteTopic?: (topic: Topic) => void;
 }
 
-const typeInfo: Record<ContentItemType, { label: string, icon: React.ElementType, count: keyof Topic['resourceSummary'] }> = {
-    video: { label: "Videos", icon: Youtube, count: 'videoCount' },
-    document: { label: "Docs", icon: FileText, count: 'documentCount' },
-    slides: { label: "Slides", icon: Presentation, count: 'slidesCount' },
-}
+const typeInfo: Record<ContentItemType, { label: string, icon: React.ElementType, countKey: keyof Topic['resourceSummary'] }> = {
+    video: { label: "Videos", icon: Youtube, countKey: 'videoCount' },
+    document: { label: "Docs", icon: FileText, countKey: 'documentCount' },
+    slides: { label: "Slides", icon: Presentation, countKey: 'slidesCount' },
+};
 
 export function TopicCard({ topic, onViewContent, onAddContent, onEditTopic, onDeleteTopic }: TopicCardProps) {
   const { resourceSummary, tags, yearLevels } = topic;
-  const hasContent = resourceSummary.hasVideo || resourceSummary.hasDocument || resourceSummary.hasSlides;
+  const isAdmin = !!(onAddContent && onEditTopic && onDeleteTopic);
 
   return (
     <Card className="flex flex-col h-full hover:shadow-xl transition-shadow duration-300 ease-in-out group">
@@ -40,7 +40,7 @@ export function TopicCard({ topic, onViewContent, onAddContent, onEditTopic, onD
             data-ai-hint="medical topic"
           />
         </div>
-        {onEditTopic && onDeleteTopic && (
+        {isAdmin && (
             <div className="absolute top-2 right-2">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -53,13 +53,12 @@ export function TopicCard({ topic, onViewContent, onAddContent, onEditTopic, onD
                             <Pencil className="mr-2 h-4 w-4" />
                             <span>Edit Topic</span>
                         </DropdownMenuItem>
-                        {onAddContent && (
-                            <DropdownMenuItem onClick={() => onAddContent(topic)}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                <span>Add Content</span>
-                            </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => onDeleteTopic(topic)} className="text-destructive">
+                        <DropdownMenuItem onClick={() => onAddContent(topic)}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            <span>Add Content</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onDeleteTopic(topic)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                             <Trash2 className="mr-2 h-4 w-4" />
                             <span>Delete Topic</span>
                         </DropdownMenuItem>
@@ -84,7 +83,7 @@ export function TopicCard({ topic, onViewContent, onAddContent, onEditTopic, onD
       <CardFooter className="p-2 border-t flex justify-end items-center gap-1.5">
         {(['video', 'document', 'slides'] as ContentItemType[]).map(type => {
             const info = typeInfo[type];
-            const count = topic.resourceSummary[info.count];
+            const count = topic.resourceSummary[info.countKey];
             const hasType = count > 0;
 
             return (
@@ -93,9 +92,9 @@ export function TopicCard({ topic, onViewContent, onAddContent, onEditTopic, onD
                     variant="outline" 
                     size="sm" 
                     disabled={!hasType}
-                    onClick={() => onViewContent(topic, type)}
-                    className="flex-1 disabled:opacity-50"
-                    aria-label={`View ${info.label} for ${topic.title}`}
+                    onClick={() => hasType && onViewContent(topic, type)}
+                    className="flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label={`View ${count} ${info.label} for ${topic.title}`}
                 >
                     <info.icon className="h-4 w-4" />
                     {hasType && (
@@ -110,5 +109,4 @@ export function TopicCard({ topic, onViewContent, onAddContent, onEditTopic, onD
     </Card>
   );
 }
-
     

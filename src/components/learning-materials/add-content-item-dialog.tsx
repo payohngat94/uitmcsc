@@ -17,6 +17,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -157,6 +158,7 @@ export function AddContentItemDialog({ isOpen, onOpenChange, onSave, currentTopi
                   <FormControl>
                     <Input placeholder="Overrides topic thumbnail for this item" {...field} />
                   </FormControl>
+                   <FormDescription>If left blank, the topic's main thumbnail will be used.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -188,5 +190,4 @@ export function AddContentItemDialog({ isOpen, onOpenChange, onSave, currentTopi
     </Dialog>
   );
 }
-
     

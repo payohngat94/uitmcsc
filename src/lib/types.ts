@@ -17,7 +17,7 @@ export type UserProfile = {
 };
 
 
-// --- OLD TYPES (to be deprecated/removed) ---
+// --- NEW LEARNING MATERIAL TYPES ---
 
 export type LearningMaterialCategoryName = string; 
 
@@ -27,13 +27,52 @@ export type LearningMaterialCategoryDoc = {
   createdAt?: Timestamp | Date;
 };
 
-export type LearningMaterialType = 'video' | 'document' | 'slides';
+export type ContentItemType = 'video' | 'document' | 'slides';
 
+// Represents an individual piece of content, like a video or a PDF.
+export type ContentItem = {
+  id: string;
+  topicId: string; // Foreign key to the Topic
+  title: string;
+  type: ContentItemType;
+  url: string;
+  description?: string;
+  thumbnailUrl?: string; // Specific thumbnail for this item
+  createdAt?: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
+};
+
+// Represents a learning topic that groups multiple content items.
+export type Topic = {
+  id: string;
+  title: string;
+  category: LearningMaterialCategoryName;
+  description?: string;
+  thumbnailUrl?: string; // General thumbnail for the topic
+  tags?: string[]; // e.g., 'Emergency Medicine', 'Respiratory'
+  yearLevels?: string[]; // e.g., '3', '4', '5'
+  resourceSummary: {
+    videoCount: number;
+    documentCount: number;
+    slidesCount: number;
+    hasVideo: boolean;
+    hasDocument: boolean;
+    hasSlides: boolean;
+  },
+  contentItems: ContentItem[]; // Populated on the client
+  createdAt?: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
+};
+
+
+// --- DEPRECATED ---
+// This is the old, flat structure for learning materials.
+// It is being replaced by the Topic/ContentItem structure.
 export type LearningMaterial = {
   id: string; 
   title: string;
   category: LearningMaterialCategoryName; 
-  type: LearningMaterialType;
+  type: ContentItemType;
   url: string;
   description?: string;
   thumbnailUrl?: string;

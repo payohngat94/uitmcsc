@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState } from "react";
-import type { Topic, ContentItem } from "@/lib/types";
+import { useState, useEffect } from "react";
+import type { Topic, ContentItem, ContentItemType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
 import Link from "next/link";
-import { Youtube, FileText, Presentation, ExternalLink, Plus, Pencil, Trash2, BookOpen } from "lucide-react";
+import { Youtube, FileText, Presentation, ExternalLink, Plus, Pencil, Trash2, BookOpen, Film, StickyNote } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +68,12 @@ const getGoogleEmbedUrl = (url: string): string => {
     return url;
 };
 
+const typeInfo: Record<ContentItemType, { label: string, icon: React.ElementType }> = {
+    video: { label: "Video", icon: Film },
+    document: { label: "Document", icon: FileText },
+    slides: { label: "Slides", icon: Presentation },
+}
+
 // --- SUB-COMPONENTS ---
 
 function ItemPlayer({ item }: { item: ContentItem }) {
@@ -93,15 +99,16 @@ function ItemPlayer({ item }: { item: ContentItem }) {
     );
 }
 
-function ItemCard({ item, topic, onPlay, onEdit, onDelete }: {
+function ItemCard({ item, topic, onPlay, onEdit, onDelete, isSelected }: {
     item: ContentItem,
     topic: Topic,
     onPlay: (item: ContentItem) => void,
     onEdit?: (item: ContentItem) => void,
     onDelete?: (item: ContentItem) => void,
+    isSelected: boolean,
 }) {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const Icon = item.type === 'video' ? Youtube : item.type === 'document' ? FileText : Presentation;
+    const ItemIcon = typeInfo[item.type].icon;
 
     const handleDeleteConfirm = () => {
         onDelete?.(item);
@@ -109,54 +116,46 @@ function ItemCard({ item, topic, onPlay, onEdit, onDelete }: {
     }
     
     return (
-        <Card className="flex flex-col">
-            <CardHeader className="p-0 relative">
-                <div className="aspect-video bg-muted rounded-t-lg">
-                    <Image
-                        src={item.thumbnailUrl || topic.thumbnailUrl || `https://placehold.co/300x169/E0E0E0/757575?text=${encodeURIComponent(item.title)}`}
-                        alt={item.title}
-                        width={300}
-                        height={169}
-                        className="w-full h-full object-cover rounded-t-lg"
-                    />
-                </div>
-                 <Badge variant="secondary" className="absolute top-2 right-2">
-                    <Icon className="h-3 w-3 mr-1" /> {item.type}
-                 </Badge>
-            </CardHeader>
-            <CardContent className="p-3 flex-grow">
+        <Card className={`flex flex-col transition-all duration-200 ${isSelected ? 'border-primary shadow-lg' : 'hover:shadow-md'}`}>
+            <button 
+                onClick={() => onPlay(item)} 
+                className="block text-left p-3 flex-grow"
+                aria-current={isSelected ? "true" : "false"}
+            >
                 <p className="font-semibold text-sm line-clamp-2">{item.title}</p>
                 {item.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.description}</p>}
-            </CardContent>
-            <CardFooter className="p-2 border-t flex gap-2">
-                <Button size="sm" className="flex-1" onClick={() => onPlay(item)}>
-                    <BookOpen className="h-4 w-4 mr-2" /> View
-                </Button>
-                {onEdit && (
-                    <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => onEdit(item)}>
-                        <Pencil className="h-4 w-4" />
-                    </Button>
-                )}
-                 {onDelete && (
-                    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon" className="h-8 w-8">
-                            <Trash2 className="h-4 w-4" />
+            </button>
+            
+            <CardFooter className="p-2 border-t flex justify-between items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                    <ItemIcon className="h-3 w-3 mr-1.5" />
+                    {typeInfo[item.type].label}
+                </Badge>
+                {onEdit && onDelete && (
+                    <div className="flex gap-1">
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(item)}>
+                            <Pencil className="h-4 w-4" />
                         </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Content Item?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This will permanently delete "{item.title}". This action cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                    </AlertDialog>
+                        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive/80">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Content Item?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete "{item.title}". This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                 )}
             </CardFooter>
         </Card>
@@ -190,14 +189,15 @@ export function ContentItemViewer({
 }: ContentItemViewerProps) {
   const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
 
-  // When dialog closes, reset the selected item
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      setSelectedItem(null);
+  // When dialog opens with items, select the first one. Reset on close.
+  useEffect(() => {
+    if (isOpen) {
+        setSelectedItem(items[0] || null);
+    } else {
+        setSelectedItem(null);
     }
-    onOpenChange(open);
-  };
-
+  }, [isOpen, items]);
+  
   const handlePlay = (item: ContentItem) => {
       // For videos and google docs, we can embed them. For others, open in new tab.
       if (item.type === 'video' || isGoogleDocUrl(item.url)) {
@@ -208,8 +208,8 @@ export function ContentItemViewer({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-4 border-b">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>Select an item from the list to view it.</DialogDescription>
@@ -232,21 +232,26 @@ export function ContentItemViewer({
                     </>
                 ) : (
                     <div className="flex-grow flex flex-col items-center justify-center bg-muted rounded-lg text-center p-8">
-                        <BookOpen className="h-16 w-16 text-muted-foreground" />
-                        <p className="mt-4 text-lg font-medium">Select an item to preview</p>
-                        <p className="text-muted-foreground">Choose a video or document from the right panel.</p>
+                        <StickyNote className="h-16 w-16 text-muted-foreground" />
+                        <p className="mt-4 text-lg font-medium">No Content to Display</p>
+                        <p className="text-muted-foreground">There are no items of this type in this topic yet.</p>
+                        {isAdmin && onAddItem && (
+                            <Button className="mt-4" onClick={onAddItem}>
+                                <Plus className="h-4 w-4 mr-2"/> Add First Content Item
+                            </Button>
+                        )}
                     </div>
                 )}
             </div>
 
-            <ScrollArea className="col-span-1 border-l h-full">
+            <ScrollArea className="col-span-1 border-l h-full bg-secondary/20">
                 <div className="p-4 space-y-3">
                     {isAdmin && onAddItem && (
                         <Button className="w-full" onClick={onAddItem} variant="outline">
                             <Plus className="h-4 w-4 mr-2"/> Add New Content
                         </Button>
                     )}
-                    {items.length > 0 ? items.map(item => (
+                    {items.map(item => (
                         <ItemCard 
                             key={item.id} 
                             item={item} 
@@ -254,12 +259,9 @@ export function ContentItemViewer({
                             onPlay={handlePlay}
                             onEdit={isAdmin ? onEditItem : undefined}
                             onDelete={isAdmin ? onDeleteItem : undefined}
+                            isSelected={selectedItem?.id === item.id}
                         />
-                    )) : (
-                        <div className="text-center py-10 text-muted-foreground">
-                            <p>No content of this type has been added yet.</p>
-                        </div>
-                    )}
+                    ))}
                 </div>
             </ScrollArea>
         </div>
@@ -268,5 +270,4 @@ export function ContentItemViewer({
     </Dialog>
   );
 }
-
     

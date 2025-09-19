@@ -16,6 +16,7 @@ import {
   setDoc,
   getDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { 
@@ -26,7 +27,10 @@ import type {
   UserRole, 
   InventoryItem, 
   UserProfile, 
-  UserStatus
+  UserStatus,
+  Topic,
+  ContentItem,
+  ContentItemType
 } from '@/lib/types';
 
 
@@ -175,63 +179,134 @@ export async function deleteUser(docId: string): Promise<void> {
 }
 
 
-// Learning Materials Service
-const materialsCollectionRef = collection(db, 'learningMaterials');
+// --- New Learning Materials Service (Topics / ContentItems) ---
+const topicsCollectionRef = collection(db, 'topics');
+const contentItemsCollectionRef = collection(db, 'contentItems');
 const categoriesCollectionRef = collection(db, 'learningMaterialCategories');
 
-export async function getLearningMaterials(): Promise<LearningMaterial[]> {
-  try {
-    const q = query(materialsCollectionRef, orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(docSnapshot => ({
-      id: docSnapshot.id,
-      ...docSnapshot.data(),
-      createdAt: (docSnapshot.data().createdAt as Timestamp)?.toDate(),
-      updatedAt: (docSnapshot.data().updatedAt as Timestamp)?.toDate(),
-    } as LearningMaterial));
-  } catch (error) {
-    console.error("Error fetching learning materials: ", error);
-    throw new Error(`Failed to fetch learning materials. ${(error as Error).message}`);
+// Helper function to update topic summary
+async function updateTopicSummary(topicId: string) {
+  const q = query(contentItemsCollectionRef, where("topicId", "==", topicId));
+  const contentItemsSnapshot = await getDocs(q);
+  
+  let videoCount = 0;
+  let documentCount = 0;
+  let slidesCount = 0;
+
+  contentItemsSnapshot.forEach(doc => {
+    const item = doc.data() as ContentItem;
+    if (item.type === 'video') videoCount++;
+    if (item.type === 'document') documentCount++;
+    if (item.type === 'slides') slidesCount++;
+  });
+
+  const resourceSummary = {
+    videoCount,
+    documentCount,
+    slidesCount,
+    hasVideo: videoCount > 0,
+    hasDocument: documentCount > 0,
+    hasSlides: slidesCount > 0,
+  };
+  
+  const topicRef = doc(db, 'topics', topicId);
+  await updateDoc(topicRef, { resourceSummary });
+}
+
+
+export async function getTopics(): Promise<Topic[]> {
+  const q = query(topicsCollectionRef, orderBy('title', 'asc'));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
+    updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
+    contentItems: [], // Initialize empty, will be populated on client
+  } as Topic));
+}
+
+export async function getContentItems(): Promise<ContentItem[]> {
+  const q = query(contentItemsCollectionRef, orderBy('createdAt', 'desc'));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
+    updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
+  } as ContentItem));
+}
+
+export async function addTopic(
+  topicData: Omit<Topic, 'id' | 'createdAt' | 'updatedAt' | 'resourceSummary' | 'contentItems'>
+): Promise<string> {
+  const docRef = await addDoc(topicsCollectionRef, {
+    ...topicData,
+    resourceSummary: { videoCount: 0, documentCount: 0, slidesCount: 0, hasVideo: false, hasDocument: false, hasSlides: false },
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function updateTopic(id: string, topicData: Partial<Topic>): Promise<void> {
+  const topicRef = doc(db, 'topics', id);
+  await updateDoc(topicRef, { ...topicData, updatedAt: serverTimestamp() });
+}
+
+export async function deleteTopic(id: string): Promise<void> {
+  const batch = writeBatch(db);
+  
+  // Delete the topic itself
+  const topicRef = doc(db, 'topics', id);
+  batch.delete(topicRef);
+
+  // Find and delete all associated content items
+  const q = query(contentItemsCollectionRef, where("topicId", "==", id));
+  const contentItemsSnapshot = await getDocs(q);
+  contentItemsSnapshot.forEach(doc => {
+    batch.delete(doc.ref);
+  });
+
+  await batch.commit();
+}
+
+export async function addContentItem(
+  contentData: Omit<ContentItem, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<string> {
+  const docRef = await addDoc(contentItemsCollectionRef, {
+    ...contentData,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  // Update the parent topic's summary
+  await updateTopicSummary(contentData.topicId);
+  return docRef.id;
+}
+
+export async function updateContentItem(id: string, contentData: Partial<ContentItem>): Promise<void> {
+  const contentItemRef = doc(db, 'contentItems', id);
+  await updateDoc(contentItemRef, { ...contentData, updatedAt: serverTimestamp() });
+  // If topicId is part of the update, we might need to update two topics, but for now, we assume it's not changing.
+  // We still need to fetch the full item to get topicId for summary update.
+  const updatedDoc = await getDoc(contentItemRef);
+  const topicId = updatedDoc.data()?.topicId;
+  if (topicId) {
+    await updateTopicSummary(topicId);
   }
 }
 
-export async function addLearningMaterial(materialData: Omit<LearningMaterial, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-  try {
-    const docRef = await addDoc(materialsCollectionRef, {
-      ...materialData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    return docRef.id;
-  } catch (error) {
-    console.error("Error adding learning material: ", error);
-    throw new Error(`Failed to add learning material. ${(error as Error).message}`);
+export async function deleteContentItem(id: string): Promise<void> {
+  const contentItemRef = doc(db, 'contentItems', id);
+  const docSnapshot = await getDoc(contentItemRef);
+  const topicId = docSnapshot.data()?.topicId;
+  
+  await deleteDoc(contentItemRef);
+
+  if (topicId) {
+    await updateTopicSummary(topicId);
   }
 }
-
-export async function updateLearningMaterial(id: string, materialData: Partial<LearningMaterial>): Promise<void> {
-  try {
-    const materialDocRef = doc(db, 'learningMaterials', id);
-    await updateDoc(materialDocRef, {
-      ...materialData,
-      updatedAt: serverTimestamp(),
-    });
-  } catch (error) {
-    console.error("Error updating learning material: ", error);
-    throw new Error(`Failed to update learning material. ${(error as Error).message}`);
-  }
-}
-
-export async function deleteLearningMaterial(id: string): Promise<void> {
-  try {
-    const materialDocRef = doc(db, 'learningMaterials', id);
-    await deleteDoc(materialDocRef);
-  } catch (error) {
-    console.error("Error deleting learning material: ", error);
-    throw new Error(`Failed to delete learning material. ${(error as Error).message}`);
-  }
-}
-
 
 export async function getLearningMaterialCategories(): Promise<LearningMaterialCategoryDoc[]> {
   try {
@@ -375,7 +450,7 @@ export async function addInventoryItem(itemData: Omit<InventoryItem, 'id' | 'cre
     return docRef.id;
   } catch (error) {
     console.error("Error adding inventory item: ", error);
-    throw new Error(`Failed to add inventory item: ${(error as Error).message}`);
+    throw new Error(`Failed to add inventory item. ${(error as Error).message}`);
   }
 }
 
@@ -388,7 +463,7 @@ export async function updateInventoryItem(id: string, itemData: Partial<Inventor
     });
   } catch (error) {
     console.error("Error updating inventory item: ", error);
-    throw new Error(`Failed to update inventory item: ${(error as Error).message}`);
+    throw new Error(`Failed to update inventory item. ${(error as Error).message}`);
   }
 }
 
@@ -398,8 +473,26 @@ export async function deleteInventoryItem(id: string): Promise<void> {
     await deleteDoc(itemDocRef);
   } catch (error) {
     console.error("Error deleting inventory item: ", error);
-    throw new Error(`Failed to delete inventory item: ${(error as Error).message}`);
+    throw new Error(`Failed to delete inventory item. ${(error as Error).message}`);
   }
 }
 
+// --- Deprecated Learning Material functions ---
+const materialsCollectionRef = collection(db, 'learningMaterials');
+
+export async function getLearningMaterials(): Promise<LearningMaterial[]> {
+  try {
+    const q = query(materialsCollectionRef, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnapshot => ({
+      id: docSnapshot.id,
+      ...docSnapshot.data(),
+      createdAt: (docSnapshot.data().createdAt as Timestamp)?.toDate(),
+      updatedAt: (docSnapshot.data().updatedAt as Timestamp)?.toDate(),
+    } as LearningMaterial));
+  } catch (error) {
+    console.error("Error fetching learning materials: ", error);
+    throw new Error(`Failed to fetch learning materials. ${(error as Error).message}`);
+  }
+}
     
