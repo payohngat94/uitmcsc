@@ -17,48 +17,6 @@ export type UserProfile = {
 };
 
 
-// --- NEW LEARNING MATERIALS STRUCTURE ---
-
-export type ContentItemType = 'video' | 'document' | 'slides';
-
-// Represents a single piece of content (e.g., one video, one PDF).
-export type ContentItem = {
-  id: string; // Firestore document ID
-  topicId: string; // Foreign key to the 'topics' collection
-  type: ContentItemType;
-  title: string;
-  url: string;
-  description?: string;
-  thumbnailUrl?: string; // Optional thumbnail for the specific item
-  createdAt?: Timestamp | Date;
-  updatedAt?: Timestamp | Date;
-};
-
-// Summary of available resources within a topic.
-// Stored within a Topic document to reduce queries.
-export type TopicResourceSummary = {
-  hasVideo: boolean;
-  hasDocument: boolean;
-  hasSlides: boolean;
-  videoCount: number;
-  documentCount: number;
-  slidesCount: number;
-};
-
-// Represents a single learning topic (e.g., "Arterial Blood Gas Sampling").
-export type Topic = {
-  id: string; // Firestore document ID
-  title: string;
-  tags?: string[]; // For specialties like "Emergency Medicine"
-  yearLevels?: number[]; // e.g., [3, 4, 5]
-  description?: string;
-  thumbnailUrl?: string; // A general thumbnail for the topic
-  resourceSummary: TopicResourceSummary;
-  createdAt?: Timestamp | Date;
-  updatedAt?: Timestamp | Date;
-};
-
-
 // --- OLD TYPES (to be deprecated/removed) ---
 
 export type LearningMaterialCategoryName = string; 
@@ -125,3 +83,5 @@ export type Announcement = {
   isPinned?: boolean;
   audience?: UserRole[]; 
 };
+
+    

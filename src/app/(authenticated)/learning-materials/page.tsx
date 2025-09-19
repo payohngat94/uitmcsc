@@ -2,28 +2,25 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { TopicCard } from "@/components/learning-materials/topic-card";
-import { AddTopicDialog, type AddTopicFormValues } from "@/components/learning-materials/add-topic-dialog";
-import { AddContentItemDialog, type AddContentItemFormValues } from "@/components/learning-materials/add-content-item-dialog";
-import { ContentItemViewer } from "@/components/learning-materials/content-item-viewer";
+import { MaterialCard } from "@/components/learning-materials/material-card";
+import { AddMaterialDialog, type AddMaterialFormValues } from "@/components/learning-materials/add-material-dialog";
+import { CategoryCard } from "@/components/learning-materials/category-card";
+import { AddCategoryDialog } from "@/components/learning-materials/add-category-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, BookOpen, PlusCircle, Layers, Tag, LayoutGrid, ListX } from "lucide-react";
-import type { Topic, ContentItem, ContentItemType } from "@/lib/types";
+import { Search, BookOpen, PlusCircle, Layers } from "lucide-react";
+import type { LearningMaterial, LearningMaterialCategoryName, LearningMaterialCategoryDoc } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { 
-  getTopics, 
-  addTopic, 
-  updateTopic, 
-  deleteTopic,
-  addContentItem,
-  updateContentItem,
-  deleteContentItem,
-  getContentItemsForTopic,
+  getLearningMaterials, 
+  addLearningMaterial,
+  updateLearningMaterial,
+  deleteLearningMaterial,
+  getLearningMaterialCategories,
+  addLearningMaterialCategory,
 } from "@/lib/firebase/firestore-service";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card as ShadCNCard, CardContent as ShadCNCardContent, CardHeader as ShadCNCardHeader, CardFooter as ShadCNCardFooter } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,35 +34,33 @@ import {
 
 
 export default function LearningMaterialsPage() {
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const [materials, setMaterials] = useState<LearningMaterial[]>([]);
+  const [categories, setCategories] = useState<LearningMaterialCategoryDoc[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTag, setSelectedTag] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<LearningMaterialCategoryName | null>(null);
 
   const { toast } = useToast();
   const { currentUser } = useAuth();
 
-  const [isTopicDialogOpen, setIsTopicDialogOpen] = useState(false);
-  const [isContentItemDialogOpen, setIsContentItemDialogOpen] = useState(false);
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
+  const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = useState(false);
+  const [materialToEdit, setMaterialToEdit] = useState<LearningMaterial | null>(null);
+  const [materialToDelete, setMaterialToDelete] = useState<LearningMaterial | null>(null);
 
-  const [topicToEdit, setTopicToEdit] = useState<Topic | null>(null);
-  const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
-  const [contentItemToEdit, setContentItemToEdit] = useState<ContentItem | null>(null);
-  
-  const [currentTopicForContent, setCurrentTopicForContent] = useState<Topic | null>(null);
-  const [currentContentItems, setCurrentContentItems] = useState<ContentItem[]>([]);
-  const [currentViewerTitle, setCurrentViewerTitle] = useState("");
-
-  const fetchTopics = async () => {
+  const fetchMaterialsAndCategories = async () => {
     setIsLoading(true);
     try {
-      const fetchedTopics = await getTopics();
-      setTopics(fetchedTopics);
+      const [fetchedMaterials, fetchedCategories] = await Promise.all([
+        getLearningMaterials(),
+        getLearningMaterialCategories(),
+      ]);
+      setMaterials(fetchedMaterials);
+      setCategories(fetchedCategories);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error fetching topics",
+        title: "Error fetching data",
         description: (error as Error).message,
       });
     } finally {
@@ -74,192 +69,106 @@ export default function LearningMaterialsPage() {
   };
 
   useEffect(() => {
-    fetchTopics();
+    fetchMaterialsAndCategories();
   }, []);
 
-  // --- DIALOG AND VIEWER HANDLERS ---
-
-  const handleOpenAddTopicDialog = () => {
-    setTopicToEdit(null);
-    setIsTopicDialogOpen(true);
+  const handleOpenAddMaterialDialog = (categoryName?: LearningMaterialCategoryName) => {
+    setMaterialToEdit(null);
+    if(categoryName) setSelectedCategory(categoryName);
+    setIsAddMaterialDialogOpen(true);
   };
 
-  const handleOpenEditTopicDialog = (topic: Topic) => {
-    setTopicToEdit(topic);
-    setIsTopicDialogOpen(true);
+  const handleOpenEditMaterialDialog = (material: LearningMaterial) => {
+    setMaterialToEdit(material);
+    setIsAddMaterialDialogOpen(true);
   };
   
-  const handleOpenAddContentItemDialog = (topic: Topic) => {
-    setContentItemToEdit(null);
-    setCurrentTopicForContent(topic);
-    setIsContentItemDialogOpen(true);
-  };
-
-  const handleOpenEditContentItemDialog = (item: ContentItem, topic: Topic) => {
-    setContentItemToEdit(item);
-    setCurrentTopicForContent(topic);
-    setIsContentItemDialogOpen(true);
-  };
-  
-  const handleOpenDeleteTopicDialog = (topic: Topic) => {
-    setTopicToDelete(topic);
+  const handleOpenDeleteMaterialDialog = (material: LearningMaterial) => {
+    setMaterialToDelete(material);
   }
 
-  const handleViewContent = async (topic: Topic, type: ContentItemType) => {
-    setCurrentTopicForContent(topic);
-    setCurrentViewerTitle(`${topic.title} - ${type.charAt(0).toUpperCase() + type.slice(1)}s`);
-    setIsViewerOpen(true);
-    try {
-        const items = await getContentItemsForTopic(topic.id, type);
-        setCurrentContentItems(items);
-    } catch (error) {
-        toast({ variant: "destructive", title: "Error", description: "Could not load content." });
-        setIsViewerOpen(false);
-    }
-  };
-
-
-  // --- SAVE/DELETE HANDLERS ---
-
-  const handleSaveTopic = async (formData: AddTopicFormValues, id?: string) => {
-    const topicData = {
+  const handleSaveMaterial = async (formData: AddMaterialFormValues, id?: string) => {
+    const materialData = {
       title: formData.title,
+      category: formData.category,
+      type: formData.type,
+      url: formData.url,
       description: formData.description,
       thumbnailUrl: formData.thumbnailUrl,
-      tags: formData.tags?.split(',').map(t => t.trim()).filter(Boolean) || [],
-      yearLevels: formData.yearLevels?.split(',').map(y => parseInt(y.trim(), 10)).filter(y => !isNaN(y)) || [],
+      specialties: formData.specialties?.split(',').map(s => s.trim()).filter(Boolean) || [],
     };
 
     try {
       if (id) {
-        await updateTopic(id, topicData);
-        toast({ title: "Topic Updated", description: `"${topicData.title}" has been updated.` });
+        await updateLearningMaterial(id, materialData);
+        toast({ title: "Material Updated", description: `"${materialData.title}" has been updated.` });
       } else {
-        await addTopic(topicData);
-        toast({ title: "Topic Added", description: `"${topicData.title}" has been added.` });
+        await addLearningMaterial(materialData);
+        toast({ title: "Material Added", description: `"${materialData.title}" has been added.` });
       }
-      fetchTopics();
+      fetchMaterialsAndCategories();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error Saving Topic", description: (error as Error).message });
+      toast({ variant: "destructive", title: "Error Saving Material", description: (error as Error).message });
     } finally {
-      setIsTopicDialogOpen(false);
-      setTopicToEdit(null);
+      setIsAddMaterialDialogOpen(false);
+      setMaterialToEdit(null);
     }
   };
   
-  const handleSaveContentItem = async (formData: AddContentItemFormValues, contentItemId?: string) => {
-    if (!currentTopicForContent) return;
-
+  const handleSaveCategory = async (categoryName: string) => {
     try {
-      if (contentItemId) { // Editing existing item
-        const itemData = {
-          title: formData.title,
-          url: formData.url,
-          description: formData.description,
-          thumbnailUrl: formData.thumbnailUrl,
-        };
-        await updateContentItem(contentItemId, itemData);
-        toast({ title: "Content Item Updated" });
-      } else { // Adding new item
-        const itemData = {
-          topicId: currentTopicForContent.id,
-          type: formData.type,
-          title: formData.title,
-          url: formData.url,
-          description: formData.description,
-          thumbnailUrl: formData.thumbnailUrl,
-        };
-        await addContentItem(itemData);
-        toast({ title: "Content Item Added" });
-      }
-      // Refresh data after saving
-      fetchTopics();
-      if(isViewerOpen && currentTopicForContent && formData.type) {
-         const items = await getContentItemsForTopic(currentTopicForContent.id, formData.type);
-         setCurrentContentItems(items);
-      }
+      await addLearningMaterialCategory(categoryName);
+      toast({ title: "Category Added", description: `"${categoryName}" has been created.`});
+      fetchMaterialsAndCategories(); // Refresh data
     } catch (error) {
-       toast({ variant: "destructive", title: "Error Saving Content", description: (error as Error).message });
+       toast({ variant: "destructive", title: "Error Adding Category", description: (error as Error).message });
     } finally {
-      setIsContentItemDialogOpen(false);
-      setContentItemToEdit(null);
-    }
-  }
-  
-  const handleConfirmDeleteTopic = async () => {
-    if (!topicToDelete) return;
-    try {
-      await deleteTopic(topicToDelete.id);
-      toast({ title: "Topic Deleted", description: `"${topicToDelete.title}" and all its content have been removed.` });
-      fetchTopics();
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error Deleting Topic", description: (error as Error).message });
-    } finally {
-      setTopicToDelete(null);
+      setIsAddCategoryDialogOpen(false);
     }
   };
 
-  const handleDeleteContentItem = async (item: ContentItem) => {
+  const handleConfirmDeleteMaterial = async () => {
+    if (!materialToDelete) return;
     try {
-      await deleteContentItem(item);
-      toast({ title: "Content Item Deleted" });
-      fetchTopics(); // Refresh topic summary
-      // Refresh viewer content
-      setCurrentContentItems(prev => prev.filter(ci => ci.id !== item.id));
+      await deleteLearningMaterial(materialToDelete.id);
+      toast({ title: "Material Deleted", description: `"${materialToDelete.title}" has been removed.` });
+      fetchMaterialsAndCategories();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error Deleting Item", description: (error as Error).message });
+      toast({ variant: "destructive", title: "Error Deleting Material", description: (error as Error).message });
+    } finally {
+      setMaterialToDelete(null);
     }
   };
 
-
-  // --- FILTERING LOGIC ---
-
-  const filteredTopics = useMemo(() => {
-    return topics.filter(topic => {
+  const filteredMaterials = useMemo(() => {
+    return materials.filter(material => {
       const searchLower = searchTerm.toLowerCase();
-      const tagLower = selectedTag.toLowerCase();
-
-      const matchesSearchTerm = searchTerm.trim() === "" ||
-        topic.title.toLowerCase().includes(searchLower) ||
-        (topic.description && topic.description.toLowerCase().includes(searchLower));
-
-      const matchesTag = selectedTag.trim() === "" ||
-        (topic.tags && topic.tags.some(t => t.toLowerCase().includes(tagLower)));
-        
-      return matchesSearchTerm && matchesTag;
+      const categoryMatch = !selectedCategory || material.category === selectedCategory;
+      const searchMatch = searchTerm === "" ||
+        material.title.toLowerCase().includes(searchLower) ||
+        (material.description && material.description.toLowerCase().includes(searchLower)) ||
+        (material.specialties && material.specialties.some(s => s.toLowerCase().includes(searchLower)));
+      return categoryMatch && searchMatch;
     });
-  }, [topics, searchTerm, selectedTag]);
+  }, [materials, searchTerm, selectedCategory]);
 
-  
+  const displayedCategories = useMemo(() => {
+    if (selectedCategory) {
+      return categories.filter(c => c.name === selectedCategory);
+    }
+    return categories;
+  }, [categories, selectedCategory]);
+
   if (isLoading) {
     return (
       <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-                <Skeleton className="h-9 w-72 mb-2" />
-                <Skeleton className="h-5 w-96" />
-            </div>
-            {currentUser?.role === 'admin' && <Skeleton className="h-10 w-40" />}
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-9 w-64" />
+          {currentUser?.role === 'admin' && <Skeleton className="h-10 w-40" />}
         </div>
-        <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <ShadCNCard key={i} className="flex flex-col h-full">
-              <ShadCNCardHeader className="p-0 relative">
-                <Skeleton className="aspect-video w-full rounded-t-lg" />
-              </ShadCNCardHeader>
-              <ShadCNCardContent className="p-4 flex-grow">
-                <Skeleton className="h-6 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/4" />
-              </ShadCNCardContent>
-              <ShadCNCardFooter className="p-4 border-t flex justify-end items-center">
-                <Skeleton className="h-8 w-1/4" />
-              </ShadCNCardFooter>
-            </ShadCNCard>
-          ))}
+        <Skeleton className="h-10 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-72 w-full rounded-lg" />)}
         </div>
       </div>
     );
@@ -271,43 +180,48 @@ export default function LearningMaterialsPage() {
         <div>
           <h1 className="text-3xl font-bold font-headline mb-2">Learning Materials</h1>
           <p className="text-muted-foreground">
-            Explore a comprehensive library of clinical topics. Each card contains multiple resource types.
+            Explore a comprehensive library of clinical skills resources, organized by topic.
           </p>
         </div>
         {currentUser?.role === 'admin' && (
-          <Button onClick={handleOpenAddTopicDialog} className="w-full sm:w-auto">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add New Topic
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button onClick={() => setIsAddCategoryDialogOpen(true)} variant="outline" className="flex-1 sm:flex-initial">
+              <Layers className="mr-2 h-5 w-5" /> New Category
+            </Button>
+            <Button onClick={() => handleOpenAddMaterialDialog()} className="flex-1 sm:flex-initial">
+              <PlusCircle className="mr-2 h-5 w-5" /> Add Material
+            </Button>
+          </div>
         )}
       </div>
 
       {currentUser?.role === 'admin' && (
         <>
-          <AddTopicDialog
-            isOpen={isTopicDialogOpen}
-            onOpenChange={setIsTopicDialogOpen}
-            onSave={handleSaveTopic}
-            currentTopic={topicToEdit}
+          <AddMaterialDialog
+            isOpen={isAddMaterialDialogOpen}
+            onOpenChange={setIsAddMaterialDialogOpen}
+            onSave={handleSaveMaterial}
+            currentMaterial={materialToEdit}
+            categories={categories.map(c => c.name)}
+            defaultCategory={selectedCategory || undefined}
           />
-          <AddContentItemDialog
-            isOpen={isContentItemDialogOpen}
-            onOpenChange={setIsContentItemDialogOpen}
-            onSave={handleSaveContentItem}
-            currentTopic={currentTopicForContent}
-            currentItem={contentItemToEdit}
+          <AddCategoryDialog
+            isOpen={isAddCategoryDialogOpen}
+            onOpenChange={setIsAddCategoryDialogOpen}
+            onSave={handleSaveCategory}
           />
-           <AlertDialog open={!!topicToDelete} onOpenChange={() => setTopicToDelete(null)}>
+           <AlertDialog open={!!materialToDelete} onOpenChange={() => setMaterialToDelete(null)}>
               <AlertDialogContent>
                   <AlertDialogHeader>
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the topic "{topicToDelete?.title}" and ALL associated content items (videos, documents, etc.).
+                      This action cannot be undone. This will permanently delete the material "{materialToDelete?.title}".
                   </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleConfirmDeleteTopic} className="bg-destructive hover:bg-destructive/90">
-                      Delete Topic
+                  <AlertDialogAction onClick={handleConfirmDeleteMaterial} className="bg-destructive hover:bg-destructive/90">
+                      Delete Material
                   </AlertDialogAction>
                   </AlertDialogFooter>
               </AlertDialogContent>
@@ -315,67 +229,72 @@ export default function LearningMaterialsPage() {
         </>
       )}
 
-      {currentTopicForContent && (
-        <ContentItemViewer
-            isOpen={isViewerOpen}
-            onOpenChange={setIsViewerOpen}
-            title={currentViewerTitle}
-            items={currentContentItems}
-            topic={currentTopicForContent}
-            isAdmin={currentUser?.role === 'admin'}
-            onAddItem={() => handleOpenAddContentItemDialog(currentTopicForContent)}
-            onEditItem={(item) => handleOpenEditContentItemDialog(item, currentTopicForContent)}
-            onDeleteItem={handleDeleteContentItem}
-        />
-      )}
-
-      <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm space-y-4">
-        <div className="relative flex-grow w-full">
+      <div className="sticky top-0 md:top-16 z-10 bg-background/80 backdrop-blur-md py-4 -mx-4 px-4 md:-mx-8 md:px-8 rounded-b-lg shadow-sm">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search topic titles, descriptions..."
+            placeholder="Search materials, descriptions, or specialties..."
             className="pl-10 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="relative flex-grow">
-            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Filter by tag (e.g., cardiology)"
-              className="pl-10 w-full"
-              value={selectedTag}
-              onChange={(e) => setSelectedTag(e.target.value)}
-            />
-          </div>
       </div>
       
-      {filteredTopics.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredTopics.map((topic) => (
-            <TopicCard
-              key={topic.id}
-              topic={topic}
-              onViewContent={handleViewContent}
-              onAddContent={currentUser?.role === 'admin' ? () => handleOpenAddContentItemDialog(topic) : undefined}
-              onEditTopic={currentUser?.role === 'admin' ? () => handleOpenEditTopicDialog(topic) : undefined}
-              onDeleteTopic={currentUser?.role === 'admin' ? () => handleOpenDeleteTopicDialog(topic) : undefined}
-            />
-          ))}
+      {selectedCategory && (
+        <div className="mb-8">
+          <Button onClick={() => setSelectedCategory(null)} variant="link" className="p-0">
+            &larr; Back to all categories
+          </Button>
+        </div>
+      )}
+
+      {displayedCategories.length > 0 ? (
+        <div className="space-y-10">
+          {displayedCategories.map(category => {
+            const categoryMaterials = filteredMaterials.filter(m => m.category === category.name);
+            return (
+              <section key={category.id}>
+                <CategoryCard 
+                  categoryName={category.name}
+                  materialCount={categoryMaterials.length}
+                  onCategoryClick={() => setSelectedCategory(category.name)}
+                />
+                
+                {categoryMaterials.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+                    {categoryMaterials.map((material) => (
+                      <MaterialCard 
+                        key={material.id} 
+                        material={material} 
+                        onEdit={currentUser?.role === 'admin' ? () => handleOpenEditMaterialDialog(material) : undefined}
+                        onDelete={currentUser?.role === 'admin' ? () => handleOpenDeleteMaterialDialog(material) : undefined}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-4 ml-6 text-sm text-muted-foreground">
+                    <p>No materials found in this category for your current search.</p>
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-16">
           <BookOpen className="mx-auto h-16 w-16 text-muted-foreground" />
-          <h3 className="mt-4 text-xl font-semibold">No Topics Found</h3>
+          <h3 className="mt-4 text-xl font-semibold">No Materials Found</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            {searchTerm || selectedTag
-              ? "Your search did not match any topics. Try different keywords or filters."
-              : "There are no topics yet. An admin can add the first one."}
+            {searchTerm
+              ? "Your search did not match any materials. Try a different keyword."
+              : "There are no materials yet. An admin can add the first one."}
           </p>
         </div>
       )}
     </div>
   );
 }
+
+    
