@@ -238,11 +238,6 @@ export function ContentItemViewer({
                         <div className="mt-4">
                             <h3 className="font-bold text-lg">{selectedItem.title}</h3>
                             {selectedItem.description && <p className="text-sm text-muted-foreground mt-1">{selectedItem.description}</p>}
-                            <Button size="sm" asChild className="mt-3">
-                                <Link href={selectedItem.url} target="_blank" rel="noopener noreferrer">
-                                    Open in New Tab <ExternalLink className="h-4 w-4 ml-2" />
-                                </Link>
-                            </Button>
                         </div>
                     </>
                 ) : (
