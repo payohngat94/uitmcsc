@@ -18,7 +18,7 @@ const ECE_BOOKING_FORM_URL = "https://wa.me/60147140146?text=Assalamualaikum%20d
 const fssBookingUrls: Record<string, string> = {
   paediatrics: "https://wa.me/60102367127?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
   og: "https://wa.me/60199541163?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
-  medicine: "https://wa.me/60136064148?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
+  medicine: "https://wa.me/60145088935?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
   surgery: "https://wa.me/60123550154?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
   emergency: "https://wa.me/60173742498?text=Assalamualaikum%20%2F%20Salam%20Sejahtera%20Puan%2C%0A%0ASaya%20ingin%20menempah%20assessment%20focused%20skill%20station%20dengan%20butiran%20berkenaan%0A%0ANama%20pelajar%3A%0ATahun%3A%0ANo.%20Hp%3A%0ATarikh%3A%0AMasa%3A%0ARotation%2FPosting%2FDisiplin%3A%0AProcedures%3A%0ALokasi%3A%0ABilangan%20pelajar%3A%0A%28sekiranya%20menjadi%20wakil%20utk%20tempahan%20berkumpulan%29%0A%0ATerima%20Kasih",
 };
@@ -164,3 +164,5 @@ export default function BookingsPage() {
   );
 }
 
+
+    
