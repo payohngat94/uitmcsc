@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './config';
@@ -217,13 +218,17 @@ async function updateTopicSummary(topicId: string) {
 export async function getTopics(): Promise<Topic[]> {
   const q = query(topicsCollectionRef, orderBy('title', 'asc'));
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-    createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
-    updatedAt: (doc.data().updatedAt as Timestamp)?.toDate(),
-    contentItems: [], // Initialize empty, will be populated on client
-  } as Topic));
+  return querySnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      createdAt: (data.createdAt as Timestamp)?.toDate(),
+      updatedAt: (data.updatedAt as Timestamp)?.toDate(),
+      resourceSummary: data.resourceSummary || { videoCount: 0, documentCount: 0, slidesCount: 0, hasVideo: false, hasDocument: false, hasSlides: false },
+      contentItems: [], // Initialize empty, will be populated on client
+    } as Topic
+  });
 }
 
 export async function getContentItems(): Promise<ContentItem[]> {
