@@ -26,8 +26,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 const registerFormSchema = z.object({
   studentOrStaffId: z.string().min(1, { message: "Student/Staff ID is required." }),
   email: z.string().email({ message: "Please enter a valid email address." })
-    .refine(email => email.endsWith('@uitm.edu.my'), {
-      message: "Only @uitm.edu.my email is allowed."
+    .refine(email => email.endsWith('@uitm.edu.my') || email.endsWith('@student.uitm.edu.my'), {
+      message: "Only UiTM-affiliated emails are allowed."
     }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string()
