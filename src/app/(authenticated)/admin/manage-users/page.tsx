@@ -23,9 +23,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle, XCircle, Hourglass, ShieldCheck, UserCog, AlertTriangle, Users, Trash2 } from 'lucide-react';
+import { CheckCircle, XCircle, Hourglass, ShieldCheck, UserCog, AlertTriangle, Users, Trash2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { getAllUsers, updateUserStatus, deleteUser } from '@/lib/firebase/firestore-service';
+import { getAllUsers, updateUserStatus, deleteUser, approveAllPendingUsers } from '@/lib/firebase/firestore-service';
 import type { UserProfile, UserStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -51,6 +51,7 @@ export default function ManageUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<UserStatus | 'all'>('all');
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+  const [isApprovingAll, setIsApprovingAll] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
 
   const fetchUsers = async () => {
@@ -102,6 +103,24 @@ export default function ManageUsersPage() {
       setIsUpdating(prev => ({ ...prev, [docId]: false }));
     }
   };
+
+  const handleApproveAll = async () => {
+    setIsApprovingAll(true);
+    try {
+      const updatedDocIds = await approveAllPendingUsers();
+      setUsers(prevUsers =>
+        prevUsers.map(user =>
+          updatedDocIds.includes(user.docId!) ? { ...user, status: 'active' } : user
+        )
+      );
+      toast({ title: 'Success', description: `${updatedDocIds.length} pending users have been approved.` });
+    } catch (error) {
+      console.error('Failed to approve all users:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to approve all pending users.' });
+    } finally {
+      setIsApprovingAll(false);
+    }
+  };
   
   const handleDeleteUser = async () => {
     if (!userToDelete || !userToDelete.docId) return;
@@ -124,6 +143,10 @@ export default function ManageUsersPage() {
     return users.filter(user => user.status === filter);
   }, [users, filter]);
 
+  const hasPendingUsers = useMemo(() => {
+    return filter === 'pending' && filteredUsers.length > 0;
+  }, [filter, filteredUsers]);
+
   if (currentUser?.role !== 'admin') {
     return null; 
   }
@@ -135,7 +158,13 @@ export default function ManageUsersPage() {
             <h1 className="text-3xl font-bold font-headline mb-2 flex items-center"><UserCog className="mr-3 h-8 w-8 text-primary" /> User Management</h1>
             <p className="text-muted-foreground">Approve, reject, or delete user registrations.</p>
         </div>
-        <div className="w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            {hasPendingUsers && (
+              <Button onClick={handleApproveAll} disabled={isApprovingAll} className="w-full sm:w-auto">
+                <CheckCircle2 className="mr-2 h-5 w-5" />
+                {isApprovingAll ? 'Approving...' : `Approve All Pending (${filteredUsers.length})`}
+              </Button>
+            )}
             <Select value={filter} onValueChange={(value) => setFilter(value as UserStatus | 'all')}>
                 <SelectTrigger className="w-full sm:w-[200px]">
                     <SelectValue placeholder="Filter by status..." />
@@ -246,7 +275,7 @@ export default function ManageUsersPage() {
                                     variant="outline"
                                     className="border-green-600 text-green-600 hover:bg-green-100 hover:text-green-700"
                                     onClick={() => handleUpdateStatus(user.docId!, 'active')}
-                                    disabled={isUpdating[user.docId!]}
+                                    disabled={isUpdating[user.docId!] || isApprovingAll}
                                 >
                                     <CheckCircle className="mr-1 h-4 w-4" /> Approve
                                 </Button>
@@ -255,7 +284,7 @@ export default function ManageUsersPage() {
                                     variant="outline"
                                     className="border-red-600 text-red-600 hover:bg-red-100 hover:text-red-700"
                                     onClick={() => handleUpdateStatus(user.docId!, 'rejected')}
-                                    disabled={isUpdating[user.docId!]}
+                                    disabled={isUpdating[user.docId!] || isApprovingAll}
                                 >
                                     <XCircle className="mr-1 h-4 w-4" /> Reject
                                 </Button>
@@ -301,5 +330,3 @@ export default function ManageUsersPage() {
     </div>
   );
 }
-
-    

@@ -169,6 +169,25 @@ export async function updateUserStatus(docId: string, status: UserStatus): Promi
   }
 }
 
+export async function approveAllPendingUsers(): Promise<string[]> {
+  const batch = writeBatch(db);
+  const q = query(usersCollectionRef, where("status", "==", "pending"));
+  const updatedDocIds: string[] = [];
+
+  try {
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach(document => {
+      batch.update(document.ref, { status: 'active' });
+      updatedDocIds.push(document.id);
+    });
+    await batch.commit();
+    return updatedDocIds;
+  } catch (error) {
+    console.error("Error approving all pending users:", error);
+    throw new Error(`Failed to approve all pending users. ${(error as Error).message}`);
+  }
+}
+
 export async function deleteUser(docId: string): Promise<void> {
   const userDocRef = doc(db, 'users', docId);
   try {
