@@ -23,7 +23,7 @@ const QR_TOKEN_EXPIRY_MINUTES = 2;
 export const generateQrToken = functions
   .region("asia-southeast1") // Specify your region
   .https.onCall(async (data, context) => {
-    // 1. Authentication and Authorization
+    // 1. Authentication
     if (!context.auth) {
       throw new functions.https.HttpsError(
         "unauthenticated",
@@ -38,16 +38,22 @@ export const generateQrToken = functions
 
     // --- SELF-HEALING ADMIN CLAIM ---
     if (userIsDesignatedAdmin && !userHasAdminClaim) {
-        console.log(`Setting 'admin' custom claim for ${adminUser.email}.`);
-        await admin.auth().setCustomUserClaims(uid, { role: 'admin' });
-        // Throw an error telling the user to retry, as the new claim will only be available on the next function call.
-        throw new functions.https.HttpsError(
-            "permission-denied",
-            "Admin permissions have just been set. Please close this dialog and try again."
-        );
+        console.log(`User ${adminUser.email} is an admin but lacks the claim. Setting it now.`);
+        try {
+            await admin.auth().setCustomUserClaims(uid, { role: 'admin' });
+             // Throw an error telling the user to retry, as the new claim will only be available on the next function call.
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "Admin permissions have just been set. Please close this dialog and try again."
+            );
+        } catch(claimError: any) {
+            console.error(`Failed to set custom claim for admin user ${adminUser.email}.`, claimError);
+            throw new functions.https.HttpsError("internal", `Failed to set admin permissions: ${claimError.message}`);
+        }
     }
     // --- END SELF-HEALING ---
-
+    
+    // 2. Authorization
     if (!userHasAdminClaim) {
       throw new functions.https.HttpsError(
         "permission-denied",
@@ -55,7 +61,7 @@ export const generateQrToken = functions
       );
     }
 
-    // 2. Input Validation
+    // 3. Input Validation
     const {sessionId, type} = data;
     if (!sessionId || (type !== "signIn" && type !== "signOut")) {
       throw new functions.https.HttpsError(
@@ -64,13 +70,13 @@ export const generateQrToken = functions
       );
     }
     
-    // 3. Secret Key Check (Robust Guard Clause)
+    // 4. Secret Key Check (Robust Guard Clause)
     if (!JWT_SECRET) {
       console.error("FATAL ERROR: JWT_SECRET not found in environment variables.");
       throw new functions.https.HttpsError("internal", "The server is missing a required secret for QR generation.");
     }
 
-    // 4. Token Generation
+    // 5. Token Generation
     const expiry = Math.floor(Date.now() / 1000) + QR_TOKEN_EXPIRY_MINUTES * 60;
     const payload = {
       sessionId: sessionId,
@@ -80,7 +86,7 @@ export const generateQrToken = functions
     const token = jwt.sign(payload, JWT_SECRET); 
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
-    // 5. Store Token Hash in Firestore
+    // 6. Store Token Hash in Firestore
     const tokenRef = db
       .collection("sessions")
       .doc(sessionId)
@@ -95,7 +101,7 @@ export const generateQrToken = functions
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // 6. Return URL for QR code
+    // 7. Return URL for QR code
     // IMPORTANT: Replace with your actual deployed app URL
     const baseUrl = "https://your-app-url.web.app/attendance";
     const qrUrl = `${baseUrl}?token=${token}`;
@@ -124,7 +130,7 @@ export const scanQr = functions
     // --- SELF-HEALING ADMIN CLAIM ---
     // Check if the user is a designated admin and if their claim is missing
     if (ADMIN_EMAILS.includes(callingUser.email || "") && callingUser.customClaims?.role !== 'admin') {
-      console.log(`User ${callingUser.email} is an admin but lacks the 'admin' custom claim. Setting it now.`);
+      console.log(`User ${callingUser.email} is an admin but lacks the 'admin' custom claim during QR scan. Setting it now.`);
       try {
         await admin.auth().setCustomUserClaims(uid, { role: 'admin' });
         console.log(`Successfully set 'admin' claim for ${callingUser.email}. They should re-authenticate to see the effect.`);
@@ -245,6 +251,4 @@ export const scanQr = functions
       return {message: "Sign-out successful."};
     }
   });
-    
-
     
