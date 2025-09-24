@@ -536,6 +536,37 @@ export async function addSession(sessionData: Omit<Session, 'id' | 'createdAt'>)
   return docRef.id;
 }
 
+export async function updateSession(sessionId: string, sessionData: Partial<Omit<Session, 'id' | 'createdAt'>>): Promise<void> {
+  const sessionRef = doc(db, 'sessions', sessionId);
+  await updateDoc(sessionRef, sessionData);
+}
+
+export async function deleteSession(sessionId: string): Promise<void> {
+  const batch = writeBatch(db);
+
+  // Delete the session document
+  const sessionRef = doc(db, 'sessions', sessionId);
+  batch.delete(sessionRef);
+
+  // Find and delete all attendance logs for this session
+  const attendanceQuery = query(attendanceLogsCollectionRef, where("sessionId", "==", sessionId));
+  const attendanceSnapshot = await getDocs(attendanceQuery);
+  attendanceSnapshot.forEach(doc => {
+    batch.delete(doc.ref);
+  });
+  
+  // Find and delete all QR tokens for this session
+  const qrTokensQuery = query(collection(db, 'sessions', sessionId, 'qrTokens'));
+  const qrTokensSnapshot = await getDocs(qrTokensQuery);
+  qrTokensSnapshot.forEach(doc => {
+      batch.delete(doc.ref);
+  });
+
+
+  await batch.commit();
+}
+
+
 export async function getSessionsWithAttendance(): Promise<Array<Session & { attendance: AttendanceRecord[] }>> {
   const sessionQuery = query(sessionsCollectionRef, orderBy('sessionDate', 'desc'));
   const sessionsSnapshot = await getDocs(sessionQuery);
@@ -593,3 +624,5 @@ export async function getLearningMaterials(): Promise<LearningMaterial[]> {
     throw new Error(`Failed to fetch learning materials. ${(error as Error).message}`);
   }
 }
+
+    

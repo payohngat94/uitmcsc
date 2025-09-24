@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,12 +20,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "@/lib/firebase/config";
-import { getStations, addStation, getSessionsWithAttendance, addSession } from "@/lib/firebase/firestore-service";
+import { getStations, addStation, getSessionsWithAttendance, addSession, updateSession, deleteSession } from "@/lib/firebase/firestore-service";
 import type { Station, Session, AttendanceRecord } from "@/lib/types";
 import { format, formatDistanceToNow } from "date-fns";
-import { CalendarIcon, Clock, PlusCircle, User, Users, QrCode as QrCodeIcon, AlertCircle, Download } from "lucide-react";
+import { CalendarIcon, Clock, PlusCircle, User, Users, QrCode as QrCodeIcon, AlertCircle, Download, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import QRCodeDisplay from "./qr-code-display";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 
 // --- Form Schemas ---
 const stationSchema = z.object({
@@ -48,6 +52,8 @@ export default function AdminAttendanceView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isStationDialogOpen, setIsStationDialogOpen] = useState(false);
   const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
+  const [sessionToEdit, setSessionToEdit] = useState<Session | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [qrCodeType, setQrCodeType] = useState<'signIn' | 'signOut' | null>(null);
 
@@ -61,13 +67,26 @@ export default function AdminAttendanceView() {
 
   const sessionForm = useForm<z.infer<typeof sessionSchema>>({
     resolver: zodResolver(sessionSchema),
-    defaultValues: {
-      stationId: "",
-      sessionDate: new Date(),
-      startTime: "09:00",
-      endTime: "17:00",
-    },
   });
+
+  useEffect(() => {
+    if (sessionToEdit) {
+      sessionForm.reset({
+        stationId: sessionToEdit.stationId,
+        sessionDate: sessionToEdit.sessionDate instanceof Date ? sessionToEdit.sessionDate : new Date(sessionToEdit.sessionDate),
+        startTime: format(sessionToEdit.startTime instanceof Date ? sessionToEdit.startTime : new Date(sessionToEdit.startTime), "HH:mm"),
+        endTime: format(sessionToEdit.endTime instanceof Date ? sessionToEdit.endTime : new Date(sessionToEdit.endTime), "HH:mm"),
+      });
+    } else {
+       sessionForm.reset({
+        stationId: "",
+        sessionDate: new Date(),
+        startTime: "09:00",
+        endTime: "17:00",
+      });
+    }
+  }, [sessionToEdit, sessionForm]);
+
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -102,7 +121,7 @@ export default function AdminAttendanceView() {
     }
   };
 
-  const handleAddSession = async (values: z.infer<typeof sessionSchema>) => {
+  const handleSaveSession = async (values: z.infer<typeof sessionSchema>) => {
     if (!currentUser) return;
     const { stationId, sessionDate, startTime, endTime } = values;
     const station = stations.find(s => s.id === stationId);
@@ -117,24 +136,51 @@ export default function AdminAttendanceView() {
     const endDateTime = new Date(sessionDate);
     endDateTime.setHours(endHour, endMinute);
 
+    const sessionData = {
+      stationId,
+      stationName: station.name,
+      sessionDate,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      status: "scheduled" as const,
+      createdBy: currentUser.uid,
+    };
+    
     try {
-      await addSession({
-        stationId,
-        stationName: station.name,
-        sessionDate,
-        startTime: startDateTime,
-        endTime: endDateTime,
-        status: "scheduled",
-        createdBy: currentUser.uid,
-      });
-      toast({ title: "Success", description: "New session scheduled." });
+      if(sessionToEdit){
+        await updateSession(sessionToEdit.id, sessionData);
+        toast({ title: "Success", description: "Session updated." });
+      } else {
+        await addSession(sessionData);
+        toast({ title: "Success", description: "New session scheduled." });
+      }
+
       fetchData();
       setIsSessionDialogOpen(false);
-      sessionForm.reset();
+      setSessionToEdit(null);
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to schedule session." });
+       toast({ variant: "destructive", title: "Error", description: sessionToEdit ? "Failed to update session." : "Failed to schedule session." });
     }
   };
+
+  const handleOpenEditDialog = (session: Session) => {
+    setSessionToEdit(session);
+    setIsSessionDialogOpen(true);
+  };
+  
+  const handleConfirmDelete = async () => {
+    if (!sessionToDelete) return;
+    try {
+      await deleteSession(sessionToDelete.id);
+      toast({ title: "Success", description: "Session deleted." });
+      fetchData();
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete session." });
+    } finally {
+      setSessionToDelete(null);
+    }
+  };
+
 
   const handleGenerateQr = async (sessionId: string, type: 'signIn' | 'signOut') => {
     setQrCodeUrl(null);
@@ -211,6 +257,12 @@ export default function AdminAttendanceView() {
     const averageMinutes = totalHeadcount > 0 ? totalMinutes / totalHeadcount : 0;
     return { totalHeadcount, totalMinutes, averageMinutes };
   };
+  
+  const closeSessionDialog = () => {
+    setIsSessionDialogOpen(false);
+    setSessionToEdit(null);
+  };
+
 
   if (isLoading) {
     return <Skeleton className="h-96 w-full" />;
@@ -220,20 +272,20 @@ export default function AdminAttendanceView() {
     <div className="space-y-6">
       {/* --- Action Buttons --- */}
       <div className="flex gap-4">
-        <Dialog open={isSessionDialogOpen} onOpenChange={setIsSessionDialogOpen}>
+        <Dialog open={isSessionDialogOpen} onOpenChange={closeSessionDialog}>
           <DialogTrigger asChild>
             <Button><PlusCircle className="mr-2 h-4 w-4" /> New Session</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Schedule a New Session</DialogTitle>
+              <DialogTitle>{sessionToEdit ? 'Edit Session' : 'Schedule a New Session'}</DialogTitle>
             </DialogHeader>
             <Form {...sessionForm}>
-              <form onSubmit={sessionForm.handleSubmit(handleAddSession)} className="space-y-4">
+              <form onSubmit={sessionForm.handleSubmit(handleSaveSession)} className="space-y-4">
                 <FormField control={sessionForm.control} name="stationId" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Station</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select a station" /></SelectTrigger></FormControl>
                       <SelectContent>
                         {stations.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -269,7 +321,10 @@ export default function AdminAttendanceView() {
                         <FormItem><FormLabel>End Time</FormLabel><FormControl><Input placeholder="HH:MM" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                 </div>
-                <DialogFooter><Button type="submit">Schedule Session</Button></DialogFooter>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={closeSessionDialog}>Cancel</Button>
+                  <Button type="submit">{sessionToEdit ? 'Save Changes' : 'Schedule Session'}</Button>
+                </DialogFooter>
               </form>
             </Form>
           </DialogContent>
@@ -296,8 +351,25 @@ export default function AdminAttendanceView() {
         <Button variant="outline" onClick={handleExportCsv}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
         </Button>
-
       </div>
+
+        <AlertDialog open={!!sessionToDelete} onOpenChange={setSessionToDelete}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This will permanently delete the session "{sessionToDelete?.stationName}" on {sessionToDelete?.sessionDate ? format(sessionToDelete.sessionDate, "PPP") : ''} and all its attendance records. This action cannot be undone.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90">
+                    Delete Session
+                </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
 
       {/* --- QR Code Display Dialog --- */}
       <QRCodeDisplay
@@ -332,9 +404,28 @@ export default function AdminAttendanceView() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="space-y-4">
-                    <div className="flex gap-4 p-4 bg-secondary/30 rounded-lg">
-                        <Button onClick={() => handleGenerateQr(session.id, 'signIn')}><QrCodeIcon className="mr-2 h-4 w-4" /> Generate Sign-In QR</Button>
-                        <Button onClick={() => handleGenerateQr(session.id, 'signOut')} variant="outline"><QrCodeIcon className="mr-2 h-4 w-4" /> Generate Sign-Out QR</Button>
+                     <div className="flex justify-between items-center p-4 bg-secondary/30 rounded-lg">
+                        <div className="flex gap-4">
+                            <Button onClick={() => handleGenerateQr(session.id, 'signIn')}><QrCodeIcon className="mr-2 h-4 w-4" /> Generate Sign-In QR</Button>
+                            <Button onClick={() => handleGenerateQr(session.id, 'signOut')} variant="outline"><QrCodeIcon className="mr-2 h-4 w-4" /> Generate Sign-Out QR</Button>
+                        </div>
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreVertical className="h-5 w-5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleOpenEditDialog(session)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    <span>Edit Session</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSessionToDelete(session)} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete Session</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                     <Table>
                       <TableHeader>
