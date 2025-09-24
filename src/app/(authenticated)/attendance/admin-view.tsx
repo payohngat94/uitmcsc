@@ -70,22 +70,27 @@ export default function AdminAttendanceView() {
   });
 
   useEffect(() => {
-    if (sessionToEdit) {
-      sessionForm.reset({
-        stationId: sessionToEdit.stationId,
-        sessionDate: sessionToEdit.sessionDate instanceof Date ? sessionToEdit.sessionDate : new Date(sessionToEdit.sessionDate),
-        startTime: format(sessionToEdit.startTime instanceof Date ? sessionToEdit.startTime : new Date(sessionToEdit.startTime), "HH:mm"),
-        endTime: format(sessionToEdit.endTime instanceof Date ? sessionToEdit.endTime : new Date(sessionToEdit.endTime), "HH:mm"),
-      });
-    } else {
-       sessionForm.reset({
-        stationId: "",
-        sessionDate: new Date(),
-        startTime: "09:00",
-        endTime: "17:00",
-      });
+    // This effect runs when the dialog opens or the sessionToEdit changes
+    if (isSessionDialogOpen) {
+      if (sessionToEdit) {
+        // We are editing: populate form with existing data
+        sessionForm.reset({
+          stationId: sessionToEdit.stationId,
+          sessionDate: sessionToEdit.sessionDate instanceof Date ? sessionToEdit.sessionDate : new Date(sessionToEdit.sessionDate),
+          startTime: format(sessionToEdit.startTime instanceof Date ? sessionToEdit.startTime : new Date(sessionToEdit.startTime), "HH:mm"),
+          endTime: format(sessionToEdit.endTime instanceof Date ? sessionToEdit.endTime : new Date(sessionToEdit.endTime), "HH:mm"),
+        });
+      } else {
+        // We are adding: reset to default/empty values
+        sessionForm.reset({
+          stationId: "",
+          sessionDate: new Date(),
+          startTime: "09:00",
+          endTime: "17:00",
+        });
+      }
     }
-  }, [sessionToEdit, sessionForm]);
+  }, [isSessionDialogOpen, sessionToEdit, sessionForm]);
 
 
   const fetchData = async () => {
@@ -157,12 +162,16 @@ export default function AdminAttendanceView() {
 
       fetchData();
       setIsSessionDialogOpen(false);
-      setSessionToEdit(null);
     } catch (error) {
        toast({ variant: "destructive", title: "Error", description: sessionToEdit ? "Failed to update session." : "Failed to schedule session." });
     }
   };
 
+  const handleOpenNewDialog = () => {
+    setSessionToEdit(null);
+    setIsSessionDialogOpen(true);
+  };
+  
   const handleOpenEditDialog = (session: Session) => {
     setSessionToEdit(session);
     setIsSessionDialogOpen(true);
@@ -224,10 +233,10 @@ export default function AdminAttendanceView() {
       session.attendance.map(att => [
         session.id,
         session.stationName,
-        format(session.sessionDate, "yyyy-MM-dd"),
+        format(new Date(session.sessionDate), "yyyy-MM-dd"),
         att.userEmail,
-        att.signInTime ? format(att.signInTime, "yyyy-MM-dd HH:mm:ss") : "N/A",
-        att.signOutTime ? format(att.signOutTime, "yyyy-MM-dd HH:mm:ss") : "N/A",
+        att.signInTime ? format(new Date(att.signInTime), "yyyy-MM-dd HH:mm:ss") : "N/A",
+        att.signOutTime ? format(new Date(att.signOutTime), "yyyy-MM-dd HH:mm:ss") : "N/A",
         att.durationMs != null ? (att.durationMs / 60000).toFixed(2) : "N/A",
       ])
     );
@@ -257,11 +266,6 @@ export default function AdminAttendanceView() {
     const averageMinutes = totalHeadcount > 0 ? totalMinutes / totalHeadcount : 0;
     return { totalHeadcount, totalMinutes, averageMinutes };
   };
-  
-  const closeSessionDialog = () => {
-    setIsSessionDialogOpen(false);
-    setSessionToEdit(null);
-  };
 
 
   if (isLoading) {
@@ -272,10 +276,8 @@ export default function AdminAttendanceView() {
     <div className="space-y-6">
       {/* --- Action Buttons --- */}
       <div className="flex gap-4">
-        <Dialog open={isSessionDialogOpen} onOpenChange={closeSessionDialog}>
-          <DialogTrigger asChild>
-            <Button><PlusCircle className="mr-2 h-4 w-4" /> New Session</Button>
-          </DialogTrigger>
+        <Dialog open={isSessionDialogOpen} onOpenChange={setIsSessionDialogOpen}>
+          <Button onClick={handleOpenNewDialog}><PlusCircle className="mr-2 h-4 w-4" /> New Session</Button>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{sessionToEdit ? 'Edit Session' : 'Schedule a New Session'}</DialogTitle>
@@ -322,7 +324,7 @@ export default function AdminAttendanceView() {
                     )}/>
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={closeSessionDialog}>Cancel</Button>
+                  <Button type="button" variant="outline" onClick={() => setIsSessionDialogOpen(false)}>Cancel</Button>
                   <Button type="submit">{sessionToEdit ? 'Save Changes' : 'Schedule Session'}</Button>
                 </DialogFooter>
               </form>
@@ -353,12 +355,12 @@ export default function AdminAttendanceView() {
         </Button>
       </div>
 
-        <AlertDialog open={!!sessionToDelete} onOpenChange={setSessionToDelete}>
+        <AlertDialog open={!!sessionToDelete} onOpenChange={() => setSessionToDelete(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This will permanently delete the session "{sessionToDelete?.stationName}" on {sessionToDelete?.sessionDate ? format(sessionToDelete.sessionDate, "PPP") : ''} and all its attendance records. This action cannot be undone.
+                    This will permanently delete the session "{sessionToDelete?.stationName}" on {sessionToDelete?.sessionDate ? format(new Date(sessionToDelete.sessionDate), "PPP") : ''} and all its attendance records. This action cannot be undone.
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -395,7 +397,7 @@ export default function AdminAttendanceView() {
                     <div className="flex justify-between items-center w-full pr-4">
                         <div className="text-left">
                             <p className="font-semibold">{session.stationName}</p>
-                            <p className="text-sm text-muted-foreground">{format(session.sessionDate, "PPP")} @ {format(session.startTime, "p")} - {format(session.endTime, "p")}</p>
+                            <p className="text-sm text-muted-foreground">{format(new Date(session.sessionDate), "PPP")} @ {format(new Date(session.startTime), "p")} - {format(new Date(session.endTime), "p")}</p>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                             <span className="flex items-center"><Users className="mr-2 h-4 w-4" /> {aggregates.totalHeadcount} Students</span>
@@ -440,8 +442,8 @@ export default function AdminAttendanceView() {
                         {session.attendance.length > 0 ? session.attendance.map(att => (
                           <TableRow key={att.id}>
                             <TableCell>{att.userEmail}</TableCell>
-                            <TableCell>{att.signInTime ? formatDistanceToNow(att.signInTime, { addSuffix: true }) : "N/A"}</TableCell>
-                            <TableCell>{att.signOutTime ? formatDistanceToNow(att.signOutTime, { addSuffix: true }) : "N/A"}</TableCell>
+                            <TableCell>{att.signInTime ? formatDistanceToNow(new Date(att.signInTime), { addSuffix: true }) : "N/A"}</TableCell>
+                            <TableCell>{att.signOutTime ? formatDistanceToNow(new Date(att.signOutTime), { addSuffix: true }) : "N/A"}</TableCell>
                             <TableCell className="text-right">{att.durationMs != null ? `${(att.durationMs / 60000).toFixed(1)} mins` : "--"}</TableCell>
                           </TableRow>
                         )) : (
@@ -459,5 +461,3 @@ export default function AdminAttendanceView() {
     </div>
   );
 }
-
-    
