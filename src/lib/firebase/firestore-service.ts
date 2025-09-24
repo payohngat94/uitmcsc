@@ -31,7 +31,9 @@ import type {
   UserStatus,
   Topic,
   ContentItem,
-  ContentItemType
+  Station,
+  Session,
+  AttendanceRecord
 } from '@/lib/types';
 
 
@@ -491,7 +493,8 @@ export async function updateInventoryItem(id: string, itemData: Partial<Inventor
   }
 }
 
-export async function deleteInventoryItem(id: string): Promise<void> {
+export async function deleteInventoryItem(id: string): Promise<void>
+{
   try {
     const itemDocRef = doc(db, 'inventoryItems', id);
     await deleteDoc(itemDocRef);
@@ -499,6 +502,77 @@ export async function deleteInventoryItem(id: string): Promise<void> {
     console.error("Error deleting inventory item: ", error);
     throw new Error(`Failed to delete inventory item. ${(error as Error).message}`);
   }
+}
+
+
+// --- ATTENDANCE TRACKING SERVICE ---
+const stationsCollectionRef = collection(db, 'stations');
+const sessionsCollectionRef = collection(db, 'sessions');
+const attendanceLogsCollectionRef = collection(db, 'attendanceLogs');
+
+export async function addStation(stationData: Omit<Station, 'id' | 'createdAt'>): Promise<string> {
+  const docRef = await addDoc(stationsCollectionRef, {
+    ...stationData,
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function getStations(): Promise<Station[]> {
+  const q = query(stationsCollectionRef, orderBy('name', 'asc'));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
+  } as Station));
+}
+
+export async function addSession(sessionData: Omit<Session, 'id' | 'createdAt'>): Promise<string> {
+  const docRef = await addDoc(sessionsCollectionRef, {
+    ...sessionData,
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function getSessionsWithAttendance(): Promise<Array<Session & { attendance: AttendanceRecord[] }>> {
+  const sessionQuery = query(sessionsCollectionRef, orderBy('sessionDate', 'desc'));
+  const sessionsSnapshot = await getDocs(sessionQuery);
+  const sessions = sessionsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      sessionDate: (doc.data().sessionDate as Timestamp).toDate(),
+      startTime: (doc.data().startTime as Timestamp).toDate(),
+      endTime: (doc.data().endTime as Timestamp).toDate(),
+      createdAt: (doc.data().createdAt as Timestamp).toDate(),
+  } as Session));
+
+  const attendanceQuery = query(attendanceLogsCollectionRef, orderBy('signInTime', 'desc'));
+  const attendanceSnapshot = await getDocs(attendanceQuery);
+  const allAttendance = attendanceSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      signInTime: doc.data().signInTime ? (doc.data().signInTime as Timestamp).toDate() : null,
+      signOutTime: doc.data().signOutTime ? (doc.data().signOutTime as Timestamp).toDate() : null,
+  } as AttendanceRecord));
+
+  // Combine sessions with their attendance records
+  return sessions.map(session => ({
+      ...session,
+      attendance: allAttendance.filter(att => att.sessionId === session.id)
+  }));
+}
+
+export async function getStudentAttendance(userId: string): Promise<AttendanceRecord[]> {
+    const q = query(attendanceLogsCollectionRef, where("userId", "==", userId), orderBy("signInTime", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        signInTime: doc.data().signInTime ? (doc.data().signInTime as Timestamp).toDate() : null,
+        signOutTime: doc.data().signOutTime ? (doc.data().signOutTime as Timestamp).toDate() : null,
+    } as AttendanceRecord));
 }
 
 // --- Deprecated Learning Material functions ---
@@ -519,4 +593,3 @@ export async function getLearningMaterials(): Promise<LearningMaterial[]> {
     throw new Error(`Failed to fetch learning materials. ${(error as Error).message}`);
   }
 }
-    

@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'admin' | 'student' | 'guest';
@@ -82,6 +83,48 @@ export type LearningMaterial = {
 };
 
 
+// --- ATTENDANCE SYSTEM TYPES ---
+
+export type Station = {
+  id: string;
+  name: string;
+  location: string;
+  createdAt: Timestamp | Date;
+};
+
+export type Session = {
+  id: string;
+  stationId: string;
+  stationName: string; // Denormalized for easier display
+  sessionDate: Timestamp | Date;
+  startTime: Timestamp | Date;
+  endTime: Timestamp | Date;
+  status: 'scheduled' | 'active' | 'completed' | 'cancelled';
+  createdBy: string; // Admin UID
+  createdAt: Timestamp | Date;
+};
+
+export type QrToken = {
+  id: string;
+  sessionId: string;
+  type: 'signIn' | 'signOut';
+  tokenHash: string;
+  expiresAt: Timestamp | Date;
+  isActive: boolean;
+};
+
+export type AttendanceRecord = {
+  id: string;
+  sessionId: string;
+  stationId: string;
+  userId: string;
+  userEmail: string;
+  signInTime: Timestamp | Date | null;
+  signOutTime: Timestamp | Date | null;
+  durationMs: number | null; // Duration in milliseconds
+};
+
+
 // --- OTHER TYPES ---
 
 export type Booking = {
@@ -122,5 +165,3 @@ export type Announcement = {
   isPinned?: boolean;
   audience?: UserRole[]; 
 };
-
-    
