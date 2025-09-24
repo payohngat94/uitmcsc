@@ -12,7 +12,7 @@ const db = admin.firestore();
 // For local dev, your secret is in /functions/.env
 // For production, it's set via `firebase functions:config:set jwt.secret="..."`
 const JWT_SECRET = process.env.JWT_SECRET;
-
+const ADMIN_EMAILS = ['admin@example.com', 'ainuddin@uitm.edu.my'];
 const QR_TOKEN_EXPIRY_MINUTES = 2;
 
 /**
@@ -101,6 +101,20 @@ export const scanQr = functions
       );
     }
     const {uid, token: userEmail} = context.auth;
+    const callingUser = await admin.auth().getUser(uid);
+
+    // --- SELF-HEALING ADMIN CLAIM ---
+    // Check if the user is a designated admin and if their claim is missing
+    if (ADMIN_EMAILS.includes(callingUser.email || "") && callingUser.customClaims?.role !== 'admin') {
+      console.log(`User ${callingUser.email} is an admin but lacks the 'admin' custom claim. Setting it now.`);
+      try {
+        await admin.auth().setCustomUserClaims(uid, { role: 'admin' });
+        console.log(`Successfully set 'admin' claim for ${callingUser.email}. They should re-authenticate to see the effect.`);
+      } catch (claimError) {
+        console.error(`Failed to set custom claim for admin user ${callingUser.email}.`, claimError);
+      }
+    }
+    // --- END SELF-HEALING ---
 
     // 2. Input Validation
     const {token} = data;
