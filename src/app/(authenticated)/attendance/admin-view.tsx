@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -64,9 +63,9 @@ export default function AdminAttendanceView() {
     resolver: zodResolver(sessionSchema),
     defaultValues: {
       stationId: "",
-      sessionDate: undefined,
-      startTime: "",
-      endTime: "",
+      sessionDate: new Date(),
+      startTime: "09:00",
+      endTime: "17:00",
     },
   });
 
@@ -154,7 +153,7 @@ export default function AdminAttendanceView() {
         setQrCodeUrl('error'); // Special value to show error state
     }
   };
-
+  
   const handleExportCsv = () => {
     if (sessions.length === 0) {
       toast({
@@ -297,6 +296,7 @@ export default function AdminAttendanceView() {
         <Button variant="outline" onClick={handleExportCsv}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
         </Button>
+
       </div>
 
       {/* --- QR Code Display Dialog --- */}
@@ -368,3 +368,5 @@ export default function AdminAttendanceView() {
     </div>
   );
 }
+
+    

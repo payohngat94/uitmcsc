@@ -1,4 +1,3 @@
-
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as jwt from "jsonwebtoken";
@@ -9,15 +8,10 @@ admin.initializeApp();
 
 const db = admin.firestore();
 
-// IMPORTANT: The JWT_SECRET is now managed by .env files.
-// Your secret is in /functions/.env.dev
+// IMPORTANT: The JWT_SECRET is now managed by .env files or Firebase config.
+// For local dev, your secret is in /functions/.env
+// For production, it's set via `firebase functions:config:set jwt.secret="..."`
 const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  console.error(
-    "FATAL ERROR: JWT_SECRET not found in environment variables. Ensure your .env file is set up and loaded."
-  );
-}
 
 const QR_TOKEN_EXPIRY_MINUTES = 2;
 
@@ -51,18 +45,24 @@ export const generateQrToken = functions
         "Invalid session ID or token type provided."
       );
     }
+    
+    // 3. Secret Key Check (Robust Guard Clause)
+    if (!JWT_SECRET) {
+      console.error("FATAL ERROR: JWT_SECRET not found in environment variables.");
+      throw new functions.https.HttpsError("internal", "The server is missing a required secret for QR generation.");
+    }
 
-    // 3. Token Generation
+    // 4. Token Generation
     const expiry = Math.floor(Date.now() / 1000) + QR_TOKEN_EXPIRY_MINUTES * 60;
     const payload = {
       sessionId: sessionId,
       type: type,
       exp: expiry,
     };
-    const token = jwt.sign(payload, JWT_SECRET!); // Added non-null assertion
+    const token = jwt.sign(payload, JWT_SECRET); 
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
-    // 4. Store Token Hash in Firestore
+    // 5. Store Token Hash in Firestore
     const tokenRef = db
       .collection("sessions")
       .doc(sessionId)
@@ -77,7 +77,7 @@ export const generateQrToken = functions
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // 5. Return URL for QR code
+    // 6. Return URL for QR code
     // IMPORTANT: Replace with your actual deployed app URL
     const baseUrl = "https://your-app-url.web.app/attendance";
     const qrUrl = `${baseUrl}?token=${token}`;
@@ -110,10 +110,16 @@ export const scanQr = functions
         "A token must be provided."
       );
     }
+    
+    // 3. Secret Key Check (Robust Guard Clause)
+    if (!JWT_SECRET) {
+      console.error("FATAL ERROR: JWT_SECRET not found in environment variables.");
+      throw new functions.https.HttpsError("internal", "The server is missing a required secret for QR verification.");
+    }
 
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET!) as { // Added non-null assertion
+      decoded = jwt.verify(token, JWT_SECRET) as { 
         sessionId: string;
         type: "signIn" | "signOut";
         exp: number;
@@ -207,3 +213,4 @@ export const scanQr = functions
       return {message: "Sign-out successful."};
     }
   });
+    
