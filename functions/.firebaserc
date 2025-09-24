@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "YOUR_PROJECT_ID"
+  },
+  "targets": {
+    "YOUR_PROJECT_ID": {
+      "hosting": {
+        "site": "YOUR_PROJECT_ID"
+      }
+    }
+  },
+  "functions": {
+    "dotenv": {
+      "path": ".env.dev"
+    }
+  }
+}

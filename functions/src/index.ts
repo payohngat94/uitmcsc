@@ -3,18 +3,19 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as jwt from "jsonwebtoken";
 import * as crypto from "crypto";
+import 'dotenv/config';
 
 admin.initializeApp();
 
 const db = admin.firestore();
 
-// IMPORTANT: Set this in your Firebase environment
-// firebase functions:config:set jwt.secret="YOUR_SUPER_SECRET_KEY_REPLACE_THIS"
-const JWT_SECRET = functions.config().jwt.secret;
+// IMPORTANT: The JWT_SECRET is now managed by .env files.
+// Your secret is in /functions/.env.dev
+const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
   console.error(
-    "FATAL ERROR: JWT Secret not found. Please set it in your Firebase environment config."
+    "FATAL ERROR: JWT_SECRET not found in environment variables. Ensure your .env file is set up and loaded."
   );
 }
 
@@ -58,7 +59,7 @@ export const generateQrToken = functions
       type: type,
       exp: expiry,
     };
-    const token = jwt.sign(payload, JWT_SECRET);
+    const token = jwt.sign(payload, JWT_SECRET!); // Added non-null assertion
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
     // 4. Store Token Hash in Firestore
@@ -112,7 +113,7 @@ export const scanQr = functions
 
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET) as {
+      decoded = jwt.verify(token, JWT_SECRET!) as { // Added non-null assertion
         sessionId: string;
         type: "signIn" | "signOut";
         exp: number;
@@ -146,7 +147,7 @@ export const scanQr = functions
     await tokenDoc.ref.update({isActive: false});
 
     if (tokenDoc.data().expiresAt.toMillis() < Date.now()) {
-      throw new functions.httpsHttpsError(
+      throw new functions.https.HttpsError(
         "deadline-exceeded",
         "This QR code has expired."
       );
@@ -206,4 +207,3 @@ export const scanQr = functions
       return {message: "Sign-out successful."};
     }
   });
-
