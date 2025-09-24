@@ -23,7 +23,7 @@ import { app } from "@/lib/firebase/config";
 import { getStations, addStation, getSessionsWithAttendance, addSession } from "@/lib/firebase/firestore-service";
 import type { Station, Session, AttendanceRecord } from "@/lib/types";
 import { format, formatDistanceToNow } from "date-fns";
-import { CalendarIcon, Clock, PlusCircle, User, Users, QrCode as QrCodeIcon, AlertCircle } from "lucide-react";
+import { CalendarIcon, Clock, PlusCircle, User, Users, QrCode as QrCodeIcon, AlertCircle, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import QRCodeDisplay from "./qr-code-display";
 
@@ -155,6 +155,56 @@ export default function AdminAttendanceView() {
     }
   };
 
+  const handleExportCsv = () => {
+    if (sessions.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No Data to Export",
+        description: "There are no sessions or attendance records to export.",
+      });
+      return;
+    }
+
+    const headers = [
+      "Session ID",
+      "Station Name",
+      "Session Date",
+      "Student Email",
+      "Sign In Time",
+      "Sign Out Time",
+      "Duration (Minutes)",
+    ];
+
+    const rows = sessions.flatMap(session =>
+      session.attendance.map(att => [
+        session.id,
+        session.stationName,
+        format(session.sessionDate, "yyyy-MM-dd"),
+        att.userEmail,
+        att.signInTime ? format(att.signInTime, "yyyy-MM-dd HH:mm:ss") : "N/A",
+        att.signOutTime ? format(att.signOutTime, "yyyy-MM-dd HH:mm:ss") : "N/A",
+        att.durationMs != null ? (att.durationMs / 60000).toFixed(2) : "N/A",
+      ])
+    );
+
+    let csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n" 
+      + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `attendance_export_${format(new Date(), "yyyyMMdd")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Export Started",
+      description: "Your attendance log CSV is downloading.",
+    });
+  };
+
   const calculateAggregates = (attendance: AttendanceRecord[]) => {
     const completed = attendance.filter(a => a.durationMs != null);
     const totalHeadcount = new Set(completed.map(a => a.userId)).size;
@@ -243,6 +293,10 @@ export default function AdminAttendanceView() {
             </Form>
           </DialogContent>
         </Dialog>
+        
+        <Button variant="outline" onClick={handleExportCsv}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+        </Button>
       </div>
 
       {/* --- QR Code Display Dialog --- */}
