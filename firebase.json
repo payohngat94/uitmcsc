@@ -2,7 +2,11 @@
 {
   "functions": {
     "source": "functions",
-    "runtime": "nodejs18"
+    "predeploy": [
+      "npm --prefix \"$RESOURCE_DIR\" install",
+      "npm --prefix \"$RESOURCE_DIR\" run build"
+    ],
+    "runtime": "nodejs20"
   },
   "hosting": {
     "source": ".",
@@ -13,3 +17,4 @@
     ]
   }
 }
+
