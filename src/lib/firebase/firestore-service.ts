@@ -35,6 +35,8 @@ import type {
   Session,
   AttendanceRecord
 } from '@/lib/types';
+import { getAuth } from 'firebase-admin/auth';
+import { app as adminApp } from 'firebase-admin';
 
 
 // User Profile Service
@@ -72,11 +74,21 @@ export async function createUserProfile(docId: string, user: FirebaseUser, stude
   try {
     let finalRole = role;
     let finalStatus = status;
+    
+    // SUPERUSER CHECK: This is a critical check for your main admin account.
+    const isAdminEmail = ['admin@example.com', 'ainuddin@uitm.edu.my'].includes(user.email || '');
 
-    // SUPERUSER CHECK: Force-approve this specific admin user.
-    if (user.email === 'ainuddin@uitm.edu.my') {
+    if (isAdminEmail) {
       finalRole = 'admin';
       finalStatus = 'active';
+      try {
+        // This is the new, critical part: setting the custom claim on the Auth user.
+        await getAuth(adminApp()).setCustomUserClaims(user.uid, { role: 'admin' });
+        console.log(`Successfully set custom claim 'role: admin' for ${user.email}`);
+      } catch (claimError) {
+          console.error(`CRITICAL: Failed to set custom claim for admin user ${user.email}. QR Code generation will fail.`, claimError);
+          // We don't rethrow here because the profile creation should still succeed, but this is a major issue.
+      }
     }
       
     await updateDoc(userProfileRef, {
