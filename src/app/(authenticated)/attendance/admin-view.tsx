@@ -267,7 +267,7 @@ export default function AdminAttendanceView() {
                 <AccordionItem value={session.id} key={session.id}>
                   <AccordionTrigger>
                     <div className="flex justify-between items-center w-full pr-4">
-                        <div>
+                        <div className="text-left">
                             <p className="font-semibold">{session.stationName}</p>
                             <p className="text-sm text-muted-foreground">{format(session.sessionDate, "PPP")} @ {format(session.startTime, "p")} - {format(session.endTime, "p")}</p>
                         </div>
