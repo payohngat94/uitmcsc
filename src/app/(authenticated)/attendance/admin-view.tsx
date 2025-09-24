@@ -62,6 +62,12 @@ export default function AdminAttendanceView() {
 
   const sessionForm = useForm<z.infer<typeof sessionSchema>>({
     resolver: zodResolver(sessionSchema),
+    defaultValues: {
+      stationId: "",
+      sessionDate: undefined,
+      startTime: "",
+      endTime: "",
+    },
   });
 
   const fetchData = async () => {
