@@ -74,4 +74,9 @@ export default function QRCodeDisplay({ isOpen, onOpenChange, qrCodeUrl, type }:
           )}
         </div>
         <DialogFooter>
-            <
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
