@@ -40,53 +40,63 @@ import type {
 // User Profile Service
 const usersCollectionRef = collection(db, 'users');
 
-export async function createProfileIfNotExist(email: string, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<string> {
-  try {
-    const q = query(usersCollectionRef, where("email", "==", email));
-    const querySnapshot = await getDocs(q);
+export async function createUserProfile(
+  user: FirebaseUser,
+  studentOrStaffId: string,
+  role: UserRole,
+  status: UserStatus
+): Promise<void> {
+  const uid = user.uid;
+  const userProfileRef = doc(db, 'users', uid);
 
-    if (querySnapshot.empty) {
-      // No user with this email exists, create a new profile document.
-      const docRef = await addDoc(usersCollectionRef, {
-        uid: null, // No UID available yet
-        email: email,
-        studentOrStaffId: studentOrStaffId,
-        role: role,
-        status: status,
-        createdAt: serverTimestamp(),
-      });
-      return docRef.id;
-    } else {
-      // A user with that email already exists. Return the ID of the existing document.
-      return querySnapshot.docs[0].id;
+  // 1) If an admin email logs in, force admin role/active status
+  const isAdminEmail = ['admin@example.com', 'ainuddin@uitm.edu.my'].includes(user.email || '');
+  const finalRole: UserRole = (isAdminEmail ? 'admin' : role);
+  const finalStatus: UserStatus = (isAdminEmail ? 'active' : status);
+
+  // 2) Look for any placeholder doc created earlier by email (uid:null)
+  const q = query(usersCollectionRef, where('email', '==', user.email || ''));
+  const snap = await getDocs(q);
+  let placeholder: any = null;
+  let placeholderId: string | null = null;
+
+  if (!snap.empty) {
+    const d = snap.docs[0];
+    // If the found doc is NOT the /users/{uid} one, treat as placeholder
+    if (d.id !== uid) {
+      placeholder = d.data();
+      placeholderId = d.id;
     }
-  } catch (error) {
-    console.error("Error in createProfileIfNotExist: ", error);
-    throw new Error(`Failed to check or create user profile. ${(error as Error).message}`);
+  }
+  
+  const existingDocSnap = await getDoc(userProfileRef);
+  const existingData = existingDocSnap.exists() ? existingDocSnap.data() : {};
+
+
+  // 3) Merge data (placeholder -> existing -> new).
+  const merged = {
+    // from placeholder (if any)
+    ...(placeholder || {}),
+    // from existing doc (if any)
+    ...existingData,
+    // authoritative fields
+    uid,
+    email: user.email,
+    studentOrStaffId,
+    role: finalRole,
+    status: placeholder?.status || existingData?.status || finalStatus, // Prioritize status from existing docs
+    createdAt: placeholder?.createdAt || existingData?.createdAt || serverTimestamp(),
+  };
+
+  // Write to /users/{uid}
+  await setDoc(userProfileRef, merged, { merge: true });
+
+  // Delete placeholder after successful merge to avoid duplicates
+  if (placeholderId) {
+    await deleteDoc(doc(db, 'users', placeholderId));
   }
 }
 
-
-export async function createUserProfile(user: FirebaseUser, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<void> {
-  const userProfileRef = doc(db, 'users', user.uid);
-  try {
-    const isAdminEmail = ['admin@example.com', 'ainuddin@uitm.edu.my'].includes(user.email || '');
-    const finalRole = isAdminEmail ? 'admin' : role;
-    const finalStatus = isAdminEmail ? 'active' : status;
-      
-    await setDoc(userProfileRef, {
-      uid: user.uid,
-      email: user.email,
-      studentOrStaffId: studentOrStaffId,
-      role: finalRole,
-      status: finalStatus,
-      createdAt: serverTimestamp(),
-    });
-  } catch (error) {
-    console.error("Error creating user profile: ", error);
-    throw new Error(`Failed to create user profile. ${(error as Error).message}`);
-  }
-}
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const docRef = doc(db, 'users', uid);
@@ -632,3 +642,5 @@ export async function getLearningMaterials(): Promise<LearningMaterial[]> {
     throw new Error(`Failed to fetch learning materials. ${(error as Error).message}`);
   }
 }
+
+    
