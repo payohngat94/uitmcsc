@@ -95,10 +95,16 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     
     if (docSnap.exists()) {
       const data = docSnap.data();
-      // Corrected Logic: Only default to pending if status is completely missing.
-      // Otherwise, use the status from the database.
-      let status: UserStatus = data.status;
-      if (!status) {
+      
+      // Robust Status Check:
+      let status: UserStatus;
+      const validStatuses: UserStatus[] = ['active', 'pending', 'rejected'];
+      
+      if (data.status && validStatuses.includes(data.status)) {
+        // If status exists and is a valid value, use it.
+        status = data.status;
+      } else {
+        // Otherwise, default the status based on role. This handles null, undefined, or invalid status values.
         status = data.role === 'admin' ? 'active' : 'pending';
       }
 
@@ -135,9 +141,12 @@ export async function getAllUsers(): Promise<UserProfile[]> {
     return querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
       
-      let status: UserStatus = data.status;
-      if (!status) {
-        status = data.role === 'admin' ? 'active' : 'pending';
+      let status: UserStatus;
+      const validStatuses: UserStatus[] = ['active', 'pending', 'rejected'];
+      if (data.status && validStatuses.includes(data.status)) {
+          status = data.status;
+      } else {
+          status = data.role === 'admin' ? 'active' : 'pending';
       }
 
       return {
