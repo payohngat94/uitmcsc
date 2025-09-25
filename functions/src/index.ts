@@ -3,175 +3,227 @@ import * as admin from "firebase-admin";
 import * as jwt from "jsonwebtoken";
 import * as crypto from "crypto";
 import { config } from "dotenv";
-config({ path: ".env.dev" }); 
 
+// If you use .env.dev keep this; otherwise use config() without path
+config({ path: ".env.dev" });
 
-admin.initializeApp();
-
+try { admin.app(); } catch { admin.initializeApp(); }
 const db = admin.firestore();
 
-// IMPORTANT: The JWT_SECRET is now managed by .env files or Firebase config.
-// For local dev, your secret is in /functions/.env
-// For production, it's set via `firebase functions:config:set jwt.secret="..."`
+// ----------------- Constants / Config -----------------
 const JWT_SECRET = process.env.JWT_SECRET;
-const ADMIN_EMAILS = ['admin@example.com', 'ainuddin@uitm.edu.my'];
+const ADMIN_EMAILS = ["admin@example.com", "ainuddin@uitm.edu.my"];
 const QR_TOKEN_EXPIRY_MINUTES = 2;
+
+// Helper: ensure caller is admin (by claim)
+function assertAdmin(ctx: functions.https.CallableContext) {
+  if (!ctx.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Login required");
+  }
+  const isClaimAdmin = (ctx.auth.token as any)?.role === "admin";
+  if (!isClaimAdmin) {
+    throw new functions.https.HttpsError("permission-denied", "Admin only");
+  }
+}
+
+// =============== Admin management callables ===============
+
+/**
+ * Admin approves / blocks a user.
+ * - Sets Firestore: /users/{uid}.status = "active" | "rejected"
+ * - Sets custom claim: approved: boolean
+ * - Revokes refresh tokens so the change shows up next login/refresh
+ */
+export const adminApproveUser = functions
+  .region("asia-southeast1")
+  .https.onCall(async (data, ctx) => {
+    assertAdmin(ctx);
+    const { uid, approved } = data || {};
+    if (!uid || typeof approved !== "boolean") {
+      throw new functions.https.HttpsError("invalid-argument", "uid and approved(boolean) required");
+    }
+
+    // Mirror to Firestore
+    await db.doc(`users/${uid}`).set(
+      {
+        status: approved ? "active" : "rejected",
+        approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    // Merge with existing claims
+    const target = await admin.auth().getUser(uid);
+    const claims = { ...(target.customClaims || {}), approved };
+    await admin.auth().setCustomUserClaims(uid, claims);
+
+    // Force token refresh visibility
+    await admin.auth().revokeRefreshTokens(uid);
+    return { ok: true };
+  });
+
+/**
+ * Admin sets role ("student" | "admin")
+ * - Sets claim role
+ * - Mirrors to Firestore
+ */
+export const adminSetRole = functions
+  .region("asia-southeast1")
+  .https.onCall(async (data, ctx) => {
+    assertAdmin(ctx);
+    const { uid, role } = data || {};
+    if (!uid || (role !== "student" && role !== "admin")) {
+      throw new functions.https.HttpsError("invalid-argument", "uid and role(student|admin) required");
+    }
+
+    const target = await admin.auth().getUser(uid);
+    const claims = { ...(target.customClaims || {}), role };
+    await admin.auth().setCustomUserClaims(uid, claims);
+    await db.doc(`users/${uid}`).set({ role }, { merge: true });
+    await admin.auth().revokeRefreshTokens(uid);
+    return { ok: true };
+  });
+
+// =============== QR generation & scanning (your code) ===============
 
 /**
  * Generates a short-lived QR code token for a specific session.
- * Only callable by users with an 'admin' custom claim.
+ * Only callable by users with admin rights (claim OR email allowlist).
  */
 export const generateQrToken = functions
-  .region("asia-southeast1") // Specify your region
+  .region("asia-southeast1")
   .https.onCall(async (data, context) => {
-    // 1. Authentication and Authorization
+    // 1) Auth
     if (!context.auth) {
       throw new functions.https.HttpsError(
         "unauthenticated",
         "The function must be called while authenticated."
       );
     }
+
+    // Admin check: claim OR email allowlist
     const adminUser = await admin.auth().getUser(context.auth.uid);
-const isClaimAdmin = adminUser.customClaims?.["role"] === "admin";
-const isEmailAdmin = ADMIN_EMAILS.includes(adminUser.email || "");
+    const isClaimAdmin = adminUser.customClaims?.["role"] === "admin";
+    const isEmailAdmin = ADMIN_EMAILS.includes(adminUser.email || "");
 
-console.log("generateQrToken caller:", {
-  uid: context.auth.uid,
-  email: adminUser.email,
-  isClaimAdmin,
-  isEmailAdmin
-});
+    console.log("generateQrToken caller:", {
+      uid: context.auth.uid,
+      email: adminUser.email,
+      isClaimAdmin,
+      isEmailAdmin,
+    });
 
-if (!isClaimAdmin && !isEmailAdmin) {
-  throw new functions.https.HttpsError(
-    "permission-denied",
-    "The function must be called by an admin user."
-  );
-}
-    
+    if (!isClaimAdmin && !isEmailAdmin) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "The function must be called by an admin user."
+      );
+    }
 
-    // 2. Input Validation
-    const {sessionId, type} = data;
+    // 2) Input
+    const { sessionId, type } = data || {};
     if (!sessionId || (type !== "signIn" && type !== "signOut")) {
       throw new functions.https.HttpsError(
         "invalid-argument",
         "Invalid session ID or token type provided."
       );
     }
-    
-    // 3. Secret Key Check (Robust Guard Clause)
+
+    // 3) Secret present?
     if (!JWT_SECRET) {
-      console.error("FATAL ERROR: JWT_SECRET not found in environment variables.");
-      throw new functions.https.HttpsError("internal", "The server is missing a required secret for QR generation.");
+      console.error("FATAL: JWT_SECRET missing");
+      throw new functions.https.HttpsError(
+        "internal",
+        "The server is missing a required secret for QR generation."
+      );
     }
 
-    // 4. Token Generation
+    // 4) Token
     const expiry = Math.floor(Date.now() / 1000) + QR_TOKEN_EXPIRY_MINUTES * 60;
-    const payload = {
-      sessionId: sessionId,
-      type: type,
-      exp: expiry,
-    };
-    const token = jwt.sign(payload, JWT_SECRET); 
+    const payload = { sessionId, type, exp: expiry };
+    const token = jwt.sign(payload, JWT_SECRET);
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
-    // 5. Store Token Hash in Firestore
-    const tokenRef = db
-      .collection("sessions")
-      .doc(sessionId)
-      .collection("qrTokens")
-      .doc();
-
+    // 5) Store hash
+    const tokenRef = db.collection("sessions").doc(sessionId).collection("qrTokens").doc();
     await tokenRef.set({
-      tokenHash: tokenHash,
-      type: type,
+      tokenHash,
+      type,
       expiresAt: admin.firestore.Timestamp.fromMillis(expiry * 1000),
       isActive: true,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // 6. Return URL for QR code
-    // IMPORTANT: Replace with your actual deployed app URL
-    const baseUrl = "https://studio--uitm-csc.us-central1.hosted.app/attendance";
+    // 6) Return URL for QR
+    const baseUrl = "https://studio--uitm-csc.us-central1.hosted.app/attendance"; // <-- your deployed app URL
     const qrUrl = `${baseUrl}?token=${token}`;
-
-    return {qrUrl: qrUrl};
+    return { qrUrl };
   });
 
-
 /**
- * Processes a QR code scan, verifies the token, and records attendance.
+ * Verifies the token and records attendance.
  * Callable by any authenticated user.
  */
 export const scanQr = functions
-  .region("asia-southeast1") // Specify your region
+  .region("asia-southeast1")
   .https.onCall(async (data, context) => {
-    // 1. Authentication
     if (!context.auth) {
       throw new functions.https.HttpsError(
         "unauthenticated",
         "The function must be called while authenticated."
       );
     }
+
     const uid = context.auth.uid;
-const callingUser = await admin.auth().getUser(uid);
-const userEmail =
-  callingUser.email ||
-  (context.auth.token as any)?.email ||
-  uid;
+    const callingUser = await admin.auth().getUser(uid);
+    const userEmail =
+      callingUser.email || (context.auth.token as any)?.email || uid;
 
-
-    // --- SELF-HEALING ADMIN CLAIM ---
-    // Check if the user is a designated admin and if their claim is missing
-    if (ADMIN_EMAILS.includes(callingUser.email || "") && callingUser.customClaims?.role !== 'admin') {
-      console.log(`User ${callingUser.email} is an admin but lacks the 'admin' custom claim. Setting it now.`);
+    // Self-heal: if allowlisted email but missing admin role, set it
+    if (
+      ADMIN_EMAILS.includes(callingUser.email || "") &&
+      callingUser.customClaims?.role !== "admin"
+    ) {
       try {
-        await admin.auth().setCustomUserClaims(uid, { role: 'admin' });
-        console.log(`Successfully set 'admin' claim for ${callingUser.email}. They should re-authenticate to see the effect.`);
-      } catch (claimError) {
-        console.error(`Failed to set custom claim for admin user ${callingUser.email}.`, claimError);
+        await admin.auth().setCustomUserClaims(uid, { role: "admin" });
+      } catch (e) {
+        console.error("Failed to set admin claim for", callingUser.email, e);
       }
     }
-    // --- END SELF-HEALING ---
 
-    // 2. Input Validation
-    const {token} = data;
+    // Input
+    const { token } = data || {};
     if (!token) {
+      throw new functions.https.HttpsError("invalid-argument", "A token must be provided.");
+    }
+
+    if (!JWT_SECRET) {
+      console.error("FATAL: JWT_SECRET missing");
       throw new functions.https.HttpsError(
-        "invalid-argument",
-        "A token must be provided."
+        "internal",
+        "The server is missing a required secret for QR verification."
       );
     }
-    
-    // 3. Secret Key Check (Robust Guard Clause)
-    if (!JWT_SECRET) {
-      console.error("FATAL ERROR: JWT_SECRET not found in environment variables.");
-      throw new functions.https.HttpsError("internal", "The server is missing a required secret for QR verification.");
-    }
 
-    let decoded;
+    // Verify
+    let decoded: { sessionId: string; type: "signIn" | "signOut"; exp: number };
     try {
-      decoded = jwt.verify(token, JWT_SECRET) as { 
-        sessionId: string;
-        type: "signIn" | "signOut";
-        exp: number;
-      };
-    } catch (error) {
+      decoded = jwt.verify(token, JWT_SECRET) as any;
+    } catch {
       throw new functions.https.HttpsError("invalid-argument", "Invalid or expired token.");
     }
 
-    const {sessionId, type} = decoded;
+    const { sessionId, type } = decoded;
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
+    // Find active token
     const tokenQuery = db
-      .collection("sessions")
-      .doc(sessionId)
+      .collection("sessions").doc(sessionId)
       .collection("qrTokens")
       .where("tokenHash", "==", tokenHash)
       .where("isActive", "==", true);
 
     const tokenSnapshot = await tokenQuery.get();
-
     if (tokenSnapshot.empty) {
       throw new functions.https.HttpsError(
         "not-found",
@@ -180,18 +232,13 @@ const userEmail =
     }
 
     const tokenDoc = tokenSnapshot.docs[0];
-
-    // Deactivate token immediately to prevent reuse
-    await tokenDoc.ref.update({isActive: false});
+    await tokenDoc.ref.update({ isActive: false }); // prevent reuse
 
     if (tokenDoc.data().expiresAt.toMillis() < Date.now()) {
-      throw new functions.https.HttpsError(
-        "deadline-exceeded",
-        "This QR code has expired."
-      );
+      throw new functions.https.HttpsError("deadline-exceeded", "This QR code has expired.");
     }
 
-    // --- Record Attendance ---
+    // Record attendance
     const attendanceRef = db.collection("attendanceLogs").doc(`${sessionId}_${uid}`);
     const attendanceDoc = await attendanceRef.get();
     const serverTime = admin.firestore.FieldValue.serverTimestamp();
@@ -200,36 +247,27 @@ const userEmail =
 
     if (type === "signIn") {
       if (attendanceDoc.exists && attendanceDoc.data()?.signInTime) {
-        throw new functions.https.HttpsError(
-          "already-exists",
-          "You have already signed in for this session."
-        );
+        throw new functions.https.HttpsError("already-exists", "You have already signed in for this session.");
       }
       await attendanceRef.set(
         {
-          sessionId: sessionId,
-          stationId: stationId,
+          sessionId,
+          stationId,
           userId: uid,
-          userEmail: userEmail || uid,
+          userEmail,
           signInTime: serverTime,
           signOutTime: null,
           durationMs: null,
         },
-        {merge: true}
+        { merge: true }
       );
-      return {message: "Sign-in successful."};
-    } else { // Sign-out
+      return { message: "Sign-in successful." };
+    } else {
       if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
-        throw new functions.https.HttpsError(
-          "failed-precondition",
-          "You must sign in before you can sign out."
-        );
+        throw new functions.https.HttpsError("failed-precondition", "You must sign in before you can sign out.");
       }
       if (attendanceDoc.data()?.signOutTime) {
-        throw new functions.https.HttpsError(
-          "already-exists",
-          "You have already signed out for this session."
-        );
+        throw new functions.https.HttpsError("already-exists", "You have already signed out for this session.");
       }
 
       const signInTimestamp = attendanceDoc.data()?.signInTime as admin.firestore.Timestamp;
@@ -237,12 +275,9 @@ const userEmail =
 
       await attendanceRef.update({
         signOutTime: serverTime,
-        durationMs: durationMs,
+        durationMs,
       });
 
-      // Optional: Update aggregate collections here
-
-      return {message: "Sign-out successful."};
+      return { message: "Sign-out successful." };
     }
   });
-    

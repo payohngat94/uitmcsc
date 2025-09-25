@@ -1,18 +1,43 @@
-
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser, signInAnonymously, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
-import { useRouter } from 'next/navigation';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  signInAnonymously,
+  createUserWithEmailAndPassword,
+  type User as FirebaseUser,
+} from "firebase/auth";
+import { useRouter } from "next/navigation";
+
+import { auth } from "@/lib/firebase/config";
 import { useToast } from "@/hooks/use-toast";
-import { getUserProfile, createUserProfile } from '@/lib/firebase/firestore-service';
-import type { AppUser, UserRole, UserStatus, UserProfile } from '@/lib/types';
 
+import {
+  getUserProfile,
+} from "@/lib/firebase/firestore-service";
 
-// --- List of Admin Emails ---
-// To add a new admin, simply add their email to this list.
-const ADMIN_EMAILS = ['admin@example.com', 'ainuddin@uitm.edu.my'];
+import {
+  ensureUserDocumentOnAuth,
+  refreshApprovalState,
+} from "@/lib/firebase/auth-service";
+
+import type {
+  AppUser,
+  UserRole,
+  UserStatus,
+} from "@/lib/types";
+
+// Optional: allow-list of emails that should default to admin on first sign-in.
+// Your Cloud Functions also handle admin allow-listing, so this is just a helpful fallback for Firestore defaults.
+const ADMIN_EMAILS = ["admin@example.com", "ainuddin@uitm.edu.my"];
 
 interface AuthContextType {
   currentUser: AppUser | null;
@@ -34,98 +59,114 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
-      if (firebaseUser) {
-        try {
-          // Note: The role is now primarily controlled by the Firestore document.
-          // This ensures consistency. The local `isAdmin` check is a fallback.
-          const userProfile = await getUserProfile(firebaseUser.uid);
+      try {
+        if (firebaseUser) {
+          // Ensure /users/{uid} exists/merged and placeholders by email are cleaned up
+          await ensureUserDocumentOnAuth(firebaseUser);
 
-          if (userProfile) {
-            // Combine Firebase user data with Firestore profile data
-            setCurrentUser({ ...firebaseUser, ...userProfile });
-          } else if (firebaseUser.isAnonymous) {
-            // Handle anonymous guest users who won't have a Firestore profile
-             setCurrentUser({
-              ...firebaseUser,
-              role: 'guest',
-              status: 'active'
-            });
-          } else {
-            // This case might happen if Firestore profile creation is delayed
-            // or for the superuser who might not have a doc initially.
-            console.warn(`No profile found for UID ${firebaseUser.uid}. Defaulting to temporary role.`);
-            const role = ADMIN_EMAILS.includes(firebaseUser.email || "") ? 'admin' : 'student';
+          // Force a fresh token so new custom claims (approved/role) are visible immediately
+          const { approvedClaim, roleClaim } = await refreshApprovalState(firebaseUser);
+
+          // Fetch the Firestore profile as the single source of truth for display info
+          const profile = await getUserProfile(firebaseUser.uid);
+
+          if (profile) {
+            // Compose final AppUser (Firestore fields take precedence for role/status)
             setCurrentUser({
               ...firebaseUser,
-              role: role,
-              status: role === 'admin' ? 'active' : 'pending'
+              ...profile,
+              role: (profile.role as UserRole) ?? (roleClaim as UserRole) ?? "student",
+              status: (profile.status as UserStatus) ?? (approvedClaim ? "active" : "pending"),
+            });
+          } else if (firebaseUser.isAnonymous) {
+            // Anonymous guest (no profile)
+            setCurrentUser({
+              ...firebaseUser,
+              role: "guest",
+              status: "active",
+            });
+          } else {
+            // Fallback if profile not found (should be rare because we ensure on auth)
+            const fallbackRole: UserRole = ADMIN_EMAILS.includes(firebaseUser.email || "")
+              ? "admin"
+              : ((roleClaim as UserRole) || "student");
+            const fallbackStatus: UserStatus = fallbackRole === "admin" || approvedClaim ? "active" : "pending";
+
+            setCurrentUser({
+              ...firebaseUser,
+              role: fallbackRole,
+              status: fallbackStatus,
             });
           }
-        } catch (error) {
-          console.error("Auth context error:", error);
-          // If there's an error fetching the profile, log out the user to prevent inconsistent state
-          await signOut(auth);
+        } else {
           setCurrentUser(null);
         }
-      } else {
+      } catch (err) {
+        console.error("[auth-context] onAuthStateChanged error:", err);
+        // To avoid inconsistent state, sign out on unexpected errors
+        try { await signOut(auth); } catch {}
         setCurrentUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
+  // ---------- Actions ----------
 
   const login = async (email: string, pass: string): Promise<{ success: boolean; error?: any }> => {
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle the rest
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      // Make sure the Firestore user doc exists/merged
+      await ensureUserDocumentOnAuth(cred.user);
+      // Fresh token so claims are current
+      await refreshApprovalState(cred.user);
       return { success: true };
     } catch (error: any) {
       console.error("Login error:", error);
-      // Don't toast here; return the error to the form to handle
       return { success: false, error };
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
-  const register = async (email: string, pass: string, studentOrStaffId: string): Promise<{ success: boolean; error?: any }> => {
+  const register = async (
+    email: string,
+    pass: string,
+    studentOrStaffId: string
+  ): Promise<{ success: boolean; error?: any }> => {
     setLoading(true);
     try {
-      // Step 1: Create the user in Firebase Auth.
+      // Create the Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
 
-      // Step 2: Determine role and status
-      const role: UserRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'student';
-      const status: UserStatus = role === 'admin' ? 'active' : 'pending';
+      // Ensure Firestore profile is created with correct initial defaults
+      // (role/status defaults are decided in ensureUserDocumentOnAuth + ADMIN_EMAILS)
+      await ensureUserDocumentOnAuth(user, studentOrStaffId);
 
-      // Step 3: Create the user's profile in Firestore using the corrected function.
-      await createUserProfile(user, studentOrStaffId, role, status);
+      // Force a fresh token so any default claims show quickly (not strictly required here)
+      await refreshApprovalState(user);
 
-      // Step 4: Sign the user out immediately. They must log in to get the merged profile.
+      // Optional: sign out after registration if you want them to log in explicitly
       await signOut(auth);
-      
+
       toast({
         title: "Registration Successful",
         description: "Your account has been created. Please log in to continue.",
       });
 
       return { success: true };
-
     } catch (error: any) {
       console.error("Registration error:", error);
-      // Return the error so the form can display it
       return { success: false, error };
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
-
 
   const signInAsGuestAnonymously = async () => {
     setLoading(true);
@@ -148,26 +189,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-
   const logout = async () => {
     setLoading(true);
     try {
       await signOut(auth);
-      setCurrentUser(null); // Explicitly clear user state
-      router.push('/');
+      setCurrentUser(null);
+      router.push("/");
     } catch (error: any) {
       console.error("Logout error:", error);
-       toast({
+      toast({
         variant: "destructive",
         title: "Logout Failed",
         description: String(error.message) || "Could not log out.",
       });
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
-  const value = {
+  const value: AuthContextType = {
     currentUser,
     loading,
     login,
@@ -182,7 +222,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
