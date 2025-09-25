@@ -2,7 +2,9 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as jwt from "jsonwebtoken";
 import * as crypto from "crypto";
-import 'dotenv/config';
+import { config } from "dotenv";
+config({ path: ".env.dev" }); 
+
 
 admin.initializeApp();
 

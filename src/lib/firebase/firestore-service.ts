@@ -67,39 +67,34 @@ export async function createProfileIfNotExist(email: string, studentOrStaffId: s
 }
 
 
-export async function createUserProfile(docId: string, user: FirebaseUser, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<void> {
-  const userProfileRef = doc(db, 'users', docId); // Use the provided docId
+export async function createUserProfile(user: FirebaseUser, studentOrStaffId: string, role: UserRole, status: UserStatus): Promise<void> {
+  const userProfileRef = doc(db, 'users', user.uid);
   try {
-    // SUPERUSER CHECK: This is a critical check for your main admin account.
     const isAdminEmail = ['admin@example.com', 'ainuddin@uitm.edu.my'].includes(user.email || '');
     const finalRole = isAdminEmail ? 'admin' : role;
     const finalStatus = isAdminEmail ? 'active' : status;
       
-    await updateDoc(userProfileRef, {
+    await setDoc(userProfileRef, {
       uid: user.uid,
       email: user.email,
       studentOrStaffId: studentOrStaffId,
       role: finalRole,
       status: finalStatus,
-      // createdAt is set by createProfileIfNotExist, so we don't overwrite it here.
+      createdAt: serverTimestamp(),
     });
   } catch (error) {
-    console.error("Error updating user profile with UID: ", error);
-    throw new Error(`Failed to update user profile. ${(error as Error).message}`);
+    console.error("Error creating user profile: ", error);
+    throw new Error(`Failed to create user profile. ${(error as Error).message}`);
   }
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  // We now need to query by the 'uid' field, not the document ID.
-  const q = query(usersCollectionRef, where("uid", "==", uid));
+  const docRef = doc(db, 'users', uid);
   try {
-    const querySnapshot = await getDocs(q);
+    const docSnap = await getDoc(docRef);
     
-    if (!querySnapshot.empty) {
-      // Assuming uid is unique, there should only be one document.
-      const docSnap = querySnapshot.docs[0];
+    if (docSnap.exists()) {
       const data = docSnap.data();
-      
       let status: UserStatus = data.status || (data.role === 'admin' ? 'active' : 'pending');
 
       const profileData: UserProfile = {
@@ -138,7 +133,7 @@ export async function getAllUsers(): Promise<UserProfile[]> {
       let status: UserStatus = data.status || (data.role === 'admin' ? 'active' : 'pending');
 
       return {
-        docId: docSnapshot.id, // Use the actual document ID
+        docId: docSnapshot.id,
         uid: data.uid,
         email: data.email,
         displayName: data.displayName || data.studentOrStaffId,

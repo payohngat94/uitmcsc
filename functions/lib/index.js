@@ -38,15 +38,15 @@ const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const jwt = __importStar(require("jsonwebtoken"));
 const crypto = __importStar(require("crypto"));
-require("dotenv/config");
+const dotenv_1 = require("dotenv");
+(0, dotenv_1.config)({ path: ".env.dev" });
 admin.initializeApp();
 const db = admin.firestore();
-// IMPORTANT: The JWT_SECRET is now managed by .env files.
-// Your secret is in /functions/.env.dev
+// IMPORTANT: The JWT_SECRET is now managed by .env files or Firebase config.
+// For local dev, your secret is in /functions/.env
+// For production, it's set via `firebase functions:config:set jwt.secret="..."`
 const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-    console.error("FATAL ERROR: JWT_SECRET not found in environment variables. Ensure your .env file is set up and loaded.");
-}
+const ADMIN_EMAILS = ['admin@example.com', 'ainuddin@uitm.edu.my'];
 const QR_TOKEN_EXPIRY_MINUTES = 2;
 /**
  * Generates a short-lived QR code token for a specific session.
@@ -68,16 +68,21 @@ exports.generateQrToken = functions
     if (!sessionId || (type !== "signIn" && type !== "signOut")) {
         throw new functions.https.HttpsError("invalid-argument", "Invalid session ID or token type provided.");
     }
-    // 3. Token Generation
+    // 3. Secret Key Check (Robust Guard Clause)
+    if (!JWT_SECRET) {
+        console.error("FATAL ERROR: JWT_SECRET not found in environment variables.");
+        throw new functions.https.HttpsError("internal", "The server is missing a required secret for QR generation.");
+    }
+    // 4. Token Generation
     const expiry = Math.floor(Date.now() / 1000) + QR_TOKEN_EXPIRY_MINUTES * 60;
     const payload = {
         sessionId: sessionId,
         type: type,
         exp: expiry,
     };
-    const token = jwt.sign(payload, JWT_SECRET); // Added non-null assertion
+    const token = jwt.sign(payload, JWT_SECRET);
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    // 4. Store Token Hash in Firestore
+    // 5. Store Token Hash in Firestore
     const tokenRef = db
         .collection("sessions")
         .doc(sessionId)
@@ -90,7 +95,7 @@ exports.generateQrToken = functions
         isActive: true,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    // 5. Return URL for QR code
+    // 6. Return URL for QR code
     // IMPORTANT: Replace with your actual deployed app URL
     const baseUrl = "https://your-app-url.web.app/attendance";
     const qrUrl = `${baseUrl}?token=${token}`;
@@ -108,10 +113,29 @@ exports.scanQr = functions
         throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
     const { uid, token: userEmail } = context.auth;
+    const callingUser = await admin.auth().getUser(uid);
+    // --- SELF-HEALING ADMIN CLAIM ---
+    // Check if the user is a designated admin and if their claim is missing
+    if (ADMIN_EMAILS.includes(callingUser.email || "") && callingUser.customClaims?.role !== 'admin') {
+        console.log(`User ${callingUser.email} is an admin but lacks the 'admin' custom claim. Setting it now.`);
+        try {
+            await admin.auth().setCustomUserClaims(uid, { role: 'admin' });
+            console.log(`Successfully set 'admin' claim for ${callingUser.email}. They should re-authenticate to see the effect.`);
+        }
+        catch (claimError) {
+            console.error(`Failed to set custom claim for admin user ${callingUser.email}.`, claimError);
+        }
+    }
+    // --- END SELF-HEALING ---
     // 2. Input Validation
     const { token } = data;
     if (!token) {
         throw new functions.https.HttpsError("invalid-argument", "A token must be provided.");
+    }
+    // 3. Secret Key Check (Robust Guard Clause)
+    if (!JWT_SECRET) {
+        console.error("FATAL ERROR: JWT_SECRET not found in environment variables.");
+        throw new functions.https.HttpsError("internal", "The server is missing a required secret for QR verification.");
     }
     let decoded;
     try {

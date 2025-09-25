@@ -99,22 +99,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const status: UserStatus = role === 'admin' ? 'active' : 'pending';
 
     try {
-      // Step 1: Create a placeholder profile or get the existing one's ID.
-      const docId = await createProfileIfNotExist(email, studentOrStaffId, role, status);
-
-      // Step 2: Attempt to create the user in Firebase Auth.
+      // Step 1: Create the user in Firebase Auth.
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
 
-      // Step 3: Update the profile with the official UID.
-      await createUserProfile(docId, user, studentOrStaffId, role, status);
+      // Step 2: Create the user's profile in Firestore.
+      await createUserProfile(user, studentOrStaffId, role, status);
 
-      // Step 4: Sign the user out. They need to log in after their account is approved.
+      // Step 3: Sign the user out. They need to log in after their account is approved (or immediately if admin).
       await signOut(auth);
       
       toast({
         title: "Registration Successful",
-        description: "Your account has been created and is now pending approval. Please log in to continue.",
+        description: "Your account has been created. Please log in to continue.",
       });
 
       return { success: true };
