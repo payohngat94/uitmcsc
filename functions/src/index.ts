@@ -32,12 +32,23 @@ export const generateQrToken = functions
       );
     }
     const adminUser = await admin.auth().getUser(context.auth.uid);
-    if (adminUser.customClaims?.["role"] !== "admin") {
-      throw new functions.https.HttpsError(
-        "permission-denied",
-        "The function must be called by an admin user."
-      );
-    }
+const isClaimAdmin = adminUser.customClaims?.["role"] === "admin";
+const isEmailAdmin = ADMIN_EMAILS.includes(adminUser.email || "");
+
+console.log("generateQrToken caller:", {
+  uid: context.auth.uid,
+  email: adminUser.email,
+  isClaimAdmin,
+  isEmailAdmin
+});
+
+if (!isClaimAdmin && !isEmailAdmin) {
+  throw new functions.https.HttpsError(
+    "permission-denied",
+    "The function must be called by an admin user."
+  );
+}
+    
 
     // 2. Input Validation
     const {sessionId, type} = data;
@@ -81,7 +92,7 @@ export const generateQrToken = functions
 
     // 6. Return URL for QR code
     // IMPORTANT: Replace with your actual deployed app URL
-    const baseUrl = "https://your-app-url.web.app/attendance";
+    const baseUrl = "https://studio--uitm-csc.us-central1.hosted.app/attendance";
     const qrUrl = `${baseUrl}?token=${token}`;
 
     return {qrUrl: qrUrl};
@@ -102,8 +113,13 @@ export const scanQr = functions
         "The function must be called while authenticated."
       );
     }
-    const {uid, token: userEmail} = context.auth;
-    const callingUser = await admin.auth().getUser(uid);
+    const uid = context.auth.uid;
+const callingUser = await admin.auth().getUser(uid);
+const userEmail =
+  callingUser.email ||
+  (context.auth.token as any)?.email ||
+  uid;
+
 
     // --- SELF-HEALING ADMIN CLAIM ---
     // Check if the user is a designated admin and if their claim is missing

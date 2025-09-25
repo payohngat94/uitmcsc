@@ -143,9 +143,11 @@ export default function ManageUsersPage() {
     return users.filter(user => user.status === filter);
   }, [users, filter]);
 
-  const hasPendingUsers = useMemo(() => {
-    return filter === 'pending' && filteredUsers.length > 0;
-  }, [filter, filteredUsers]);
+  const pendingUsers = useMemo(() => {
+    return users.filter(user => user.status === 'pending');
+  }, [users]);
+  
+  const hasPendingUsers = pendingUsers.length > 0;
 
   if (currentUser?.role !== 'admin') {
     return null; 
@@ -162,7 +164,7 @@ export default function ManageUsersPage() {
             {hasPendingUsers && (
               <Button onClick={handleApproveAll} disabled={isApprovingAll} className="w-full sm:w-auto">
                 <CheckCircle2 className="mr-2 h-5 w-5" />
-                {isApprovingAll ? 'Approving...' : `Approve All Pending (${filteredUsers.length})`}
+                {isApprovingAll ? 'Approving...' : `Approve All Pending (${pendingUsers.length})`}
               </Button>
             )}
             <Select value={filter} onValueChange={(value) => setFilter(value as UserStatus | 'all')}>

@@ -95,7 +95,12 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     
     if (docSnap.exists()) {
       const data = docSnap.data();
-      let status: UserStatus = data.status || (data.role === 'admin' ? 'active' : 'pending');
+      // Corrected Logic: Only default to pending if status is completely missing.
+      // Otherwise, use the status from the database.
+      let status: UserStatus = data.status;
+      if (!status) {
+        status = data.role === 'admin' ? 'active' : 'pending';
+      }
 
       const profileData: UserProfile = {
         docId: docSnap.id,
@@ -130,7 +135,10 @@ export async function getAllUsers(): Promise<UserProfile[]> {
     return querySnapshot.docs.map(docSnapshot => {
       const data = docSnapshot.data();
       
-      let status: UserStatus = data.status || (data.role === 'admin' ? 'active' : 'pending');
+      let status: UserStatus = data.status;
+      if (!status) {
+        status = data.role === 'admin' ? 'active' : 'pending';
+      }
 
       return {
         docId: docSnapshot.id,
