@@ -94,19 +94,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (email: string, pass: string, studentOrStaffId: string): Promise<{ success: boolean; error?: any }> => {
-    const role: UserRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'student';
-    // For admins, status is active. For students, it's pending admin approval.
-    const status: UserStatus = role === 'admin' ? 'active' : 'pending';
-
+    setLoading(true);
     try {
       // Step 1: Create the user in Firebase Auth.
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
 
-      // Step 2: Create the user's profile in Firestore.
+      // Step 2: Determine role and status
+      const role: UserRole = ADMIN_EMAILS.includes(email.toLowerCase()) ? 'admin' : 'student';
+      const status: UserStatus = role === 'admin' ? 'active' : 'pending';
+
+      // Step 3: Create the user's profile in Firestore using the corrected function.
       await createUserProfile(user, studentOrStaffId, role, status);
 
-      // Step 3: Sign the user out. They need to log in after their account is approved (or immediately if admin).
+      // Step 4: Sign the user out immediately. They must log in to get the merged profile.
       await signOut(auth);
       
       toast({
@@ -120,6 +121,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Registration error:", error);
       // Return the error so the form can display it
       return { success: false, error };
+    } finally {
+        setLoading(false);
     }
   };
 

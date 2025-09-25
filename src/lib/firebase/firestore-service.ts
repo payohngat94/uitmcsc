@@ -84,7 +84,8 @@ export async function createUserProfile(
     email: user.email,
     studentOrStaffId,
     role: finalRole,
-    status: placeholder?.status || existingData?.status || finalStatus, // Prioritize status from existing docs
+    // Prioritize status from existing docs (especially the approved placeholder), then fall back to the new status.
+    status: placeholder?.status || existingData?.status || finalStatus, 
     createdAt: placeholder?.createdAt || existingData?.createdAt || serverTimestamp(),
   };
 
