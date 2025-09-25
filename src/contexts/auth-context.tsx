@@ -6,7 +6,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as F
 import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
-import { getUserProfile, createUserProfile, createProfileIfNotExist } from '@/lib/firebase/firestore-service';
+import { getUserProfile, createUserProfile } from '@/lib/firebase/firestore-service';
 import type { AppUser, UserRole, UserStatus, UserProfile } from '@/lib/types';
 
 
