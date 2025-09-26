@@ -181,14 +181,19 @@ export async function getAllUsers(): Promise<UserProfile[]> {
 }
 
 export async function updateUserStatus(docId: string, status: UserStatus): Promise<void> {
-  const userProfileRef = doc(db, 'users', docId);
+  const userProfileRef = doc(db, "users", docId);
   try {
-    await updateDoc(userProfileRef, { status: status });
+    await updateDoc(userProfileRef, {
+      status,
+      updatedAt: serverTimestamp(),
+    });
+    // ✅ Extra step: Firestore doc is now in sync, client will read "active" immediately
   } catch (error) {
     console.error("Error updating user status:", error);
     throw new Error(`Failed to update user status. ${(error as Error).message}`);
   }
 }
+
 
 export async function approveAllPendingUsers(): Promise<string[]> {
   const batch = writeBatch(db);

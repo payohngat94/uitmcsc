@@ -1,14 +1,28 @@
-import { auth } from "./config";
-import { db } from "./config";
+import { auth, db } from "./config";
 import {
-  doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, serverTimestamp
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
-import { getIdToken, getIdTokenResult, type User as FirebaseUser } from "firebase/auth";
+import {
+  getIdToken,
+  getIdTokenResult,
+  type User as FirebaseUser,
+} from "firebase/auth";
 
 const usersCol = collection(db, "users");
 const ADMIN_EMAILS = ["admin@example.com", "ainuddin@uitm.edu.my"];
 
-export async function ensureUserDocumentOnAuth(user: FirebaseUser, studentOrStaffId = ""): Promise<void> {
+export async function ensureUserDocumentOnAuth(
+  user: FirebaseUser,
+  studentOrStaffId = ""
+): Promise<void> {
   const uid = user.uid;
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
@@ -26,14 +40,44 @@ export async function ensureUserDocumentOnAuth(user: FirebaseUser, studentOrStaf
   }
 
   const isAdminEmail = ADMIN_EMAILS.includes(user.email || "");
+  const existingData = snap.exists() ? snap.data() : {};
+
+  // 🔹 Guest handling: force guest role/active
+  if (user.isAnonymous) {
+    await setDoc(
+      ref,
+      {
+        uid,
+        email: null,
+        displayName: "Guest",
+        studentOrStaffId: "",
+        role: "guest",
+        status: "active",
+        createdAt: existingData?.createdAt || serverTimestamp(),
+      },
+      { merge: true }
+    );
+    if (placeholderId) await deleteDoc(doc(db, "users", placeholderId));
+    return;
+  }
+
+  // 🔹 Preserve status/role if already set, don’t overwrite approved users
+  const finalRole =
+    isAdminEmail ? "admin" : (existingData?.role || "student");
+
+  const finalStatus =
+    existingData?.status ??
+    (isAdminEmail ? "active" : "pending");
+
   const base = {
     uid,
     email: user.email || "",
-    displayName: user.displayName || studentOrStaffId || user.email || uid,
+    displayName:
+      user.displayName || studentOrStaffId || user.email || uid,
     studentOrStaffId,
-    role: isAdminEmail ? "admin" : "student",
-    status: isAdminEmail ? "active" : "pending",
-    createdAt: serverTimestamp(),
+    role: finalRole,
+    status: finalStatus,
+    createdAt: existingData?.createdAt || serverTimestamp(),
   };
 
   await setDoc(ref, { ...placeholderData, ...base }, { merge: true });

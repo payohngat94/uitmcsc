@@ -53,12 +53,21 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const ADMIN_EMAILS = ["admin@example.com", "ainuddin@uitm.edu.my"];
 const QR_TOKEN_EXPIRY_MINUTES = 2;
 // Helper: ensure caller is admin (by claim)
-function assertAdmin(ctx) {
+async function assertAdmin(ctx) {
     if (!ctx.auth) {
         throw new functions.https.HttpsError("unauthenticated", "Login required");
     }
+    const uid = ctx.auth.uid;
+    const user = await admin.auth().getUser(uid);
     const isClaimAdmin = ctx.auth.token?.role === "admin";
-    if (!isClaimAdmin) {
+    const isEmailAdmin = ADMIN_EMAILS.includes(user.email || "");
+    // Self-heal if email is in allowlist but claim missing
+    if (isEmailAdmin && !isClaimAdmin) {
+        await admin.auth().setCustomUserClaims(uid, { ...(user.customClaims || {}), role: "admin", approved: true });
+        await admin.auth().revokeRefreshTokens(uid);
+        return;
+    }
+    if (!isClaimAdmin && !isEmailAdmin) {
         throw new functions.https.HttpsError("permission-denied", "Admin only");
     }
 }
@@ -72,21 +81,27 @@ function assertAdmin(ctx) {
 exports.adminApproveUser = functions
     .region("asia-southeast1")
     .https.onCall(async (data, ctx) => {
-    assertAdmin(ctx);
-    const { uid, approved } = data || {};
+    await assertAdmin(ctx);
+    const { uid, approved, role } = data || {};
     if (!uid || typeof approved !== "boolean") {
         throw new functions.https.HttpsError("invalid-argument", "uid and approved(boolean) required");
     }
-    // Mirror to Firestore
+    const target = await admin.auth().getUser(uid);
+    const newRole = role || target.customClaims?.role || "student";
+    // 1) Update Firestore
     await db.doc(`users/${uid}`).set({
         status: approved ? "active" : "rejected",
+        role: newRole,
         approvedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
-    // Merge with existing claims
-    const target = await admin.auth().getUser(uid);
-    const claims = { ...(target.customClaims || {}), approved };
+    // 2) Update custom claims
+    const claims = {
+        ...(target.customClaims || {}),
+        approved,
+        role: newRole,
+    };
     await admin.auth().setCustomUserClaims(uid, claims);
-    // Force token refresh visibility
+    // 3) Force refresh
     await admin.auth().revokeRefreshTokens(uid);
     return { ok: true };
 });
