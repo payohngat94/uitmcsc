@@ -221,7 +221,10 @@ export const scanQr = functions
     // Input
     const { token } = data || {};
     if (!token) {
-      throw new functions.https.HttpsError("invalid-argument", "A token must be provided.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "A token must be provided."
+      );
     }
 
     if (!JWT_SECRET) {
@@ -237,7 +240,10 @@ export const scanQr = functions
     try {
       decoded = jwt.verify(token, JWT_SECRET) as any;
     } catch {
-      throw new functions.https.HttpsError("invalid-argument", "Invalid or expired token.");
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Invalid or expired token."
+      );
     }
 
     const { sessionId, type } = decoded;
@@ -245,7 +251,8 @@ export const scanQr = functions
 
     // Find active token
     const tokenQuery = db
-      .collection("sessions").doc(sessionId)
+      .collection("sessions")
+      .doc(sessionId)
       .collection("qrTokens")
       .where("tokenHash", "==", tokenHash)
       .where("isActive", "==", true);
@@ -262,11 +269,16 @@ export const scanQr = functions
     await tokenDoc.ref.update({ isActive: false }); // prevent reuse
 
     if (tokenDoc.data().expiresAt.toMillis() < Date.now()) {
-      throw new functions.https.HttpsError("deadline-exceeded", "This QR code has expired.");
+      throw new functions.https.HttpsError(
+        "deadline-exceeded",
+        "This QR code has expired."
+      );
     }
 
     // Record attendance
-    const attendanceRef = db.collection("attendanceLogs").doc(`${sessionId}_${uid}`);
+    const attendanceRef = db
+      .collection("attendanceLogs")
+      .doc(`${sessionId}_${uid}`);
     const attendanceDoc = await attendanceRef.get();
     const serverTime = admin.firestore.FieldValue.serverTimestamp();
     const stationDoc = await db.collection("sessions").doc(sessionId).get();
@@ -274,7 +286,10 @@ export const scanQr = functions
 
     if (type === "signIn") {
       if (attendanceDoc.exists && attendanceDoc.data()?.signInTime) {
-        throw new functions.https.HttpsError("already-exists", "You have already signed in for this session.");
+        throw new functions.https.HttpsError(
+          "already-exists",
+          "You have already signed in for this session."
+        );
       }
       await attendanceRef.set(
         {
@@ -288,16 +303,28 @@ export const scanQr = functions
         },
         { merge: true }
       );
-      return { message: "Sign-in successful." };
+      return {
+        message: "Sign-in successful.",
+        sessionId,
+        stationId,
+        type: "signIn",
+      };
     } else {
       if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
-        throw new functions.https.HttpsError("failed-precondition", "You must sign in before you can sign out.");
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "You must sign in before you can sign out."
+        );
       }
       if (attendanceDoc.data()?.signOutTime) {
-        throw new functions.https.HttpsError("already-exists", "You have already signed out for this session.");
+        throw new functions.https.HttpsError(
+          "already-exists",
+          "You have already signed out for this session."
+        );
       }
 
-      const signInTimestamp = attendanceDoc.data()?.signInTime as admin.firestore.Timestamp;
+      const signInTimestamp = attendanceDoc.data()
+        ?.signInTime as admin.firestore.Timestamp;
       const durationMs = Date.now() - signInTimestamp.toMillis();
 
       await attendanceRef.update({
@@ -305,6 +332,12 @@ export const scanQr = functions
         durationMs,
       });
 
-      return { message: "Sign-out successful." };
+      return {
+        message: "Sign-out successful.",
+        sessionId,
+        stationId,
+        type: "signOut",
+      };
     }
   });
+

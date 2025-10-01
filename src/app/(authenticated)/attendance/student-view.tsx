@@ -1,136 +1,125 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
+import QrCodeScanner from "./qr-code-scanner";
 import { useAuth } from "@/contexts/auth-context";
+import { toast } from "@/hooks/use-toast";
 import { getStudentAttendance } from "@/lib/firebase/firestore-service";
 import type { AttendanceRecord } from "@/lib/types";
-import { useToast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
-import { Clock, UserCheck, CheckCircle } from "lucide-react";
-import QrCodeScanner from "./qr-code-scanner";
 
-export default function StudentAttendanceView() {
+const StudentView = () => {
   const { currentUser } = useAuth();
-  const { toast } = useToast();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [totalTime, setTotalTime] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  // ✅ Track last scan
+  const [lastScan, setLastScan] = useState<null | {
+    message: string;
+    sessionId: string;
+    stationId: string;
+    type: "signIn" | "signOut";
+  }>(null);
 
   const fetchAttendance = async () => {
     if (!currentUser) return;
-    setIsLoading(true);
+    setLoading(true);
     try {
       const records = await getStudentAttendance(currentUser.uid);
       setAttendance(records);
-      const total = records.reduce((sum, record) => sum + (record.durationMs || 0), 0);
-      setTotalTime(total);
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not fetch attendance records." });
+    } catch (error: any) {
+      console.error("Error fetching student attendance:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load attendance records.",
+        variant: "destructive",
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchAttendance();
-  }, [currentUser, toast]);
+  }, [currentUser]);
 
-  const onScanSuccess = () => {
-    toast({ title: "Success", description: "Your attendance has been recorded." });
-    fetchAttendance(); // Re-fetch data to show the latest status
+  // ✅ Called when QR scan succeeded
+  const onScanSuccess = (data: any) => {
+    setLastScan(data);
+    toast({ title: "Success", description: data.message });
+    fetchAttendance();
   };
 
-  const onScanError = (errorMessage: string) => {
-    toast({ variant: "destructive", title: "Scan Error", description: errorMessage });
+  // ❌ Called when QR scan failed
+  const onScanError = (msg: string) => {
+    toast({
+      title: "Scan Failed",
+      description: msg,
+      variant: "destructive",
+    });
   };
-  
-  const totalHours = (totalTime / (1000 * 60 * 60)).toFixed(2);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      {/* Left side: QR Scanner */}
-      <div className="md:col-span-1">
-        <Card className="sticky top-20">
-          <CardHeader>
-            <CardTitle>Scan QR Code</CardTitle>
-            <CardDescription>
-              Use your camera to scan the session QR code for sign-in or sign-out.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <QrCodeScanner
-              onScanSuccess={onScanSuccess}
-              onScanError={onScanError}
-            />
-          </CardContent>
-        </Card>
-      </div>
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold">Attendance Scanner</h2>
 
-      {/* Right side: Attendance History */}
-      <div className="md:col-span-2 space-y-6">
-         <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Practice Time</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                {isLoading ? (
-                    <Skeleton className="h-8 w-1/2" />
-                ) : (
-                    <div className="text-2xl font-bold">{totalHours} hours</div>
-                )}
-                <p className="text-xs text-muted-foreground">Total time spent across all sessions.</p>
-            </CardContent>
-         </Card>
+      {/* ✅ Show banner when last scan exists */}
+      {lastScan && (
+        <div className="p-4 rounded-lg bg-green-100 border border-green-400 text-green-800">
+          <p className="font-semibold">{lastScan.message}</p>
+          <p>
+            Station: <span className="font-mono">{lastScan.stationId}</span>{" "}
+            <br />
+            Action: <span className="capitalize">{lastScan.type}</span>
+          </p>
+        </div>
+      )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Attendance History</CardTitle>
-            <CardDescription>A log of your recorded practice sessions.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Station</TableHead>
-                  <TableHead>Sign In</TableHead>
-                  <TableHead>Sign Out</TableHead>
-                  <TableHead className="text-right">Duration</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  [...Array(3)].map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : attendance.length > 0 ? (
-                  attendance.map(record => (
-                    <TableRow key={record.id}>
-                      <TableCell>{record.stationId}</TableCell> {/* Should be stationName */}
-                      <TableCell>{record.signInTime ? formatDistanceToNow(record.signInTime, { addSuffix: true }) : "N/A"}</TableCell>
-                      <TableCell>{record.signOutTime ? formatDistanceToNow(record.signOutTime, { addSuffix: true }) : "N/A"}</TableCell>
-                      <TableCell className="text-right">{record.durationMs != null ? `${(record.durationMs / 60000).toFixed(1)} mins` : "--"}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
-                      <UserCheck className="mx-auto h-8 w-8 text-muted-foreground" />
-                      <p className="mt-2 text-muted-foreground">No attendance records found.</p>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+      <QrCodeScanner onScanSuccess={onScanSuccess} onScanError={onScanError} />
+
+      <h3 className="text-lg font-medium">Your Attendance Records</h3>
+
+      {loading ? (
+        <p>Loading attendance records...</p>
+      ) : attendance.length === 0 ? (
+        <p>No attendance records found.</p>
+      ) : (
+        <table className="w-full border text-sm">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-2 border">Session</th>
+              <th className="p-2 border">Station</th>
+              <th className="p-2 border">Sign-in</th>
+              <th className="p-2 border">Sign-out</th>
+              <th className="p-2 border">Duration</th>
+            </tr>
+          </thead>
+          <tbody>
+            {attendance.map((rec) => (
+              <tr key={rec.id}>
+                <td className="p-2 border">{rec.sessionId}</td>
+                <td className="p-2 border">{rec.stationId}</td>
+                <td className="p-2 border">
+                  {rec.signInTime
+                    ? rec.signInTime.toLocaleString()
+                    : "—"}
+                </td>
+                <td className="p-2 border">
+                  {rec.signOutTime
+                    ? rec.signOutTime.toLocaleString()
+                    : "—"}
+                </td>
+                <td className="p-2 border">
+                  {rec.durationMs
+                    ? `${Math.round(rec.durationMs / 60000)} min`
+                    : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
-}
+};
+
+export default StudentView;

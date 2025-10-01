@@ -223,7 +223,8 @@ exports.scanQr = functions
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     // Find active token
     const tokenQuery = db
-        .collection("sessions").doc(sessionId)
+        .collection("sessions")
+        .doc(sessionId)
         .collection("qrTokens")
         .where("tokenHash", "==", tokenHash)
         .where("isActive", "==", true);
@@ -237,7 +238,9 @@ exports.scanQr = functions
         throw new functions.https.HttpsError("deadline-exceeded", "This QR code has expired.");
     }
     // Record attendance
-    const attendanceRef = db.collection("attendanceLogs").doc(`${sessionId}_${uid}`);
+    const attendanceRef = db
+        .collection("attendanceLogs")
+        .doc(`${sessionId}_${uid}`);
     const attendanceDoc = await attendanceRef.get();
     const serverTime = admin.firestore.FieldValue.serverTimestamp();
     const stationDoc = await db.collection("sessions").doc(sessionId).get();
@@ -255,7 +258,12 @@ exports.scanQr = functions
             signOutTime: null,
             durationMs: null,
         }, { merge: true });
-        return { message: "Sign-in successful." };
+        return {
+            message: "Sign-in successful.",
+            sessionId,
+            stationId,
+            type: "signIn",
+        };
     }
     else {
         if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
@@ -264,12 +272,18 @@ exports.scanQr = functions
         if (attendanceDoc.data()?.signOutTime) {
             throw new functions.https.HttpsError("already-exists", "You have already signed out for this session.");
         }
-        const signInTimestamp = attendanceDoc.data()?.signInTime;
+        const signInTimestamp = attendanceDoc.data()
+            ?.signInTime;
         const durationMs = Date.now() - signInTimestamp.toMillis();
         await attendanceRef.update({
             signOutTime: serverTime,
             durationMs,
         });
-        return { message: "Sign-out successful." };
+        return {
+            message: "Sign-out successful.",
+            sessionId,
+            stationId,
+            type: "signOut",
+        };
     }
 });
