@@ -52,15 +52,16 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
   
   // Effect to clean up scanner on unmount
   useEffect(() => {
+    const scanner = scannerRef.current;
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(error => {
-          console.error("Failed to clear html5-qrcode instance on unmount.", error);
+      if (scanner && scanner.isScanning) {
+        scanner.stop().catch(error => {
+          console.error("Failed to stop html5-qrcode instance on unmount.", error);
         });
-        scannerRef.current = null;
       }
     };
   }, []);
+
 
   const startScanner = async () => {
     if (!hasCameraPermission || !currentUser || isScanning || isProcessing) return;
@@ -78,15 +79,16 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
       
       console.log("🔎 QR scanned:", decodedText);
       setIsProcessing(true);
-      setIsScanning(false);
       
       // Stop scanning before processing
       try {
-        if (scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
+        if (scannerRef.current.isScanning) {
             await scannerRef.current.stop();
         }
+        setIsScanning(false);
       } catch (e) {
         console.error("Error stopping scanner on success:", e);
+        setIsScanning(false); // Ensure state is correct even on error
       }
 
       try {
@@ -132,7 +134,7 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
   };
 
   const stopScanner = async () => {
-    if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
+    if (scannerRef.current && scannerRef.current.isScanning) {
       try {
         await scannerRef.current.stop();
       } catch (err) {
