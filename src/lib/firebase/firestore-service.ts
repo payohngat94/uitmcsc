@@ -605,12 +605,15 @@ export async function getSessionsWithAttendance(): Promise<Array<Session & { att
 
   const attendanceQuery = query(attendanceLogsCollectionRef, orderBy('signInTime', 'desc'));
   const attendanceSnapshot = await getDocs(attendanceQuery);
-  const allAttendance = attendanceSnapshot.docs.map(doc => ({
+  const allAttendance = attendanceSnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
       id: doc.id,
-      ...doc.data(),
-      signInTime: doc.data().signInTime ? (doc.data().signInTime as Timestamp).toDate() : null,
-      signOutTime: doc.data().signOutTime ? (doc.data().signOutTime as Timestamp).toDate() : null,
-  } as AttendanceRecord));
+      ...data,
+      signInTime: data.signInTime ? (data.signInTime as Timestamp).toDate() : null,
+      signOutTime: data.signOutTime ? (data.signOutTime as Timestamp).toDate() : null,
+    } as AttendanceRecord
+  });
 
   // Combine sessions with their attendance records
   return sessions.map(session => ({
@@ -622,12 +625,16 @@ export async function getSessionsWithAttendance(): Promise<Array<Session & { att
 export async function getStudentAttendance(userId: string): Promise<AttendanceRecord[]> {
     const q = query(attendanceLogsCollectionRef, where("userId", "==", userId), orderBy("signInTime", "desc"));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        signInTime: doc.data().signInTime ? (doc.data().signInTime as Timestamp).toDate() : null,
-        signOutTime: doc.data().signOutTime ? (doc.data().signOutTime as Timestamp).toDate() : null,
-    } as AttendanceRecord));
+    return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            stationName: data.stationName || data.stationId, // Add fallback for stationName
+            signInTime: data.signInTime ? (data.signInTime as Timestamp).toDate() : null,
+            signOutTime: data.signOutTime ? (data.signOutTime as Timestamp).toDate() : null,
+        } as AttendanceRecord
+    });
 }
 
 // --- Deprecated Learning Material functions ---

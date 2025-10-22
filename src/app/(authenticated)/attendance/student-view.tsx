@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -129,7 +130,7 @@ const StudentView = () => {
                   {attendance.map((rec) => (
                     <TableRow key={rec.id}>
                       <TableCell>
-                        <div className="font-medium">{rec.stationId}</div>
+                        <div className="font-medium">{rec.stationName}</div>
                         <div className="text-xs text-muted-foreground font-mono">{rec.sessionId}</div>
                       </TableCell>
                       <TableCell>

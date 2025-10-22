@@ -117,6 +117,7 @@ export type AttendanceRecord = {
   id: string;
   sessionId: string;
   stationId: string;
+  stationName: string; // Denormalized
   userId: string;
   userEmail: string;
   signInTime: Timestamp | Date | null;
@@ -165,3 +166,10 @@ export type Announcement = {
   isPinned?: boolean;
   audience?: UserRole[]; 
 };
+
+// This represents the user object used throughout the app, combining Firebase Auth and Firestore profile data.
+export interface AppUser extends Omit<FirebaseUser, 'providerData'> {
+  role: UserRole;
+  status: UserStatus;
+  studentOrStaffId?: string;
+}
