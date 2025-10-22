@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useRef }from "react";
+import { useEffect, useState, useRef } from "react";
 import { Html5Qrcode, type Html5QrcodeScannerState } from "html5-qrcode";
 import { useAuth } from "@/contexts/auth-context";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -48,12 +48,18 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
       });
   }, []);
 
-  // Effect to clean up scanner on unmount
+  // Effect to instantiate and clean up the scanner instance
   useEffect(() => {
-    // This function will be called when the component unmounts.
+    // Only create a new instance if one doesn't exist
+    if (!scannerRef.current) {
+      scannerRef.current = new Html5Qrcode(qrcodeRegionId, { verbose: false });
+    }
+    const scanner = scannerRef.current;
+
+    // This cleanup function is CRITICAL. It runs when the component unmounts.
     return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().catch(error => {
+      if (scanner && scanner.isScanning) {
+        scanner.stop().catch(error => {
           console.error("Failed to stop html5-qrcode instance on unmount.", error);
         });
       }
@@ -62,59 +68,60 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
 
 
   const startScanner = async () => {
-    if (!hasCameraPermission || !currentUser || isScanning || isProcessing) return;
+    if (!hasCameraPermission || !currentUser || isScanning || isProcessing || !scannerRef.current) return;
 
-    // Ensure there's a scanner instance
-    if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode(qrcodeRegionId, { verbose: false });
-    }
     const scanner = scannerRef.current;
     
     setIsScanning(true);
+    setIsProcessing(false);
 
     const qrCodeSuccessCallback = (decodedText: string) => {
-        if (isProcessing) return; // Prevent multiple scans from being processed
+        if (isProcessing || !scanner.isScanning) return; // Prevent multiple scans from being processed
 
-        if (scannerRef.current?.isScanning) {
-            scannerRef.current.stop()
-                .then(async () => {
-                    setIsScanning(false);
-                    setIsProcessing(true); // Lock processing AFTER stopping scanner
-                    console.log("QR Scanner stopped successfully.");
+        // 1. Set processing to true to prevent further scans
+        setIsProcessing(true);
+        
+        // 2. Stop the scanner FIRST
+        scanner.stop()
+            .then(async () => {
+                // 3. Update scanning state AFTER stopping
+                setIsScanning(false);
+                console.log("QR Scanner stopped successfully.");
 
+                // 4. Now, safely process the token
+                try {
+                    let token: string | null = null;
                     try {
-                        let token: string | null = null;
-                        try {
-                            const url = new URL(decodedText);
-                            token = url.searchParams.get("token");
-                        } catch {
-                            token = decodedText;
-                        }
-
-                        if (!token) {
-                            throw new Error("Invalid QR code: No token found.");
-                        }
-
-                        console.log("📦 Extracted token:", token);
-                        const res: any = await scanQr({ token });
-
-                        console.log("✅ scanQr result:", res.data);
-                        onScanSuccess(res.data);
-                    } catch (err: any) {
-                        console.error("❌ Error calling scanQr function:", err);
-                        const msg = err.details?.message || err.message || "An unknown error occurred during processing.";
-                        onScanError(msg);
-                    } finally {
-                        setIsProcessing(false); // Unlock processing
+                        const url = new URL(decodedText);
+                        token = url.searchParams.get("token");
+                    } catch {
+                        token = decodedText;
                     }
-                })
-                .catch((err) => {
-                    console.error("Failed to stop QR scanner after success:", err);
-                    setIsScanning(false);
-                    setIsProcessing(false); // Unlock on error
-                    onScanError("Could not stop the scanner after a successful scan.");
-                });
-        }
+
+                    if (!token) {
+                        throw new Error("Invalid QR code: No token found.");
+                    }
+
+                    console.log("📦 Extracted token:", token);
+                    const res: any = await scanQr({ token });
+
+                    console.log("✅ scanQr result:", res.data);
+                    onScanSuccess(res.data);
+                } catch (err: any) {
+                    console.error("❌ Error calling scanQr function:", err);
+                    const msg = err.details?.message || err.message || "An unknown error occurred during processing.";
+                    onScanError(msg);
+                } finally {
+                    // 5. Reset processing state
+                    setIsProcessing(false); 
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to stop QR scanner after success:", err);
+                setIsScanning(false);
+                setIsProcessing(false);
+                onScanError("Could not stop the scanner after a successful scan.");
+            });
     };
     
     try {
@@ -135,11 +142,14 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
       try {
         await scannerRef.current.stop();
         setIsScanning(false);
+        setIsProcessing(false);
       } catch (err) {
         console.error("Failed to stop scanner:", err);
+        onScanError("Failed to stop the camera.");
       }
+    } else {
+        setIsScanning(false);
     }
-    setIsScanning(false);
   };
 
   return (
