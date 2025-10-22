@@ -2,8 +2,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Html5Qrcode, type Html5QrcodeScannerState } from "html5-qrcode";
-import { useAuth } from "@/contexts/auth-context";
+import { Html5Qrcode, type Html5QrcodeResult } from "html5-qrcode";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "@/lib/firebase/config";
 import { Camera, AlertTriangle, Loader2 } from "lucide-react";
@@ -24,23 +23,16 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
   onScanSuccess,
   onScanError,
 }) => {
-  const { currentUser } = useAuth();
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const [hasCameraPermission, setHasCameraPermission] = useState<
-    boolean | null
-  >(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Effect to check for camera permissions on mount
   useEffect(() => {
+    // Check for camera permissions on mount
     Html5Qrcode.getCameras()
       .then(devices => {
-        if (devices && devices.length) {
-          setHasCameraPermission(true);
-        } else {
-          setHasCameraPermission(false);
-        }
+        setHasCameraPermission(devices && devices.length > 0);
       })
       .catch(err => {
         console.error("Camera permission error:", err);
@@ -50,16 +42,10 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
 
   // Effect to instantiate and clean up the scanner instance
   useEffect(() => {
-    // Only create a new instance if one doesn't exist
-    if (!scannerRef.current) {
-      scannerRef.current = new Html5Qrcode(qrcodeRegionId, { verbose: false });
-    }
-    const scanner = scannerRef.current;
-
-    // This cleanup function is CRITICAL. It runs when the component unmounts.
+    // Return a cleanup function
     return () => {
-      if (scanner && scanner.isScanning) {
-        scanner.stop().catch(error => {
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().catch(error => {
           console.error("Failed to stop html5-qrcode instance on unmount.", error);
         });
       }
@@ -68,72 +54,66 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
 
 
   const startScanner = async () => {
-    if (!hasCameraPermission || !currentUser || isScanning || isProcessing || !scannerRef.current) return;
+    if (!hasCameraPermission || isScanning || isProcessing) return;
 
-    const scanner = scannerRef.current;
-    
     setIsScanning(true);
     setIsProcessing(false);
 
-    const qrCodeSuccessCallback = (decodedText: string) => {
-        if (isProcessing || !scanner.isScanning) return; // Prevent multiple scans from being processed
+    // Create a new instance every time we start scanning
+    const newScanner = new Html5Qrcode(qrcodeRegionId, { verbose: false });
+    scannerRef.current = newScanner;
 
-        // 1. Set processing to true to prevent further scans
-        setIsProcessing(true);
+    const qrCodeSuccessCallback = async (decodedText: string, decodedResult: Html5QrcodeResult) => {
+      if (isProcessing || !scannerRef.current?.isScanning) return;
+
+      setIsProcessing(true);
+
+      try {
+        // 1. Stop the scanner FIRST and wait for it to complete.
+        await newScanner.stop();
+        setIsScanning(false);
+        console.log("QR Scanner stopped successfully.");
         
-        // 2. Stop the scanner FIRST
-        scanner.stop()
-            .then(async () => {
-                // 3. Update scanning state AFTER stopping
-                setIsScanning(false);
-                console.log("QR Scanner stopped successfully.");
+        // 2. Now that the DOM is clean, process the token.
+        let token: string | null = null;
+        try {
+            const url = new URL(decodedText);
+            token = url.searchParams.get("token");
+        } catch {
+            token = decodedText;
+        }
 
-                // 4. Now, safely process the token
-                try {
-                    let token: string | null = null;
-                    try {
-                        const url = new URL(decodedText);
-                        token = url.searchParams.get("token");
-                    } catch {
-                        token = decodedText;
-                    }
+        if (!token) {
+            throw new Error("Invalid QR code: No token found.");
+        }
 
-                    if (!token) {
-                        throw new Error("Invalid QR code: No token found.");
-                    }
+        console.log("📦 Extracted token:", token);
+        const res: any = await scanQr({ token });
 
-                    console.log("📦 Extracted token:", token);
-                    const res: any = await scanQr({ token });
+        console.log("✅ scanQr result:", res.data);
+        onScanSuccess(res.data);
 
-                    console.log("✅ scanQr result:", res.data);
-                    onScanSuccess(res.data);
-                } catch (err: any) {
-                    console.error("❌ Error calling scanQr function:", err);
-                    const msg = err.details?.message || err.message || "An unknown error occurred during processing.";
-                    onScanError(msg);
-                } finally {
-                    // 5. Reset processing state
-                    setIsProcessing(false); 
-                }
-            })
-            .catch((err) => {
-                console.error("Failed to stop QR scanner after success:", err);
-                setIsScanning(false);
-                setIsProcessing(false);
-                onScanError("Could not stop the scanner after a successful scan.");
-            });
+      } catch (err: any) {
+        console.error("❌ Error during scan processing:", err);
+        const msg = err.details?.message || err.message || "An unknown error occurred during processing.";
+        onScanError(msg);
+      } finally {
+        // 3. Reset processing state AFTER all operations are done.
+        setIsProcessing(false);
+      }
     };
     
     try {
-        await scanner.start(
+        await newScanner.start(
             { facingMode: "environment" },
             { fps: 5, qrbox: { width: 250, height: 250 }, useBarCodeDetectorIfSupported: true },
             qrCodeSuccessCallback,
-            () => {} // Optional: QR Code no longer match
+            undefined // Optional: QR Code no longer match
         );
     } catch (err: any) {
         onScanError(`Failed to start scanner: ${err.message}`);
         setIsScanning(false);
+        setIsProcessing(false);
     }
   };
 
