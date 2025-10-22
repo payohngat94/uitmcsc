@@ -28,8 +28,8 @@ export default function QRCodeDisplay({ isOpen, onOpenChange, qrCodeUrl, type }:
         setCountdown(prev => {
           if (prev <= 1) {
             clearInterval(timer);
-            // Optionally auto-close or show expired message
-            onOpenChange(false);
+            // Defer the state update to avoid the "cannot update during render" error
+            setTimeout(() => onOpenChange(false), 0); 
             return 0;
           }
           return prev - 1;
