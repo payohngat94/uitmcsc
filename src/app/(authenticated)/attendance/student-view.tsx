@@ -12,6 +12,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle, List, ScanLine } from "lucide-react";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { app } from "@/lib/firebase/config";
+
+
+const functions = getFunctions(app, "asia-southeast1");
+const scanQrCallable = httpsCallable(functions, "scanQr");
 
 
 const StudentView = () => {
@@ -53,14 +59,37 @@ const StudentView = () => {
   }, [currentUser]);
 
   // Called when QR scan succeeded
-  const onScanSuccess = (data: any) => {
-    setLastScanResult(data); // Store the full result object
-    toast({ title: "Success", description: data.message });
-    fetchAttendance(); // Refresh the attendance list
+  const handleScanSuccess = async (decodedText: string) => {
+    let token: string | null = null;
+    try {
+        // Handle both raw tokens and URLs with tokens
+        try {
+            const url = new URL(decodedText);
+            token = url.searchParams.get("token");
+        } catch {
+            token = decodedText;
+        }
+
+        if (!token) {
+            throw new Error("Invalid QR code format. No token found.");
+        }
+        
+        const res: any = await scanQrCallable({ token });
+        const data = res.data;
+
+        setLastScanResult(data); 
+        toast({ title: "Success", description: data.message });
+        await fetchAttendance(); // Refresh the attendance list
+
+    } catch (err: any) {
+        const msg = err.details?.message || err.message || "An unknown error occurred during processing.";
+        handleScanError(msg);
+        throw err; // Re-throw to inform the scanner
+    }
   };
 
   // Called when QR scan failed
-  const onScanError = (msg: string) => {
+  const handleScanError = (msg: string) => {
     toast({
       title: "Scan Failed",
       description: msg,
@@ -76,7 +105,7 @@ const StudentView = () => {
             <CardTitle className="flex items-center"><ScanLine className="mr-2 h-6 w-6"/> Attendance Scanner</CardTitle>
           </CardHeader>
           <CardContent>
-            <QrCodeScanner onScanSuccess={onScanSuccess} onScanError={onScanError} />
+            <QrCodeScanner onScanSuccess={handleScanSuccess} onScanError={handleScanError} />
           </CardContent>
         </Card>
 
