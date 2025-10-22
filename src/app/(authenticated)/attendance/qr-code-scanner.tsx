@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, type Html5QrcodeScannerState } from "html5-qrcode";
 import { useAuth } from "@/contexts/auth-context";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "@/lib/firebase/config";
@@ -17,6 +17,8 @@ interface QrCodeScannerProps {
 const functions = getFunctions(app, "asia-southeast1");
 const scanQr = httpsCallable(functions, "scanQr");
 
+const qrcodeRegionId = "qr-code-reader";
+
 const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
   onScanSuccess,
   onScanError,
@@ -27,44 +29,60 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
     boolean | null
   >(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false); // New state for processing
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const qrcodeRegionId = "qr-code-reader";
-
+  // Effect to initialize and clean up the scanner instance
   useEffect(() => {
-    const getCameraPermissionAndStart = async () => {
+    const getCameraPermission = async () => {
       try {
-        await navigator.mediaDevices.getUserMedia({ video: true });
-        setHasCameraPermission(true);
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length) {
+          setHasCameraPermission(true);
+        } else {
+          setHasCameraPermission(false);
+        }
       } catch (err) {
-        console.error("Camera permission denied:", err);
+        console.error("Camera permission error:", err);
         setHasCameraPermission(false);
       }
     };
-    getCameraPermissionAndStart();
+    getCameraPermission();
 
+    // Cleanup function
     return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().catch(console.error);
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(error => {
+          console.error("Failed to clear html5-qrcode instance.", error);
+        });
+        scannerRef.current = null;
       }
     };
   }, []);
 
-  const startScanner = () => {
-    if (!hasCameraPermission || !currentUser || isScanning) return;
+  const startScanner = async () => {
+    if (!hasCameraPermission || !currentUser || isScanning || isProcessing) return;
+
+    // Ensure there's a scanner instance
+    if (!scannerRef.current) {
+        scannerRef.current = new Html5Qrcode(qrcodeRegionId);
+    }
+    const scanner = scannerRef.current;
 
     setIsScanning(true);
-    const html5QrcodeScanner = new Html5Qrcode(qrcodeRegionId);
-    scannerRef.current = html5QrcodeScanner;
 
     const qrCodeSuccessCallback = async (decodedText: string) => {
-      if (isProcessing || !isScanning) return; // Prevent multiple submissions
-
-      console.log("🔎 QR scanned:", decodedText);
+      if (isProcessing || !isScanning) return;
       
-      setIsProcessing(true); // Set processing state
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        await scannerRef.current.stop();
+      console.log("🔎 QR scanned:", decodedText);
+      setIsProcessing(true);
+
+      // Stop scanning before processing
+      if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
+        try {
+          await scanner.stop();
+        } catch (e) {
+          console.error("Error stopping scanner on success:", e);
+        }
       }
       setIsScanning(false);
 
@@ -84,44 +102,42 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
         }
 
         console.log("📦 Extracted token:", token);
-
         const res: any = await scanQr({ token });
 
         console.log("✅ scanQr result:", res.data);
-        onScanSuccess(res.data); // Pass full data object to parent
+        onScanSuccess(res.data);
       } catch (err: any) {
         console.error("❌ Error calling scanQr function:", err);
-        const msg =
-          err.details?.message ||
-          err.message ||
-          "An unknown error occurred during processing.";
+        const msg = err.details?.message || err.message || "An unknown error occurred during processing.";
         onScanError(msg);
       } finally {
-        setIsProcessing(false); // Reset processing state
+        setIsProcessing(false);
       }
     };
-
-    html5QrcodeScanner
-      .start(
-        { facingMode: "environment" },
-        { fps: 5, qrbox: { width: 250, height: 250 } },
-        qrCodeSuccessCallback,
-        () => {}
-      )
-      .catch((err) => {
+    
+    try {
+        await scanner.start(
+            { facingMode: "environment" },
+            { fps: 5, qrbox: { width: 250, height: 250 }, useBarCodeDetectorIfSupported: true },
+            qrCodeSuccessCallback,
+            () => {} // QR Code no longer match
+        );
+    } catch (err: any) {
         onScanError(`Failed to start scanner: ${err.message}`);
         setIsScanning(false);
-      });
+    }
   };
 
-  const stopScanner = () => {
-    if (scannerRef.current && scannerRef.current.isScanning) {
-      scannerRef.current
-        .stop()
-        .then(() => setIsScanning(false))
-        .catch((err) => console.error("Failed to stop scanner:", err));
+  const stopScanner = async () => {
+    if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
+      try {
+        await scannerRef.current.stop();
+        setIsScanning(false);
+      } catch (err) {
+        console.error("Failed to stop scanner:", err);
+      }
     } else {
-      setIsScanning(false);
+        setIsScanning(false);
     }
   };
 
