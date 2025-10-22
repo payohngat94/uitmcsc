@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -31,7 +32,7 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Effect to initialize and clean up the scanner instance
+  // Effect to check for camera permissions on mount
   useEffect(() => {
     const getCameraPermission = async () => {
       try {
@@ -47,12 +48,14 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
       }
     };
     getCameraPermission();
-
-    // Cleanup function
+  }, []);
+  
+  // Effect to clean up scanner on unmount
+  useEffect(() => {
     return () => {
       if (scannerRef.current) {
         scannerRef.current.clear().catch(error => {
-          console.error("Failed to clear html5-qrcode instance.", error);
+          console.error("Failed to clear html5-qrcode instance on unmount.", error);
         });
         scannerRef.current = null;
       }
@@ -71,20 +74,20 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
     setIsScanning(true);
 
     const qrCodeSuccessCallback = async (decodedText: string) => {
-      if (isProcessing || !isScanning) return;
+      if (isProcessing || !scannerRef.current) return;
       
       console.log("🔎 QR scanned:", decodedText);
       setIsProcessing(true);
-
-      // Stop scanning before processing
-      if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
-        try {
-          await scanner.stop();
-        } catch (e) {
-          console.error("Error stopping scanner on success:", e);
-        }
-      }
       setIsScanning(false);
+      
+      // Stop scanning before processing
+      try {
+        if (scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
+            await scannerRef.current.stop();
+        }
+      } catch (e) {
+        console.error("Error stopping scanner on success:", e);
+      }
 
       try {
         let token: string | null = null;
@@ -132,13 +135,11 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
     if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
       try {
         await scannerRef.current.stop();
-        setIsScanning(false);
       } catch (err) {
         console.error("Failed to stop scanner:", err);
       }
-    } else {
-        setIsScanning(false);
     }
+    setIsScanning(false);
   };
 
   return (
@@ -186,3 +187,4 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
 };
 
 export default QrCodeScanner;
+
