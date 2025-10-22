@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef }from "react";
 import { Html5Qrcode, type Html5QrcodeScannerState } from "html5-qrcode";
 import { useAuth } from "@/contexts/auth-context";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -46,7 +47,7 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
         setHasCameraPermission(false);
       });
   }, []);
-  
+
   // Effect to clean up scanner on unmount
   useEffect(() => {
     // This function will be called when the component unmounts.
@@ -74,12 +75,11 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({
     const qrCodeSuccessCallback = (decodedText: string) => {
         if (isProcessing) return; // Prevent multiple scans from being processed
 
-        setIsProcessing(true); // Lock processing
-
         if (scannerRef.current?.isScanning) {
             scannerRef.current.stop()
                 .then(async () => {
                     setIsScanning(false);
+                    setIsProcessing(true); // Lock processing AFTER stopping scanner
                     console.log("QR Scanner stopped successfully.");
 
                     try {
