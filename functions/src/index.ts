@@ -1,3 +1,4 @@
+
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as jwt from "jsonwebtoken";
@@ -31,7 +32,12 @@ async function assertAdmin(ctx: functions.https.CallableContext) {
   if (isEmailAdmin && !isClaimAdmin) {
     await admin.auth().setCustomUserClaims(uid, { ...(user.customClaims || {}), role: "admin", approved: true });
     await admin.auth().revokeRefreshTokens(uid);
-    return;
+    // On the first run, this will still fail because the token isn't fresh.
+    // Throw a specific error telling the user to retry.
+    throw new functions.https.HttpsError(
+      "permission-denied",
+      "Admin permissions were just updated. Please close this dialog and try again in a moment."
+    );
   }
 
   if (!isClaimAdmin && !isEmailAdmin) {
@@ -97,7 +103,7 @@ export const adminApproveUser = functions
 export const adminSetRole = functions
   .region("asia-southeast1")
   .https.onCall(async (data, ctx) => {
-    assertAdmin(ctx);
+    await assertAdmin(ctx);
     const { uid, role } = data || {};
     if (!uid || (role !== "student" && role !== "admin")) {
       throw new functions.https.HttpsError("invalid-argument", "uid and role(student|admin) required");
@@ -120,32 +126,8 @@ export const adminSetRole = functions
 export const generateQrToken = functions
   .region("asia-southeast1")
   .https.onCall(async (data, context) => {
-    // 1) Auth
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "The function must be called while authenticated."
-      );
-    }
-
-    // Admin check: claim OR email allowlist
-    const adminUser = await admin.auth().getUser(context.auth.uid);
-    const isClaimAdmin = adminUser.customClaims?.["role"] === "admin";
-    const isEmailAdmin = ADMIN_EMAILS.includes(adminUser.email || "");
-
-    console.log("generateQrToken caller:", {
-      uid: context.auth.uid,
-      email: adminUser.email,
-      isClaimAdmin,
-      isEmailAdmin,
-    });
-
-    if (!isClaimAdmin && !isEmailAdmin) {
-      throw new functions.https.HttpsError(
-        "permission-denied",
-        "The function must be called by an admin user."
-      );
-    }
+    // 1) Auth & Admin Check
+    await assertAdmin(context);
 
     // 2) Input
     const { sessionId, type } = data || {};
@@ -212,9 +194,10 @@ export const scanQr = functions
       callingUser.customClaims?.role !== "admin"
     ) {
       try {
-        await admin.auth().setCustomUserClaims(uid, { role: "admin" });
+        await admin.auth().setCustomUserClaims(uid, { ...(callingUser.customClaims || {}), role: "admin" });
+        await admin.auth().revokeRefreshTokens(uid);
       } catch (e) {
-        console.error("Failed to set admin claim for", callingUser.email, e);
+        console.error("Failed to self-heal admin claim for", callingUser.email, e);
       }
     }
 
@@ -340,4 +323,3 @@ export const scanQr = functions
       };
     }
   });
-

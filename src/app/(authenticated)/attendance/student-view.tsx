@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,19 +7,25 @@ import { useAuth } from "@/contexts/auth-context";
 import { toast } from "@/hooks/use-toast";
 import { getStudentAttendance } from "@/lib/firebase/firestore-service";
 import type { AttendanceRecord } from "@/lib/types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CheckCircle, List, ScanLine } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 
 const StudentView = () => {
   const { currentUser } = useAuth();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Track last scan
-  const [lastScan, setLastScan] = useState<null | {
+  // Track last scan result
+  const [lastScanResult, setLastScanResult] = useState<{
     message: string;
     sessionId: string;
     stationId: string;
     type: "signIn" | "signOut";
-  }>(null);
+  } | null>(null);
 
   const fetchAttendance = async () => {
     if (!currentUser) return;
@@ -39,17 +46,20 @@ const StudentView = () => {
   };
 
   useEffect(() => {
-    fetchAttendance();
+    if (currentUser) {
+      fetchAttendance();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
-  // ✅ Called when QR scan succeeded
+  // Called when QR scan succeeded
   const onScanSuccess = (data: any) => {
-    setLastScan(data);
+    setLastScanResult(data); // Store the full result object
     toast({ title: "Success", description: data.message });
-    fetchAttendance();
+    fetchAttendance(); // Refresh the attendance list
   };
 
-  // ❌ Called when QR scan failed
+  // Called when QR scan failed
   const onScanError = (msg: string) => {
     toast({
       title: "Scan Failed",
@@ -59,65 +69,93 @@ const StudentView = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Attendance Scanner</h2>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-1 space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><ScanLine className="mr-2 h-6 w-6"/> Attendance Scanner</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <QrCodeScanner onScanSuccess={onScanSuccess} onScanError={onScanError} />
+          </CardContent>
+        </Card>
 
-      {/* ✅ Show banner when last scan exists */}
-      {lastScan && (
-        <div className="p-4 rounded-lg bg-green-100 border border-green-400 text-green-800">
-          <p className="font-semibold">{lastScan.message}</p>
-          <p>
-            Station: <span className="font-mono">{lastScan.stationId}</span>{" "}
-            <br />
-            Action: <span className="capitalize">{lastScan.type}</span>
-          </p>
-        </div>
-      )}
+        {lastScanResult && (
+          <Card className="bg-green-50 border-green-200">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center text-green-800">
+                <CheckCircle className="mr-2 h-5 w-5"/>
+                Last Scan Result
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-green-700 space-y-2">
+              <p className="font-semibold">{lastScanResult.message}</p>
+              <p>
+                <strong>Station:</strong> <span className="font-mono bg-green-100 px-1 py-0.5 rounded">{lastScanResult.stationId}</span>
+              </p>
+              <p>
+                <strong>Action:</strong> <span className="capitalize">{lastScanResult.type}</span>
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
-      <QrCodeScanner onScanSuccess={onScanSuccess} onScanError={onScanError} />
-
-      <h3 className="text-lg font-medium">Your Attendance Records</h3>
-
-      {loading ? (
-        <p>Loading attendance records...</p>
-      ) : attendance.length === 0 ? (
-        <p>No attendance records found.</p>
-      ) : (
-        <table className="w-full border text-sm">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 border">Session</th>
-              <th className="p-2 border">Station</th>
-              <th className="p-2 border">Sign-in</th>
-              <th className="p-2 border">Sign-out</th>
-              <th className="p-2 border">Duration</th>
-            </tr>
-          </thead>
-          <tbody>
-            {attendance.map((rec) => (
-              <tr key={rec.id}>
-                <td className="p-2 border">{rec.sessionId}</td>
-                <td className="p-2 border">{rec.stationId}</td>
-                <td className="p-2 border">
-                  {rec.signInTime
-                    ? rec.signInTime.toLocaleString()
-                    : "—"}
-                </td>
-                <td className="p-2 border">
-                  {rec.signOutTime
-                    ? rec.signOutTime.toLocaleString()
-                    : "—"}
-                </td>
-                <td className="p-2 border">
-                  {rec.durationMs
-                    ? `${Math.round(rec.durationMs / 60000)} min`
-                    : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <div className="lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center"><List className="mr-2 h-6 w-6"/>Your Attendance History</CardTitle>
+            <CardDescription>A log of all your recorded sign-ins and sign-outs.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : attendance.length === 0 ? (
+              <p className="text-muted-foreground text-center py-10">No attendance records found.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Station</TableHead>
+                    <TableHead>Sign In</TableHead>
+                    <TableHead>Sign Out</TableHead>
+                    <TableHead className="text-right">Duration</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {attendance.map((rec) => (
+                    <TableRow key={rec.id}>
+                      <TableCell>
+                        <div className="font-medium">{rec.stationId}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{rec.sessionId}</div>
+                      </TableCell>
+                      <TableCell>
+                        {rec.signInTime
+                          ? format(rec.signInTime, "PPp")
+                          : "—"}
+                      </TableCell>
+                       <TableCell>
+                        {rec.signOutTime
+                          ? format(rec.signOutTime, "p")
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {rec.durationMs != null
+                          ? `${Math.round(rec.durationMs / 60000)} min`
+                          : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };
