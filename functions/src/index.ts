@@ -265,7 +265,9 @@ export const scanQr = functions
         .doc(`${sessionId}_${uid}`);
       const attendanceDoc = await transaction.get(attendanceRef);
       const serverTime = admin.firestore.FieldValue.serverTimestamp();
-      const stationDoc = await db.collection("sessions").doc(sessionId).get();
+      
+      const stationDocRef = db.collection("sessions").doc(sessionId);
+      const stationDoc = await transaction.get(stationDocRef); // Use transaction.get
       const stationData = stationDoc.data();
       const stationName = stationData?.stationName || "Unknown Station";
       const stationId = stationData?.stationId || "unknown";
@@ -282,7 +284,7 @@ export const scanQr = functions
           {
             sessionId,
             stationId,
-            stationName,
+            stationName, // Ensure stationName is saved here
             userId: uid,
             userEmail,
             signInTime: serverTime,
@@ -319,6 +321,7 @@ export const scanQr = functions
         transaction.update(attendanceRef, {
           signOutTime: serverTime,
           durationMs,
+          stationName, // Also update on sign-out just in case
         });
 
         return {
