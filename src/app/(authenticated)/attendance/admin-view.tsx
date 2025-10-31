@@ -222,6 +222,7 @@ export default function AdminAttendanceView() {
     const headers = [
       "Session ID",
       "Station Name",
+      "Location",
       "Session Date",
       "Student Email",
       "Sign In Time",
@@ -229,17 +230,21 @@ export default function AdminAttendanceView() {
       "Duration (Minutes)",
     ];
 
-    const rows = sessions.flatMap(session =>
-      session.attendance.map(att => [
+    const rows = sessions.flatMap(session => {
+      const station = stations.find(s => s.id === session.stationId);
+      const location = station ? station.location : "N/A";
+      
+      return session.attendance.map(att => [
         session.id,
         session.stationName,
+        location,
         format(new Date(session.sessionDate), "yyyy-MM-dd"),
         att.userEmail,
         att.signInTime ? format(new Date(att.signInTime), "yyyy-MM-dd HH:mm:ss") : "N/A",
         att.signOutTime ? format(new Date(att.signOutTime), "yyyy-MM-dd HH:mm:ss") : "N/A",
         att.durationMs != null ? (att.durationMs / 60000).toFixed(2) : "N/A",
-      ])
-    );
+      ]);
+    });
 
     let csvContent = "data:text/csv;charset=utf-8," 
       + headers.join(",") + "\n" 
@@ -461,3 +466,5 @@ export default function AdminAttendanceView() {
     </div>
   );
 }
+
+    
