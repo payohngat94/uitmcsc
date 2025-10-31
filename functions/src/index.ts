@@ -295,6 +295,7 @@ export const scanQr = functions
           message: "Sign-in successful.",
           sessionId,
           stationId,
+          stationName,
           type: "signIn",
         };
       } else {
@@ -324,6 +325,7 @@ export const scanQr = functions
           message: "Sign-out successful.",
           sessionId,
           stationId,
+          stationName,
           type: "signOut",
         };
       }
