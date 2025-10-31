@@ -1,37 +1,111 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
 import QrCodeScanner from "./qr-code-scanner";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "@/hooks/use-toast";
-import { getStudentAttendance } from "@/lib/firebase/firestore-service";
-import type { AttendanceRecord } from "@/lib/types";
+import { getStudentAttendance, getRotationForSession } from "@/lib/firebase/firestore-service";
+import type { AttendanceRecord, Rotation } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, List, ScanLine } from "lucide-react";
+import { CheckCircle, List, ScanLine, Circle, Check } from "lucide-react";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "@/lib/firebase/config";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 
 
 const functions = getFunctions(app, "asia-southeast1");
 const scanQrCallable = httpsCallable(functions, "scanQr");
 
 
+// --- New Dialog Component ---
+interface StationChecklistDialogProps {
+  isOpen: boolean;
+  rotation: Rotation | null;
+  onConfirm: (practicedStations: string[]) => void;
+  onCancel: () => void;
+}
+
+function StationChecklistDialog({ isOpen, rotation, onConfirm, onCancel }: StationChecklistDialogProps) {
+  const [selectedStations, setSelectedStations] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Reset selection when dialog is opened
+    if (isOpen) {
+      setSelectedStations([]);
+    }
+  }, [isOpen]);
+  
+  if (!rotation) return null;
+
+  const handleToggleStation = (stationName: string, isChecked: boolean) => {
+    setSelectedStations(prev =>
+      isChecked ? [...prev, stationName] : prev.filter(name => name !== stationName)
+    );
+  };
+
+  const handleConfirm = () => {
+    onConfirm(selectedStations);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Practiced Stations Checklist</DialogTitle>
+          <DialogDescription>
+            Please select the stations you practiced in the "{rotation.name}" rotation.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-3">
+          <Label>Stations:</Label>
+          {rotation.stationNames.map(stationName => (
+            <div key={stationName} className="flex items-center space-x-2">
+              <Checkbox
+                id={stationName}
+                checked={selectedStations.includes(stationName)}
+                onCheckedChange={(checked) => handleToggleStation(stationName, !!checked)}
+              />
+              <label htmlFor={stationName} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {stationName}
+              </label>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button onClick={handleConfirm}>Confirm Sign-Out</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+// --- Main Student View ---
 const StudentView = () => {
   const { currentUser } = useAuth();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Track last scan result
+  // State for the new sign-out flow
+  const [showChecklist, setShowChecklist] = useState(false);
+  const [signOutData, setSignOutData] = useState<{ token: string; rotation: Rotation } | null>(null);
+
   const [lastScanResult, setLastScanResult] = useState<{
     message: string;
     sessionId: string;
-    stationId: string;
     stationName: string;
     type: "signIn" | "signOut";
+    practicedStations?: string[];
   } | null>(null);
 
   const fetchAttendance = async () => {
@@ -59,37 +133,64 @@ const StudentView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
-  // Called when QR scan succeeded
   const handleScanSuccess = async (decodedText: string) => {
     let token: string | null = null;
     try {
-        // Handle both raw tokens and URLs with tokens
-        try {
-            const url = new URL(decodedText);
-            token = url.searchParams.get("token");
-        } catch {
-            token = decodedText;
-        }
+        const url = new URL(decodedText);
+        token = url.searchParams.get("token");
+    } catch {
+        token = decodedText;
+    }
 
-        if (!token) {
-            throw new Error("Invalid QR code format. No token found.");
-        }
-        
+    if (!token) throw new Error("Invalid QR code format. No token found.");
+    
+    // Decode token to check type without verifying signature
+    const payload = JSON.parse(atob(token.split('.')[1]));
+
+    if (payload.type === 'signIn') {
         const res: any = await scanQrCallable({ token });
-        const data = res.data;
-
-        setLastScanResult(data); 
-        toast({ title: "Success", description: data.message });
-        await fetchAttendance(); // Refresh the attendance list
-
-    } catch (err: any) {
-        const msg = err.details?.message || err.message || "An unknown error occurred during processing.";
-        handleScanError(msg);
-        throw err; // Re-throw to inform the scanner
+        setLastScanResult(res.data); 
+        toast({ title: "Success", description: res.data.message });
+        await fetchAttendance();
+    } else if (payload.type === 'signOut') {
+        // Fetch rotation details for the checklist
+        const rotation = await getRotationForSession(payload.sessionId);
+        if (!rotation) {
+             toast({ variant: "destructive", title: "Error", description: "Could not find session details." });
+             return;
+        }
+        setSignOutData({ token, rotation });
+        setShowChecklist(true);
     }
   };
 
-  // Called when QR scan failed
+  const handleConfirmSignOut = async (practicedStations: string[]) => {
+    if (!signOutData) return;
+    try {
+      const res: any = await scanQrCallable({
+        token: signOutData.token,
+        practicedStations: practicedStations
+      });
+
+      setLastScanResult({ ...res.data, practicedStations });
+      toast({ title: "Success", description: res.data.message });
+      await fetchAttendance();
+    } catch (err: any) {
+       const msg = err.details?.message || err.message || "An unknown error occurred during sign-out.";
+       handleScanError(msg);
+       throw err;
+    } finally {
+      setShowChecklist(false);
+      setSignOutData(null);
+    }
+  };
+
+  const handleCancelSignOut = () => {
+    setShowChecklist(false);
+    setSignOutData(null);
+    toast({ variant: "default", title: "Sign-Out Canceled" });
+  };
+
   const handleScanError = (msg: string) => {
     toast({
       title: "Scan Failed",
@@ -100,6 +201,13 @@ const StudentView = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <StationChecklistDialog
+        isOpen={showChecklist}
+        rotation={signOutData?.rotation ?? null}
+        onConfirm={handleConfirmSignOut}
+        onCancel={handleCancelSignOut}
+      />
+
       <div className="lg:col-span-1 space-y-6">
         <Card>
           <CardHeader>
@@ -126,6 +234,14 @@ const StudentView = () => {
               <p>
                 <strong>Action:</strong> <span className="capitalize">{lastScanResult.type}</span>
               </p>
+              {lastScanResult.type === 'signOut' && lastScanResult.practicedStations && lastScanResult.practicedStations.length > 0 && (
+                  <div>
+                      <strong>Practiced:</strong>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                          {lastScanResult.practicedStations.map(s => <Badge key={s} variant="secondary">{s}</Badge>)}
+                      </div>
+                  </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -150,9 +266,10 @@ const StudentView = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Station</TableHead>
+                    <TableHead>Rotation</TableHead>
                     <TableHead>Sign In</TableHead>
                     <TableHead>Sign Out</TableHead>
+                    <TableHead>Practiced Stations</TableHead>
                     <TableHead className="text-right">Duration</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -172,6 +289,13 @@ const StudentView = () => {
                         {rec.signOutTime
                           ? format(rec.signOutTime, "p")
                           : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {rec.practicedStations && rec.practicedStations.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                                {rec.practicedStations.map(ps => <Badge key={ps} variant="outline">{ps}</Badge>)}
+                            </div>
+                        ) : rec.signOutTime ? "None" : "—"}
                       </TableCell>
                       <TableCell className="text-right">
                         {rec.durationMs != null

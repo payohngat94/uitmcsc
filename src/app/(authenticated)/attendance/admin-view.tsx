@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -29,6 +30,7 @@ import QRCodeDisplay from "./qr-code-display";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 
 
 // --- Form Schemas ---
@@ -235,6 +237,7 @@ export default function AdminAttendanceView() {
       "Sign In Time",
       "Sign Out Time",
       "Duration (Minutes)",
+      "Practiced Stations",
     ];
 
     const rows = sessions.flatMap(session => {
@@ -250,6 +253,7 @@ export default function AdminAttendanceView() {
         att.signInTime ? format(new Date(att.signInTime), "yyyy-MM-dd HH:mm:ss") : "N/A",
         att.signOutTime ? format(new Date(att.signOutTime), "yyyy-MM-dd HH:mm:ss") : "N/A",
         att.durationMs != null ? (att.durationMs / 60000).toFixed(2) : "N/A",
+        att.practicedStations ? `"${att.practicedStations.join(", ")}"` : "N/A",
       ]);
     });
 
@@ -459,6 +463,7 @@ export default function AdminAttendanceView() {
                           <TableHead>Student Email</TableHead>
                           <TableHead>Sign In</TableHead>
                           <TableHead>Sign Out</TableHead>
+                          <TableHead>Practiced Stations</TableHead>
                           <TableHead className="text-right">Duration</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -468,10 +473,17 @@ export default function AdminAttendanceView() {
                             <TableCell>{att.userEmail}</TableCell>
                             <TableCell>{att.signInTime ? formatDistanceToNow(new Date(att.signInTime), { addSuffix: true }) : "N/A"}</TableCell>
                             <TableCell>{att.signOutTime ? formatDistanceToNow(new Date(att.signOutTime), { addSuffix: true }) : "N/A"}</TableCell>
+                            <TableCell>
+                                {att.practicedStations && att.practicedStations.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                        {att.practicedStations.map(ps => <Badge key={ps} variant="secondary">{ps}</Badge>)}
+                                    </div>
+                                ) : att.signOutTime ? "None" : "--"}
+                            </TableCell>
                             <TableCell className="text-right">{att.durationMs != null ? `${(att.durationMs / 60000).toFixed(1)} mins` : "--"}</TableCell>
                           </TableRow>
                         )) : (
-                            <TableRow><TableCell colSpan={4} className="text-center h-24">No attendance records for this session yet.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={5} className="text-center h-24">No attendance records for this session yet.</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>

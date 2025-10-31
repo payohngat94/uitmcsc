@@ -127,6 +127,7 @@ export type AttendanceRecord = {
   signInTime: Timestamp | Date | null;
   signOutTime: Timestamp | Date | null;
   durationMs: number | null; // Duration in milliseconds
+  practicedStations?: string[]; // New field for practiced stations
 };
 
 

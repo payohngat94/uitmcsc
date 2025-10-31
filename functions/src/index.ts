@@ -1,4 +1,5 @@
 
+
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as jwt from "jsonwebtoken";
@@ -202,7 +203,7 @@ export const scanQr = functions
     }
 
     // Input
-    const { token } = data || {};
+    const { token, practicedStations } = data || {}; // <-- practicedStations added
     if (!token) {
       throw new functions.https.HttpsError(
         "invalid-argument",
@@ -290,6 +291,7 @@ export const scanQr = functions
             signInTime: serverTime,
             signOutTime: null,
             durationMs: null,
+            practicedStations: [], // Initialize as empty array on sign-in
           },
           { merge: true }
         );
@@ -300,7 +302,7 @@ export const scanQr = functions
           stationName,
           type: "signIn",
         };
-      } else {
+      } else { // type === 'signOut'
         if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
           throw new functions.https.HttpsError(
             "failed-precondition",
@@ -322,6 +324,7 @@ export const scanQr = functions
           signOutTime: serverTime,
           durationMs,
           stationName, // Also update on sign-out just in case
+          practicedStations: Array.isArray(practicedStations) ? practicedStations : [], // Save the practiced stations
         });
 
         return {

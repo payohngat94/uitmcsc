@@ -637,6 +637,24 @@ export async function getStudentAttendance(userId: string): Promise<AttendanceRe
     });
 }
 
+export async function getRotationForSession(sessionId: string): Promise<Rotation | null> {
+    const sessionRef = doc(db, 'sessions', sessionId);
+    const sessionSnap = await getDoc(sessionRef);
+    if (!sessionSnap.exists()) return null;
+    
+    const stationId = sessionSnap.data().stationId; // This is the Rotation ID
+    const rotationRef = doc(db, 'rotations', stationId);
+    const rotationSnap = await getDoc(rotationRef);
+    if (!rotationSnap.exists()) return null;
+
+    return {
+        id: rotationSnap.id,
+        ...rotationSnap.data()
+    } as Rotation;
+}
+
+
+
 // --- Deprecated Learning Material functions ---
 const materialsCollectionRef = collection(db, 'learningMaterials');
 
