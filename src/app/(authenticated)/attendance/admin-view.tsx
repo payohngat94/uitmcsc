@@ -20,24 +20,26 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "@/lib/firebase/config";
-import { getStations, addStation, getSessionsWithAttendance, addSession, updateSession, deleteSession } from "@/lib/firebase/firestore-service";
-import type { Station, Session, AttendanceRecord } from "@/lib/types";
+import { getRotations, addRotation, getSessionsWithAttendance, addSession, updateSession, deleteSession } from "@/lib/firebase/firestore-service";
+import type { Rotation, Session, AttendanceRecord } from "@/lib/types";
 import { format, formatDistanceToNow } from "date-fns";
 import { CalendarIcon, Clock, PlusCircle, User, Users, QrCode as QrCodeIcon, AlertCircle, Download, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import QRCodeDisplay from "./qr-code-display";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 
 // --- Form Schemas ---
-const stationSchema = z.object({
-  name: z.string().min(3, "Station name is required."),
+const rotationSchema = z.object({
+  name: z.string().min(3, "Rotation name is required."),
   location: z.string().min(3, "Location is required."),
+  stationNames: z.string().min(1, "At least one station name is required."),
 });
 
 const sessionSchema = z.object({
-  stationId: z.string().min(1, "Please select a station."),
+  stationId: z.string().min(1, "Please select a rotation."),
   sessionDate: z.date({ required_error: "Session date is required." }),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)."),
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)."),
@@ -47,10 +49,10 @@ const sessionSchema = z.object({
 export default function AdminAttendanceView() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  const [stations, setStations] = useState<Station[]>([]);
+  const [rotations, setRotations] = useState<Rotation[]>([]);
   const [sessions, setSessions] = useState<Array<Session & { attendance: AttendanceRecord[] }>>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isStationDialogOpen, setIsStationDialogOpen] = useState(false);
+  const [isRotationDialogOpen, setIsRotationDialogOpen] = useState(false);
   const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
   const [sessionToEdit, setSessionToEdit] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
@@ -60,9 +62,9 @@ export default function AdminAttendanceView() {
   const functions = getFunctions(app, 'asia-southeast1'); // Replace with your region
   const generateQrToken = httpsCallable(functions, 'generateQrToken');
 
-  const stationForm = useForm<z.infer<typeof stationSchema>>({
-    resolver: zodResolver(stationSchema),
-    defaultValues: { name: "", location: "" },
+  const rotationForm = useForm<z.infer<typeof rotationSchema>>({
+    resolver: zodResolver(rotationSchema),
+    defaultValues: { name: "", location: "", stationNames: "" },
   });
 
   const sessionForm = useForm<z.infer<typeof sessionSchema>>({
@@ -96,11 +98,11 @@ export default function AdminAttendanceView() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [fetchedStations, fetchedSessions] = await Promise.all([
-        getStations(),
+      const [fetchedRotations, fetchedSessions] = await Promise.all([
+        getRotations(),
         getSessionsWithAttendance(),
       ]);
-      setStations(fetchedStations);
+      setRotations(fetchedRotations);
       setSessions(fetchedSessions);
     } catch (error) {
       console.error(error);
@@ -114,23 +116,28 @@ export default function AdminAttendanceView() {
     fetchData();
   }, [toast]);
 
-  const handleAddStation = async (values: z.infer<typeof stationSchema>) => {
+  const handleAddRotation = async (values: z.infer<typeof rotationSchema>) => {
     try {
-      await addStation(values);
-      toast({ title: "Success", description: "New station created." });
+      const stationNamesArray = values.stationNames.split(',').map(s => s.trim()).filter(s => s);
+      await addRotation({
+          name: values.name,
+          location: values.location,
+          stationNames: stationNamesArray
+      });
+      toast({ title: "Success", description: "New rotation created." });
       fetchData();
-      setIsStationDialogOpen(false);
-      stationForm.reset();
+      setIsRotationDialogOpen(false);
+      rotationForm.reset();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to create station." });
+      toast({ variant: "destructive", title: "Error", description: "Failed to create rotation." });
     }
   };
 
   const handleSaveSession = async (values: z.infer<typeof sessionSchema>) => {
     if (!currentUser) return;
     const { stationId, sessionDate, startTime, endTime } = values;
-    const station = stations.find(s => s.id === stationId);
-    if (!station) return;
+    const rotation = rotations.find(s => s.id === stationId);
+    if (!rotation) return;
 
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
@@ -143,7 +150,7 @@ export default function AdminAttendanceView() {
 
     const sessionData = {
       stationId,
-      stationName: station.name,
+      stationName: rotation.name, // stationName is now Rotation Name
       sessionDate,
       startTime: startDateTime,
       endTime: endDateTime,
@@ -221,7 +228,7 @@ export default function AdminAttendanceView() {
 
     const headers = [
       "Session ID",
-      "Station Name",
+      "Rotation Name",
       "Location",
       "Session Date",
       "Student Email",
@@ -231,8 +238,8 @@ export default function AdminAttendanceView() {
     ];
 
     const rows = sessions.flatMap(session => {
-      const station = stations.find(s => s.id === session.stationId);
-      const location = station ? station.location : "N/A";
+      const rotation = rotations.find(s => s.id === session.stationId);
+      const location = rotation ? rotation.location : "N/A";
       
       return session.attendance.map(att => [
         session.id,
@@ -291,11 +298,11 @@ export default function AdminAttendanceView() {
               <form onSubmit={sessionForm.handleSubmit(handleSaveSession)} className="space-y-4">
                 <FormField control={sessionForm.control} name="stationId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Station</FormLabel>
+                    <FormLabel>Rotation</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select a station" /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select a rotation" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {stations.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        {rotations.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -337,19 +344,31 @@ export default function AdminAttendanceView() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isStationDialogOpen} onOpenChange={setIsStationDialogOpen}>
-          <DialogTrigger asChild><Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> New Station</Button></DialogTrigger>
+        <Dialog open={isRotationDialogOpen} onOpenChange={setIsRotationDialogOpen}>
+          <DialogTrigger asChild><Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> New Rotation</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Create a New Station</DialogTitle></DialogHeader>
-            <Form {...stationForm}>
-              <form onSubmit={stationForm.handleSubmit(handleAddStation)} className="space-y-4">
-                <FormField control={stationForm.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Station Name</FormLabel><FormControl><Input placeholder="e.g. Suturing Station" {...field} /></FormControl><FormMessage /></FormItem>
+            <DialogHeader><DialogTitle>Create a New Rotation</DialogTitle></DialogHeader>
+            <Form {...rotationForm}>
+              <form onSubmit={rotationForm.handleSubmit(handleAddRotation)} className="space-y-4">
+                <FormField control={rotationForm.control} name="name" render={({ field }) => (
+                  <FormItem><FormLabel>Rotation Name</FormLabel><FormControl><Input placeholder="e.g. Emergency Medicine Year 5" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
-                <FormField control={stationForm.control} name="location" render={({ field }) => (
+                <FormField control={rotationForm.control} name="stationNames" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Station Names</FormLabel>
+                        <FormControl>
+                            <Textarea placeholder="e.g. Suturing, Basic Airway, IV Cannulation" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                            Enter multiple station names separated by a comma.
+                        </FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                )}/>
+                <FormField control={rotationForm.control} name="location" render={({ field }) => (
                   <FormItem><FormLabel>Location</FormLabel><FormControl><Input placeholder="e.g. Sim Lab B" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
-                <DialogFooter><Button type="submit">Create Station</Button></DialogFooter>
+                <DialogFooter><Button type="submit">Create Rotation</Button></DialogFooter>
               </form>
             </Form>
           </DialogContent>

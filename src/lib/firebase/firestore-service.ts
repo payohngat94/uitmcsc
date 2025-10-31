@@ -31,7 +31,7 @@ import type {
   UserStatus,
   Topic,
   ContentItem,
-  Station,
+  Rotation,
   Session,
   AttendanceRecord
 } from '@/lib/types';
@@ -530,26 +530,26 @@ export async function deleteInventoryItem(id: string): Promise<void>
 
 
 // --- ATTENDANCE TRACKING SERVICE ---
-const stationsCollectionRef = collection(db, 'stations');
+const rotationsCollectionRef = collection(db, 'rotations');
 const sessionsCollectionRef = collection(db, 'sessions');
 const attendanceLogsCollectionRef = collection(db, 'attendanceLogs');
 
-export async function addStation(stationData: Omit<Station, 'id' | 'createdAt'>): Promise<string> {
-  const docRef = await addDoc(stationsCollectionRef, {
-    ...stationData,
+export async function addRotation(rotationData: Omit<Rotation, 'id' | 'createdAt'>): Promise<string> {
+  const docRef = await addDoc(rotationsCollectionRef, {
+    ...rotationData,
     createdAt: serverTimestamp(),
   });
   return docRef.id;
 }
 
-export async function getStations(): Promise<Station[]> {
-  const q = query(stationsCollectionRef, orderBy('name', 'asc'));
+export async function getRotations(): Promise<Rotation[]> {
+  const q = query(rotationsCollectionRef, orderBy('name', 'asc'));
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
     createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
-  } as Station));
+  } as Rotation));
 }
 
 export async function addSession(sessionData: Omit<Session, 'id' | 'createdAt'>): Promise<string> {
@@ -655,3 +655,5 @@ export async function getLearningMaterials(): Promise<LearningMaterial[]> {
     throw new Error(`Failed to fetch learning materials. ${(error as Error).message}`);
   }
 }
+
+    

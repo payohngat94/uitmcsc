@@ -85,17 +85,21 @@ export type LearningMaterial = {
 
 // --- ATTENDANCE SYSTEM TYPES ---
 
-export type Station = {
+export type Rotation = {
   id: string;
-  name: string;
+  name: string; // This is the Rotation Name, e.g., "Emergency Medicine Year 5"
   location: string;
+  stationNames: string[]; // List of station names within this rotation
   createdAt: Timestamp | Date;
 };
 
+// Station is being deprecated in favor of Rotation
+export type Station = Rotation;
+
 export type Session = {
   id: string;
-  stationId: string;
-  stationName: string; // Denormalized for easier display
+  stationId: string; // This will now be the Rotation ID
+  stationName: string; // This is the Rotation Name
   sessionDate: Timestamp | Date;
   startTime: Timestamp | Date;
   endTime: Timestamp | Date;
@@ -117,7 +121,7 @@ export type AttendanceRecord = {
   id: string;
   sessionId: string;
   stationId: string;
-  stationName: string; // Denormalized
+  stationName: string; // Denormalized Rotation Name
   userId: string;
   userEmail: string;
   signInTime: Timestamp | Date | null;
@@ -173,3 +177,5 @@ export interface AppUser extends Omit<FirebaseUser, 'providerData'> {
   status: UserStatus;
   studentOrStaffId?: string;
 }
+
+    
