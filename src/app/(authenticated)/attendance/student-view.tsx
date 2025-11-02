@@ -282,12 +282,12 @@ const StudentView = () => {
                       </TableCell>
                       <TableCell>
                         {rec.signInTime
-                          ? format(rec.signInTime, "PPp")
+                          ? format(rec.signInTime as Date, "PPp")
                           : "—"}
                       </TableCell>
                        <TableCell>
                         {rec.signOutTime
-                          ? format(rec.signOutTime, "p")
+                          ? format(rec.signOutTime as Date, "p")
                           : "—"}
                       </TableCell>
                       <TableCell>
@@ -315,3 +315,5 @@ const StudentView = () => {
 };
 
 export default StudentView;
+
+    
