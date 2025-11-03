@@ -203,7 +203,7 @@ export const scanQr = functions
     }
 
     // Input
-    const { token, practicedStations } = data || {}; // <-- practicedStations added
+    const { token, practicedStations, location } = data || {}; 
     if (!token) {
       throw new functions.https.HttpsError(
         "invalid-argument",
@@ -254,23 +254,35 @@ export const scanQr = functions
          throw new functions.https.HttpsError("deadline-exceeded", "This QR code has expired.");
       }
 
-      // b. Fetch session document
+      // b. Fetch session document and its linked rotation name
       const sessionDocRef = db.collection("sessions").doc(sessionId);
       const sessionDoc = await transaction.get(sessionDocRef);
+
       if (!sessionDoc.exists) {
         throw new functions.https.HttpsError("not-found", "Session details could not be found.");
       }
 
-      // c. Fetch rotation document (if available)
-      let rotationName = "Unknown Rotation";
+      // sessionDoc must have a rotationId field to link to rotations
       const rotationId = sessionDoc.data()?.rotationId || sessionDoc.data()?.stationId;
-      if (rotationId) {
-        const rotationRef = db.collection("rotations").doc(rotationId);
+      const rotationRef = rotationId ? db.collection("rotations").doc(rotationId) : null;
+      let rotationName = "Unknown Rotation";
+      let rotationLocations: string[] = [];
+
+      if (rotationRef) {
         const rotationDoc = await transaction.get(rotationRef);
         if (rotationDoc.exists) {
           rotationName = rotationDoc.data()?.name || "Unknown Rotation";
+          rotationLocations = rotationDoc.data()?.locations || [];
         }
       }
+      
+      const chosenLocation =
+        location && typeof location === "string"
+            ? location
+            : rotationLocations.length > 0
+            ? rotationLocations[0]
+            : null;
+
 
       // d. Fetch attendance log
       const attendanceRef = db.collection("attendanceLogs").doc(`${sessionId}_${uid}`);
@@ -300,9 +312,10 @@ export const scanQr = functions
           signOutTime: null,
           durationMs: null,
           practicedStations: [],
+          location: chosenLocation,
         }, { merge: true });
 
-        return { message: "Sign-in successful.", sessionId, stationId, stationName, type: "signIn" };
+        return { message: "Sign-in successful.", sessionId, stationId, stationName, type: "signIn", location: chosenLocation };
       } else {
         if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
           throw new functions.https.HttpsError("failed-precondition", "You must sign in before you can sign out.");
@@ -318,14 +331,10 @@ export const scanQr = functions
           : [];
 
         transaction.set(attendanceRef, {
-          sessionId,
-          stationId,
-          stationName,
-          userId: uid,
-          userEmail,
           signOutTime: admin.firestore.FieldValue.serverTimestamp(),
           durationMs,
           practicedStations: finalPracticedStations,
+          location: chosenLocation,
         }, { merge: true });
 
         return {
@@ -335,17 +344,12 @@ export const scanQr = functions
           stationName,
           type: "signOut",
           practicedStations: finalPracticedStations,
+          location: chosenLocation,
         };
       }
     });
 
     return txResult;
   });
-    
-
-
-
-
-
 
 
