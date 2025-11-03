@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -20,26 +19,17 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "@/lib/firebase/config";
-import { getRotations, addRotation, getSessionsWithAttendance, addSession, updateSession, deleteSession } from "@/lib/firebase/firestore-service";
+import { getRotations, getSessionsWithAttendance, addSession, updateSession, deleteSession } from "@/lib/firebase/firestore-service";
 import type { Rotation, Session, AttendanceRecord } from "@/lib/types";
 import { format, formatDistanceToNow } from "date-fns";
-import { CalendarIcon, Clock, PlusCircle, User, Users, QrCode as QrCodeIcon, AlertCircle, Download, MoreVertical, Edit, Trash2, MapPin } from "lucide-react";
+import { CalendarIcon, Clock, PlusCircle, User, Users, QrCode as QrCodeIcon, AlertCircle, Download, MoreVertical, Edit, Trash2, MapPin, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import QRCodeDisplay from "./qr-code-display";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { FormDescription } from "@/components/ui/form";
-
+import { ManageRotationsDialog } from "./manage-rotations-dialog";
 
 // --- Form Schemas ---
-const rotationSchema = z.object({
-  name: z.string().min(3, "Rotation name is required."),
-  locations: z.string().min(3, "At least one location is required."),
-  stationNames: z.string().min(1, "At least one station name is required."),
-});
-
 const sessionSchema = z.object({
   stationId: z.string().min(1, "Please select a rotation."),
   sessionDate: z.date({ required_error: "Session date is required." }),
@@ -54,7 +44,7 @@ export default function AdminAttendanceView() {
   const [rotations, setRotations] = useState<Rotation[]>([]);
   const [sessions, setSessions] = useState<Array<Session & { attendance: AttendanceRecord[] }>>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRotationDialogOpen, setIsRotationDialogOpen] = useState(false);
+  const [isManageRotationsOpen, setIsManageRotationsOpen] = useState(false);
   const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
   const [sessionToEdit, setSessionToEdit] = useState<Session | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
@@ -63,11 +53,6 @@ export default function AdminAttendanceView() {
 
   const functions = getFunctions(app, 'asia-southeast1'); // Replace with your region
   const generateQrToken = httpsCallable(functions, 'generateQrToken');
-
-  const rotationForm = useForm<z.infer<typeof rotationSchema>>({
-    resolver: zodResolver(rotationSchema),
-    defaultValues: { name: "", locations: "", stationNames: "" },
-  });
 
   const sessionForm = useForm<z.infer<typeof sessionSchema>>({
     resolver: zodResolver(sessionSchema),
@@ -118,23 +103,6 @@ export default function AdminAttendanceView() {
     fetchData();
   }, [toast]);
 
-  const handleAddRotation = async (values: z.infer<typeof rotationSchema>) => {
-    try {
-      const stationNamesArray = values.stationNames.split(',').map(s => s.trim()).filter(s => s);
-      const locationsArray = values.locations.split(',').map(s => s.trim()).filter(s => s);
-      await addRotation({
-          name: values.name,
-          locations: locationsArray,
-          stationNames: stationNamesArray
-      });
-      toast({ title: "Success", description: "New rotation created." });
-      fetchData();
-      setIsRotationDialogOpen(false);
-      rotationForm.reset();
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to create rotation." });
-    }
-  };
 
   const handleSaveSession = async (values: z.infer<typeof sessionSchema>) => {
     if (!currentUser) return;
@@ -361,42 +329,16 @@ export default function AdminAttendanceView() {
             </Form>
           </DialogContent>
         </Dialog>
-
-        <Dialog open={isRotationDialogOpen} onOpenChange={setIsRotationDialogOpen}>
-          <DialogTrigger asChild><Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" /> New Rotation</Button></DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Create a New Rotation</DialogTitle></DialogHeader>
-            <Form {...rotationForm}>
-              <form onSubmit={rotationForm.handleSubmit(handleAddRotation)} className="space-y-4">
-                <FormField control={rotationForm.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Rotation Name</FormLabel><FormControl><Input placeholder="e.g. Emergency Medicine Year 5" {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <FormField control={rotationForm.control} name="stationNames" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Station Names</FormLabel>
-                        <FormControl>
-                            <Textarea placeholder="e.g. Suturing, Basic Airway, IV Cannulation" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                            Enter multiple station names separated by a comma.
-                        </FormDescription>
-                        <FormMessage />
-                    </FormItem>
-                )}/>
-                <FormField control={rotationForm.control} name="locations" render={({ field }) => (
-                  <FormItem><FormLabel>Locations</FormLabel><FormControl><Input placeholder="e.g. Sim Lab B, Ward 5A" {...field} /></FormControl>
-                  <FormDescription>
-                    Enter multiple locations separated by a comma.
-                  </FormDescription>
-                  <FormMessage />
-                  </FormItem>
-                )}/>
-                <DialogFooter><Button type="submit">Create Rotation</Button></DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
         
+        <Button variant="outline" onClick={() => setIsManageRotationsOpen(true)}>
+            <List className="mr-2 h-4 w-4" /> Manage Rotations
+        </Button>
+        <ManageRotationsDialog
+            isOpen={isManageRotationsOpen}
+            onOpenChange={setIsManageRotationsOpen}
+            onRotationsUpdate={fetchData} // Re-fetch all data when rotations change
+        />
+
         <Button variant="outline" onClick={handleExportCsv}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
         </Button>

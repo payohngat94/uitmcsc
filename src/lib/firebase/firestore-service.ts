@@ -542,6 +542,17 @@ export async function addRotation(rotationData: Omit<Rotation, 'id' | 'createdAt
   return docRef.id;
 }
 
+export async function updateRotation(rotationId: string, rotationData: Partial<Omit<Rotation, 'id' | 'createdAt'>>): Promise<void> {
+  const rotationRef = doc(db, 'rotations', rotationId);
+  await updateDoc(rotationRef, rotationData);
+}
+
+export async function deleteRotation(rotationId: string): Promise<void> {
+  // Optional: Add logic to check if this rotation is used in any sessions before deleting
+  const rotationRef = doc(db, 'rotations', rotationId);
+  await deleteDoc(rotationRef);
+}
+
 export async function getRotations(): Promise<Rotation[]> {
   const q = query(rotationsCollectionRef, orderBy('name', 'asc'));
   const querySnapshot = await getDocs(q);
