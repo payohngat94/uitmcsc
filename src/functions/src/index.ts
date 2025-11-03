@@ -320,13 +320,11 @@ export const scanQr = functions
           ?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
         
-        const stationsToSave = Array.isArray(practicedStations) ? practicedStations : [];
-
         transaction.update(attendanceRef, {
           signOutTime: serverTime,
           durationMs,
           stationName, // Also update on sign-out just in case
-          practicedStations: stationsToSave,
+          practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
         });
 
         return {
@@ -335,7 +333,8 @@ export const scanQr = functions
           stationId,
           stationName,
           type: "signOut",
-          practicedStations: stationsToSave, 
+          // Return the same array to the client for immediate UI feedback.
+          practicedStations: Array.isArray(practicedStations) ? practicedStations : [], 
         };
       }
     });
