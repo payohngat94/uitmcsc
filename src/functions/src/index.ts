@@ -320,6 +320,7 @@ export const scanQr = functions
           ?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
         
+        // ** THE DEFINITIVE FIX **
         const updateData = {
             signOutTime: serverTime,
             durationMs,
