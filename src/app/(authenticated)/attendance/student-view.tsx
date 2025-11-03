@@ -9,7 +9,7 @@ import { getStudentAttendance, getRotationForSession } from "@/lib/firebase/fire
 import type { AttendanceRecord, Rotation } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, List, ScanLine, Circle, Check } from "lucide-react";
+import { CheckCircle, List, ScanLine } from "lucide-react";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getFunctions, httpsCallable } from "firebase/functions";

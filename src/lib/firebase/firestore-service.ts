@@ -548,7 +548,7 @@ export async function getRotations(): Promise<Rotation[]> {
   return querySnapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
-    createdAt: (doc.data().createdAt as Timestamp)?.toDate(),
+    createdAt: (doc.data().createdAt as Timestamp).toDate(),
   } as Rotation));
 }
 
@@ -642,15 +642,15 @@ export async function getRotationForSession(sessionId: string): Promise<Rotation
     const sessionSnap = await getDoc(sessionRef);
     if (!sessionSnap.exists()) return null;
     
-    const stationId = sessionSnap.data().stationId; // This is the Rotation ID
-    if (!stationId) return null;
+    const rotationId = sessionSnap.data().stationId; // This is the Rotation ID
+    if (!rotationId) return null;
 
-    const rotationRef = doc(db, 'rotations', stationId);
+    const rotationRef = doc(db, 'rotations', rotationId);
     const rotationSnap = await getDoc(rotationRef);
     if (!rotationSnap.exists()) return null;
 
     const data = rotationSnap.data();
-    // Manually convert Timestamp to Date to make it serializable
+    // Manually convert Timestamp to Date to make it serializable for the client
     const serializableData = {
         id: rotationSnap.id,
         name: data.name,

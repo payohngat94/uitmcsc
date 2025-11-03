@@ -8,7 +8,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -30,6 +30,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { FormDescription } from "@/components/ui/form";
 
 
 // --- Form Schemas ---
@@ -243,6 +244,17 @@ export default function AdminAttendanceView() {
       const rotation = rotations.find(s => s.id === session.stationId);
       const location = rotation ? rotation.location : "N/A";
       
+      if (session.attendance.length === 0) {
+        return [[
+          session.id,
+          session.stationName,
+          location,
+          format(new Date(session.sessionDate), "yyyy-MM-dd"),
+          "NO ATTENDANCE",
+          "N/A", "N/A", "N/A", "N/A"
+        ]];
+      }
+
       return session.attendance.map(att => [
         session.id,
         session.stationName,
