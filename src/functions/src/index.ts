@@ -320,6 +320,7 @@ export const scanQr = functions
           ?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
 
+        // **THE FIX IS HERE:** Ensure practicedStations is included in the update.
         transaction.update(attendanceRef, {
           signOutTime: serverTime,
           durationMs,
@@ -333,11 +334,11 @@ export const scanQr = functions
           stationId,
           stationName,
           type: "signOut",
+          practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
         };
       }
     });
 
     return tx;
   });
-
     
