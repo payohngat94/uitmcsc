@@ -320,12 +320,14 @@ export const scanQr = functions
           ?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
         
-        transaction.update(attendanceRef, {
-          signOutTime: serverTime,
-          durationMs,
-          stationName, // Also update on sign-out just in case
-          practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
-        });
+        const updateData = {
+            signOutTime: serverTime,
+            durationMs,
+            stationName, // Also update on sign-out just in case
+            practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
+        };
+        
+        transaction.update(attendanceRef, updateData);
 
         return {
           message: "Sign-out successful.",
@@ -342,3 +344,4 @@ export const scanQr = functions
     return tx;
   });
     
+
