@@ -319,11 +319,6 @@ export const scanQr = functions
           : [];
 
         transaction.set(attendanceRef, {
-          sessionId,
-          stationId,
-          stationName,
-          userId: uid,
-          userEmail,
           signOutTime: admin.firestore.FieldValue.serverTimestamp(),
           durationMs,
           practicedStations: finalPracticedStations,
@@ -344,3 +339,4 @@ export const scanQr = functions
 
     return txResult;
   });
+
