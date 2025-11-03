@@ -294,23 +294,40 @@ export const scanQr = functions
       // --- SIGN OUT LOGIC ---
       else {
         if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
-          throw new functions.https.HttpsError("failed-precondition", "You must sign in before you can sign out.");
+          throw new functions.https.HttpsError(
+            "failed-precondition",
+            "You must sign in before you can sign out."
+          );
         }
         if (attendanceDoc.data()?.signOutTime) {
-          throw new functions.https.HttpsError("already-exists", "You have already signed out for this session.");
+          throw new functions.https.HttpsError(
+            "already-exists",
+            "You have already signed out for this session."
+          );
         }
 
         const signInTimestamp = attendanceDoc.data()?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
-        
-        const finalPracticedStations = Array.isArray(practicedStations) ? practicedStations : [];
-        
-        // BACKEND FIX: Use .set with { merge: true } for a safe write
-        transaction.set(attendanceRef, {
-            signOutTime: admin.firestore.FieldValue.serverTimestamp(),
-            durationMs,
-            practicedStations: finalPracticedStations,
-        }, { merge: true });
+
+        // --- FIX #1: ensure practicedStations is an array ---
+        const finalPracticedStations = Array.isArray(practicedStations)
+          ? practicedStations.filter((s) => typeof s === "string")
+          : [];
+
+        // --- FIX #2: reinclude station metadata in update ---
+        const updateData = {
+          sessionId,
+          stationId,
+          stationName,
+          userId: uid,
+          userEmail,
+          signOutTime: admin.firestore.FieldValue.serverTimestamp(),
+          durationMs,
+          practicedStations: finalPracticedStations,
+        };
+
+        // --- FIX #3: always merge for resilience ---
+        transaction.set(attendanceRef, updateData, { merge: true });
 
         return {
           message: "Sign-out successful.",
@@ -326,6 +343,7 @@ export const scanQr = functions
     return txResult;
   });
     
+
 
 
 
