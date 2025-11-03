@@ -166,6 +166,7 @@ const StudentView = () => {
   const handleConfirmSignOut = async (practicedStations: string[]) => {
     if (!signOutData) return;
     try {
+      // FRONTEND FIX: Await the callable function
       const res: any = await scanQrCallable({
         token: signOutData.token,
         practicedStations: practicedStations
@@ -173,7 +174,10 @@ const StudentView = () => {
 
       setLastScanResult({ ...res.data, practicedStations });
       toast({ title: "Success", description: res.data.message });
+      
+      // FRONTEND FIX: Manually re-fetch attendance after successful sign-out
       await fetchAttendance();
+
     } catch (err: any) {
        const msg = err.details?.message || err.message || "An unknown error occurred during sign-out.";
        handleScanError(msg);

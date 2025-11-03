@@ -305,13 +305,12 @@ export const scanQr = functions
         
         const finalPracticedStations = Array.isArray(practicedStations) ? practicedStations : [];
         
-        const updateData = {
-          signOutTime: admin.firestore.FieldValue.serverTimestamp(),
-          durationMs,
-          practicedStations: finalPracticedStations,
-        };
-        
-        transaction.update(attendanceRef, updateData);
+        // BACKEND FIX: Use .set with { merge: true } for a safe write
+        transaction.set(attendanceRef, {
+            signOutTime: admin.firestore.FieldValue.serverTimestamp(),
+            durationMs,
+            practicedStations: finalPracticedStations,
+        }, { merge: true });
 
         return {
           message: "Sign-out successful.",
@@ -327,6 +326,7 @@ export const scanQr = functions
     return txResult;
   });
     
+
 
 
 
