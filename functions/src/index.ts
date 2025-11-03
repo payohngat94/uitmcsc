@@ -319,12 +319,15 @@ export const scanQr = functions
         const signInTimestamp = attendanceDoc.data()
           ?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
-
+        
+        // ** THE FIX **
+        // Directly use the `practicedStations` from the input data in the update call.
+        // Default to an empty array if it's not a valid array.
         transaction.update(attendanceRef, {
           signOutTime: serverTime,
           durationMs,
           stationName, // Also update on sign-out just in case
-          practicedStations: Array.isArray(practicedStations) ? practicedStations : [], // Save the practiced stations
+          practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
         });
 
         return {
@@ -333,9 +336,12 @@ export const scanQr = functions
           stationId,
           stationName,
           type: "signOut",
+          // Return the same array to the client for immediate UI feedback.
+          practicedStations: Array.isArray(practicedStations) ? practicedStations : [], 
         };
       }
     });
 
     return tx;
   });
+    
