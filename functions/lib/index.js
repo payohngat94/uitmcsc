@@ -65,7 +65,9 @@ async function assertAdmin(ctx) {
     if (isEmailAdmin && !isClaimAdmin) {
         await admin.auth().setCustomUserClaims(uid, { ...(user.customClaims || {}), role: "admin", approved: true });
         await admin.auth().revokeRefreshTokens(uid);
-        return;
+        // On the first run, this will still fail because the token isn't fresh.
+        // Throw a specific error telling the user to retry.
+        throw new functions.https.HttpsError("permission-denied", "Admin permissions were just updated. Please close this dialog and try again in a moment.");
     }
     if (!isClaimAdmin && !isEmailAdmin) {
         throw new functions.https.HttpsError("permission-denied", "Admin only");
@@ -113,7 +115,7 @@ exports.adminApproveUser = functions
 exports.adminSetRole = functions
     .region("asia-southeast1")
     .https.onCall(async (data, ctx) => {
-    assertAdmin(ctx);
+    await assertAdmin(ctx);
     const { uid, role } = data || {};
     if (!uid || (role !== "student" && role !== "admin")) {
         throw new functions.https.HttpsError("invalid-argument", "uid and role(student|admin) required");
@@ -133,23 +135,8 @@ exports.adminSetRole = functions
 exports.generateQrToken = functions
     .region("asia-southeast1")
     .https.onCall(async (data, context) => {
-    // 1) Auth
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
-    }
-    // Admin check: claim OR email allowlist
-    const adminUser = await admin.auth().getUser(context.auth.uid);
-    const isClaimAdmin = adminUser.customClaims?.["role"] === "admin";
-    const isEmailAdmin = ADMIN_EMAILS.includes(adminUser.email || "");
-    console.log("generateQrToken caller:", {
-        uid: context.auth.uid,
-        email: adminUser.email,
-        isClaimAdmin,
-        isEmailAdmin,
-    });
-    if (!isClaimAdmin && !isEmailAdmin) {
-        throw new functions.https.HttpsError("permission-denied", "The function must be called by an admin user.");
-    }
+    // 1) Auth & Admin Check
+    await assertAdmin(context);
     // 2) Input
     const { sessionId, type } = data || {};
     if (!sessionId || (type !== "signIn" && type !== "signOut")) {
@@ -196,14 +183,15 @@ exports.scanQr = functions
     if (ADMIN_EMAILS.includes(callingUser.email || "") &&
         callingUser.customClaims?.role !== "admin") {
         try {
-            await admin.auth().setCustomUserClaims(uid, { role: "admin" });
+            await admin.auth().setCustomUserClaims(uid, { ...(callingUser.customClaims || {}), role: "admin" });
+            await admin.auth().revokeRefreshTokens(uid);
         }
         catch (e) {
-            console.error("Failed to set admin claim for", callingUser.email, e);
+            console.error("Failed to self-heal admin claim for", callingUser.email, e);
         }
     }
     // Input
-    const { token } = data || {};
+    const { token, practicedStations } = data || {}; // <-- practicedStations added
     if (!token) {
         throw new functions.https.HttpsError("invalid-argument", "A token must be provided.");
     }
@@ -221,69 +209,81 @@ exports.scanQr = functions
     }
     const { sessionId, type } = decoded;
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-    // Find active token
-    const tokenQuery = db
-        .collection("sessions")
-        .doc(sessionId)
-        .collection("qrTokens")
-        .where("tokenHash", "==", tokenHash)
-        .where("isActive", "==", true);
-    const tokenSnapshot = await tokenQuery.get();
-    if (tokenSnapshot.empty) {
-        throw new functions.https.HttpsError("not-found", "QR code is invalid or has already been used.");
-    }
-    const tokenDoc = tokenSnapshot.docs[0];
-    await tokenDoc.ref.update({ isActive: false }); // prevent reuse
-    if (tokenDoc.data().expiresAt.toMillis() < Date.now()) {
-        throw new functions.https.HttpsError("deadline-exceeded", "This QR code has expired.");
-    }
-    // Record attendance
-    const attendanceRef = db
-        .collection("attendanceLogs")
-        .doc(`${sessionId}_${uid}`);
-    const attendanceDoc = await attendanceRef.get();
-    const serverTime = admin.firestore.FieldValue.serverTimestamp();
-    const stationDoc = await db.collection("sessions").doc(sessionId).get();
-    const stationId = stationDoc.data()?.stationId || "unknown";
-    if (type === "signIn") {
-        if (attendanceDoc.exists && attendanceDoc.data()?.signInTime) {
-            throw new functions.https.HttpsError("already-exists", "You have already signed in for this session.");
+    const txResult = await db.runTransaction(async (transaction) => {
+        // 1. Find and deactivate the QR token to prevent reuse
+        const tokenQuery = db
+            .collection("sessions").doc(sessionId)
+            .collection("qrTokens")
+            .where("tokenHash", "==", tokenHash)
+            .where("isActive", "==", true);
+        const tokenSnapshot = await transaction.get(tokenQuery);
+        if (tokenSnapshot.empty) {
+            throw new functions.https.HttpsError("not-found", "QR code is invalid or has already been used.");
         }
-        await attendanceRef.set({
-            sessionId,
-            stationId,
-            userId: uid,
-            userEmail,
-            signInTime: serverTime,
-            signOutTime: null,
-            durationMs: null,
-        }, { merge: true });
-        return {
-            message: "Sign-in successful.",
-            sessionId,
-            stationId,
-            type: "signIn",
-        };
-    }
-    else {
-        if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
-            throw new functions.https.HttpsError("failed-precondition", "You must sign in before you can sign out.");
+        const tokenDoc = tokenSnapshot.docs[0];
+        if (tokenDoc.data().expiresAt.toMillis() < Date.now()) {
+            transaction.update(tokenDoc.ref, { isActive: false }); // Deactivate expired token
+            throw new functions.https.HttpsError("deadline-exceeded", "This QR code has expired.");
         }
-        if (attendanceDoc.data()?.signOutTime) {
-            throw new functions.https.HttpsError("already-exists", "You have already signed out for this session.");
+        transaction.update(tokenDoc.ref, { isActive: false });
+        // 2. Fetch the session document to get the stationName (Rotation Name)
+        const sessionDocRef = db.collection("sessions").doc(sessionId);
+        const sessionDoc = await transaction.get(sessionDocRef);
+        if (!sessionDoc.exists) {
+            throw new functions.https.HttpsError("not-found", "Session details could not be found.");
         }
-        const signInTimestamp = attendanceDoc.data()
-            ?.signInTime;
-        const durationMs = Date.now() - signInTimestamp.toMillis();
-        await attendanceRef.update({
-            signOutTime: serverTime,
-            durationMs,
-        });
-        return {
-            message: "Sign-out successful.",
-            sessionId,
-            stationId,
-            type: "signOut",
-        };
-    }
+        const stationName = sessionDoc.data()?.stationName || "Unknown Station";
+        const stationId = sessionDoc.id;
+        // 3. Get reference to the user's attendance log for this session
+        const attendanceRef = db.collection("attendanceLogs").doc(`${sessionId}_${uid}`);
+        const attendanceDoc = await transaction.get(attendanceRef);
+        // --- SIGN IN LOGIC ---
+        if (type === "signIn") {
+            if (attendanceDoc.exists && attendanceDoc.data()?.signInTime) {
+                throw new functions.https.HttpsError("already-exists", "You have already signed in for this session.");
+            }
+            transaction.set(attendanceRef, {
+                sessionId,
+                stationId,
+                stationName,
+                userId: uid,
+                userEmail,
+                signInTime: admin.firestore.FieldValue.serverTimestamp(),
+                signOutTime: null,
+                durationMs: null,
+                practicedStations: [],
+            }, { merge: true });
+            return {
+                message: "Sign-in successful.",
+                sessionId, stationId, stationName, type: "signIn",
+            };
+        }
+        // --- SIGN OUT LOGIC ---
+        else {
+            if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
+                throw new functions.https.HttpsError("failed-precondition", "You must sign in before you can sign out.");
+            }
+            if (attendanceDoc.data()?.signOutTime) {
+                throw new functions.https.HttpsError("already-exists", "You have already signed out for this session.");
+            }
+            const signInTimestamp = attendanceDoc.data()?.signInTime;
+            const durationMs = Date.now() - signInTimestamp.toMillis();
+            // ** THE DEFINITIVE FIX **
+            const updateData = {
+                signOutTime: admin.firestore.FieldValue.serverTimestamp(),
+                durationMs,
+                practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
+            };
+            transaction.update(attendanceRef, updateData);
+            return {
+                message: "Sign-out successful.",
+                sessionId,
+                stationId,
+                stationName,
+                type: "signOut",
+                practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
+            };
+        }
+    });
+    return txResult;
 });
