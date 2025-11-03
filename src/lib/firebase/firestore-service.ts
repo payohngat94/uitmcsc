@@ -643,14 +643,23 @@ export async function getRotationForSession(sessionId: string): Promise<Rotation
     if (!sessionSnap.exists()) return null;
     
     const stationId = sessionSnap.data().stationId; // This is the Rotation ID
+    if (!stationId) return null;
+
     const rotationRef = doc(db, 'rotations', stationId);
     const rotationSnap = await getDoc(rotationRef);
     if (!rotationSnap.exists()) return null;
 
-    return {
+    const data = rotationSnap.data();
+    // Manually convert Timestamp to Date to make it serializable
+    const serializableData = {
         id: rotationSnap.id,
-        ...rotationSnap.data()
-    } as Rotation;
+        name: data.name,
+        location: data.location,
+        stationNames: data.stationNames,
+        createdAt: (data.createdAt as Timestamp).toDate(),
+    };
+
+    return serializableData as Rotation;
 }
 
 
