@@ -320,15 +320,15 @@ export const scanQr = functions
           ?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
         
-        // ** THE FIX **
-        // Directly use the `practicedStations` from the input data in the update call.
-        // Default to an empty array if it's not a valid array.
-        transaction.update(attendanceRef, {
-          signOutTime: serverTime,
-          durationMs,
-          stationName, // Also update on sign-out just in case
-          practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
-        });
+        // ** THE DEFINITIVE FIX **
+        const updateData = {
+            signOutTime: serverTime,
+            durationMs,
+            stationName, // Also update on sign-out just in case
+            practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
+        };
+        
+        transaction.update(attendanceRef, updateData);
 
         return {
           message: "Sign-out successful.",
@@ -345,3 +345,4 @@ export const scanQr = functions
     return tx;
   });
     
+
