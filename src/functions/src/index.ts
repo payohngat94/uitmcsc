@@ -320,12 +320,13 @@ export const scanQr = functions
           ?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
 
-        // **THE FIX IS HERE:** Ensure practicedStations is included in the update.
+        const stationsToSave = Array.isArray(practicedStations) ? practicedStations : [];
+
         transaction.update(attendanceRef, {
           signOutTime: serverTime,
           durationMs,
           stationName, // Also update on sign-out just in case
-          practicedStations: Array.isArray(practicedStations) ? practicedStations : [], // Save the practiced stations
+          practicedStations: stationsToSave,
         });
 
         return {
@@ -334,7 +335,7 @@ export const scanQr = functions
           stationId,
           stationName,
           type: "signOut",
-          practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
+          practicedStations: stationsToSave, // THE FIX: Ensure this is in the return object
         };
       }
     });
