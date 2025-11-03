@@ -319,7 +319,7 @@ export const scanQr = functions
         const signInTimestamp = attendanceDoc.data()
           ?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
-
+        
         const stationsToSave = Array.isArray(practicedStations) ? practicedStations : [];
 
         transaction.update(attendanceRef, {
@@ -335,7 +335,7 @@ export const scanQr = functions
           stationId,
           stationName,
           type: "signOut",
-          practicedStations: stationsToSave, // THE FIX: Ensure this is in the return object
+          practicedStations: stationsToSave, 
         };
       }
     });
