@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -229,7 +228,7 @@ const StudentView = () => {
             <CardContent className="text-sm text-green-700 space-y-2">
               <p className="font-semibold">{lastScanResult.message}</p>
               <p>
-                <strong>Station:</strong> <span className="font-mono bg-green-100 px-1 py-0.5 rounded">{lastScanResult.stationName}</span>
+                <strong>Rotation:</strong> <span className="font-mono bg-green-100 px-1 py-0.5 rounded">{lastScanResult.stationName}</span>
               </p>
               <p>
                 <strong>Action:</strong> <span className="capitalize">{lastScanResult.type}</span>
@@ -315,5 +314,3 @@ const StudentView = () => {
 };
 
 export default StudentView;
-
-    

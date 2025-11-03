@@ -271,7 +271,7 @@ export const scanQr = functions
       const stationDoc = await transaction.get(stationDocRef); // Use transaction.get
       const stationData = stationDoc.data();
       const stationName = stationData?.stationName || "Unknown Station";
-      const stationId = stationData?.stationId || "unknown";
+      const stationId = stationDoc.id;
 
       if (type === "signIn") {
         if (attendanceDoc.exists && attendanceDoc.data()?.signInTime) {
@@ -339,5 +339,3 @@ export const scanQr = functions
 
     return tx;
   });
-
-    
