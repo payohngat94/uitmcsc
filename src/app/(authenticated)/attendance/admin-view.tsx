@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -425,7 +424,7 @@ export default function AdminAttendanceView() {
                     <div className="flex justify-between items-center w-full pr-4">
                         <div className="text-left">
                             <p className="font-semibold">{session.stationName}</p>
-                            <p className="text-sm text-muted-foreground">{format(new Date(session.sessionDate), "PPP")} @ {format(new Date(session.startTime), "p")} - {format(new Date(session.endTime), "p")}</p>
+                            <p className="text-sm text-green-600">{format(new Date(session.sessionDate), "PPP")} @ {format(new Date(session.startTime), "p")} - {format(new Date(session.endTime), "p")}</p>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
                             <span className="flex items-center"><Users className="mr-2 h-4 w-4" /> {aggregates.totalHeadcount} Students</span>
@@ -497,6 +496,5 @@ export default function AdminAttendanceView() {
     </div>
   );
 }
-
     
     
