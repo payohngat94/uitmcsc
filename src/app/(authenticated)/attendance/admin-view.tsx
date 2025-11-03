@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "@/lib/firebase/config";
-import { getRotations, getSessionsWithAttendance, addSession, updateSession, deleteSession } from "@/lib/firebase/firestore-service";
+import { getSpecialties, getSessionsWithAttendance, addSession, updateSession, deleteSession } from "@/lib/firebase/firestore-service";
 import type { Rotation, Session, AttendanceRecord } from "@/lib/types";
 import { format, formatDistanceToNow } from "date-fns";
 import { CalendarIcon, Clock, PlusCircle, User, Users, QrCode as QrCodeIcon, AlertCircle, Download, MoreVertical, Edit, Trash2, MapPin, List } from "lucide-react";
@@ -28,10 +28,11 @@ import QRCodeDisplay from "./qr-code-display";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ManageRotationsDialog } from "./manage-rotations-dialog";
+import { Badge } from "@/components/ui/badge";
 
 // --- Form Schemas ---
 const sessionSchema = z.object({
-  stationId: z.string().min(1, "Please select a rotation."),
+  stationId: z.string().min(1, "Please select a specialty."),
   sessionDate: z.date({ required_error: "Session date is required." }),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)."),
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)."),
@@ -86,7 +87,7 @@ export default function AdminAttendanceView() {
     setIsLoading(true);
     try {
       const [fetchedRotations, fetchedSessions] = await Promise.all([
-        getRotations(),
+        getSpecialties(),
         getSessionsWithAttendance(),
       ]);
       setRotations(fetchedRotations);
@@ -121,7 +122,7 @@ export default function AdminAttendanceView() {
 
     const sessionData = {
       stationId,
-      stationName: rotation.name, // stationName is now Rotation Name
+      stationName: rotation.name, // stationName is now Specialty Name
       sessionDate,
       startTime: startDateTime,
       endTime: endDateTime,
@@ -199,7 +200,7 @@ export default function AdminAttendanceView() {
 
     const headers = [
       "Session ID",
-      "Rotation Name",
+      "Specialty Name",
       "Location",
       "Session Date",
       "Student Email",
@@ -284,9 +285,9 @@ export default function AdminAttendanceView() {
               <form onSubmit={sessionForm.handleSubmit(handleSaveSession)} className="space-y-4">
                 <FormField control={sessionForm.control} name="stationId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Rotation</FormLabel>
+                    <FormLabel>Specialty</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select a rotation" /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select a specialty" /></SelectTrigger></FormControl>
                       <SelectContent>
                         {rotations.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                       </SelectContent>
@@ -331,7 +332,7 @@ export default function AdminAttendanceView() {
         </Dialog>
         
         <Button variant="outline" onClick={() => setIsManageRotationsOpen(true)}>
-            <List className="mr-2 h-4 w-4" /> Manage Rotations
+            <List className="mr-2 h-4 w-4" /> Manage Specialties
         </Button>
         <ManageRotationsDialog
             isOpen={isManageRotationsOpen}
@@ -467,3 +468,5 @@ export default function AdminAttendanceView() {
     </div>
   );
 }
+
+    
