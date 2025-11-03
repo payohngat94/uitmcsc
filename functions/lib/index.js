@@ -210,9 +210,9 @@ exports.scanQr = functions
     const { sessionId, type } = decoded;
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const txResult = await db.runTransaction(async (transaction) => {
-        // 1. Find and deactivate the QR token to prevent reuse
-        const tokenQuery = db
-            .collection("sessions").doc(sessionId)
+        // 1️⃣ READS FIRST
+        // a. Find QR token
+        const tokenQuery = db.collection("sessions").doc(sessionId)
             .collection("qrTokens")
             .where("tokenHash", "==", tokenHash)
             .where("isActive", "==", true);
@@ -221,23 +221,36 @@ exports.scanQr = functions
             throw new functions.https.HttpsError("not-found", "QR code is invalid or has already been used.");
         }
         const tokenDoc = tokenSnapshot.docs[0];
-        if (tokenDoc.data().expiresAt.toMillis() < Date.now()) {
-            transaction.update(tokenDoc.ref, { isActive: false }); // Deactivate expired token
+        const tokenData = tokenDoc.data();
+        if (tokenData.expiresAt.toMillis() < Date.now()) {
+            // Expiration check is now a read operation, but the write to deactivate it will happen later
             throw new functions.https.HttpsError("deadline-exceeded", "This QR code has expired.");
         }
-        transaction.update(tokenDoc.ref, { isActive: false });
-        // 2. Fetch the session document to get the stationName (Rotation Name)
+        // b. Fetch session document
         const sessionDocRef = db.collection("sessions").doc(sessionId);
         const sessionDoc = await transaction.get(sessionDocRef);
         if (!sessionDoc.exists) {
             throw new functions.https.HttpsError("not-found", "Session details could not be found.");
         }
-        const stationName = sessionDoc.data()?.stationName || "Unknown Station";
-        const stationId = sessionDoc.id;
-        // 3. Get reference to the user's attendance log for this session
+        // c. Fetch rotation document (if available)
+        let rotationName = "Unknown Rotation";
+        const rotationId = sessionDoc.data()?.rotationId || sessionDoc.data()?.stationId;
+        if (rotationId) {
+            const rotationRef = db.collection("rotations").doc(rotationId);
+            const rotationDoc = await transaction.get(rotationRef);
+            if (rotationDoc.exists) {
+                rotationName = rotationDoc.data()?.name || "Unknown Rotation";
+            }
+        }
+        // d. Fetch attendance log
         const attendanceRef = db.collection("attendanceLogs").doc(`${sessionId}_${uid}`);
         const attendanceDoc = await transaction.get(attendanceRef);
-        // --- SIGN IN LOGIC ---
+        // 2️⃣ NOW DO WRITES
+        // a. Deactivate QR token
+        transaction.update(tokenDoc.ref, { isActive: false });
+        const stationId = rotationId || sessionDoc.id;
+        const stationName = rotationName;
+        // b. Handle sign-in / sign-out logic
         if (type === "signIn") {
             if (attendanceDoc.exists && attendanceDoc.data()?.signInTime) {
                 throw new functions.https.HttpsError("already-exists", "You have already signed in for this session.");
@@ -253,12 +266,8 @@ exports.scanQr = functions
                 durationMs: null,
                 practicedStations: [],
             }, { merge: true });
-            return {
-                message: "Sign-in successful.",
-                sessionId, stationId, stationName, type: "signIn",
-            };
+            return { message: "Sign-in successful.", sessionId, stationId, stationName, type: "signIn" };
         }
-        // --- SIGN OUT LOGIC ---
         else {
             if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
                 throw new functions.https.HttpsError("failed-precondition", "You must sign in before you can sign out.");
@@ -268,20 +277,26 @@ exports.scanQr = functions
             }
             const signInTimestamp = attendanceDoc.data()?.signInTime;
             const durationMs = Date.now() - signInTimestamp.toMillis();
-            // ** THE DEFINITIVE FIX **
-            const updateData = {
+            const finalPracticedStations = Array.isArray(practicedStations)
+                ? practicedStations.filter((s) => typeof s === "string")
+                : [];
+            transaction.set(attendanceRef, {
+                sessionId,
+                stationId,
+                stationName,
+                userId: uid,
+                userEmail,
                 signOutTime: admin.firestore.FieldValue.serverTimestamp(),
                 durationMs,
-                practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
-            };
-            transaction.update(attendanceRef, updateData);
+                practicedStations: finalPracticedStations,
+            }, { merge: true });
             return {
                 message: "Sign-out successful.",
                 sessionId,
                 stationId,
                 stationName,
                 type: "signOut",
-                practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
+                practicedStations: finalPracticedStations,
             };
         }
     });

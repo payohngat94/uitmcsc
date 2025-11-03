@@ -9,7 +9,7 @@ import { getStudentAttendance, getRotationForSession } from "@/lib/firebase/fire
 import type { AttendanceRecord, Rotation } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, List, ScanLine } from "lucide-react";
+import { CheckCircle, List, ScanLine, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 const functions = getFunctions(app, "asia-southeast1");
@@ -29,17 +30,19 @@ const scanQrCallable = httpsCallable(functions, "scanQr");
 interface StationChecklistDialogProps {
   isOpen: boolean;
   rotation: Rotation | null;
-  onConfirm: (practicedStations: string[]) => void;
+  onConfirm: (practicedStations: string[], location: string) => void;
   onCancel: () => void;
 }
 
 function StationChecklistDialog({ isOpen, rotation, onConfirm, onCancel }: StationChecklistDialogProps) {
   const [selectedStations, setSelectedStations] = useState<string[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
 
   useEffect(() => {
     // Reset selection when dialog is opened
     if (isOpen) {
       setSelectedStations([]);
+      setSelectedLocation("");
     }
   }, [isOpen]);
   
@@ -52,32 +55,57 @@ function StationChecklistDialog({ isOpen, rotation, onConfirm, onCancel }: Stati
   };
 
   const handleConfirm = () => {
-    onConfirm(selectedStations);
+    if (!selectedLocation) {
+        toast({
+            variant: "destructive",
+            title: "Location Required",
+            description: "Please select the location where you attended the session."
+        })
+        return;
+    }
+    onConfirm(selectedStations, selectedLocation);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Practiced Stations Checklist</DialogTitle>
+          <DialogTitle>Practiced Stations & Location</DialogTitle>
           <DialogDescription>
-            Please select the stations you practiced in the "{rotation.name}" rotation.
+            Confirm your attendance for the "{rotation.name}" rotation.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-3">
-          <Label>Stations:</Label>
-          {rotation.stationNames.map(stationName => (
-            <div key={stationName} className="flex items-center space-x-2">
-              <Checkbox
-                id={stationName}
-                checked={selectedStations.includes(stationName)}
-                onCheckedChange={(checked) => handleToggleStation(stationName, !!checked)}
-              />
-              <label htmlFor={stationName} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                {stationName}
-              </label>
+        <div className="py-4 space-y-4">
+          <div>
+            <Label htmlFor="location-select" className="mb-2 block">Location</Label>
+            <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                <SelectTrigger id="location-select">
+                    <SelectValue placeholder="Select session location..." />
+                </SelectTrigger>
+                <SelectContent>
+                    {rotation.locations.map(loc => (
+                        <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Practiced Stations (Optional)</Label>
+            <div className="space-y-2 pt-2">
+            {rotation.stationNames.map(stationName => (
+                <div key={stationName} className="flex items-center space-x-2">
+                <Checkbox
+                    id={stationName}
+                    checked={selectedStations.includes(stationName)}
+                    onCheckedChange={(checked) => handleToggleStation(stationName, !!checked)}
+                />
+                <label htmlFor={stationName} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    {stationName}
+                </label>
+                </div>
+            ))}
             </div>
-          ))}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>Cancel</Button>
@@ -105,6 +133,7 @@ const StudentView = () => {
     stationName: string;
     type: "signIn" | "signOut";
     practicedStations?: string[];
+    location?: string;
   } | null>(null);
 
   const fetchAttendance = async () => {
@@ -163,19 +192,18 @@ const StudentView = () => {
     }
   };
 
-  const handleConfirmSignOut = async (practicedStations: string[]) => {
+  const handleConfirmSignOut = async (practicedStations: string[], location: string) => {
     if (!signOutData) return;
     try {
-      // FRONTEND FIX: Await the callable function
       const res: any = await scanQrCallable({
         token: signOutData.token,
-        practicedStations: practicedStations
+        practicedStations: practicedStations,
+        location: location,
       });
 
-      setLastScanResult({ ...res.data, practicedStations });
+      setLastScanResult({ ...res.data, practicedStations, location });
       toast({ title: "Success", description: res.data.message });
       
-      // FRONTEND FIX: Manually re-fetch attendance after successful sign-out
       await fetchAttendance();
 
     } catch (err: any) {
@@ -234,6 +262,11 @@ const StudentView = () => {
               <p>
                 <strong>Rotation:</strong> <span className="font-mono bg-green-100 px-1 py-0.5 rounded">{lastScanResult.stationName}</span>
               </p>
+               {lastScanResult.location && (
+                 <p>
+                    <strong>Location:</strong> {lastScanResult.location}
+                  </p>
+               )}
               <p>
                 <strong>Action:</strong> <span className="capitalize">{lastScanResult.type}</span>
               </p>
@@ -270,6 +303,7 @@ const StudentView = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Rotation</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Sign In</TableHead>
                     <TableHead>Sign Out</TableHead>
                     <TableHead>Practiced Stations</TableHead>
@@ -282,6 +316,14 @@ const StudentView = () => {
                       <TableCell>
                         <div className="font-medium">{rec.stationName}</div>
                         <div className="text-xs text-muted-foreground font-mono">{rec.sessionId}</div>
+                      </TableCell>
+                       <TableCell>
+                        {rec.location ? (
+                            <span className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                {rec.location}
+                            </span>
+                        ) : "—"}
                       </TableCell>
                       <TableCell>
                         {rec.signInTime

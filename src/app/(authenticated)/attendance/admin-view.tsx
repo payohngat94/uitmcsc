@@ -23,7 +23,7 @@ import { app } from "@/lib/firebase/config";
 import { getRotations, addRotation, getSessionsWithAttendance, addSession, updateSession, deleteSession } from "@/lib/firebase/firestore-service";
 import type { Rotation, Session, AttendanceRecord } from "@/lib/types";
 import { format, formatDistanceToNow } from "date-fns";
-import { CalendarIcon, Clock, PlusCircle, User, Users, QrCode as QrCodeIcon, AlertCircle, Download, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { CalendarIcon, Clock, PlusCircle, User, Users, QrCode as QrCodeIcon, AlertCircle, Download, MoreVertical, Edit, Trash2, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import QRCodeDisplay from "./qr-code-display";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -36,7 +36,7 @@ import { FormDescription } from "@/components/ui/form";
 // --- Form Schemas ---
 const rotationSchema = z.object({
   name: z.string().min(3, "Rotation name is required."),
-  location: z.string().min(3, "Location is required."),
+  locations: z.string().min(3, "At least one location is required."),
   stationNames: z.string().min(1, "At least one station name is required."),
 });
 
@@ -66,7 +66,7 @@ export default function AdminAttendanceView() {
 
   const rotationForm = useForm<z.infer<typeof rotationSchema>>({
     resolver: zodResolver(rotationSchema),
-    defaultValues: { name: "", location: "", stationNames: "" },
+    defaultValues: { name: "", locations: "", stationNames: "" },
   });
 
   const sessionForm = useForm<z.infer<typeof sessionSchema>>({
@@ -121,9 +121,10 @@ export default function AdminAttendanceView() {
   const handleAddRotation = async (values: z.infer<typeof rotationSchema>) => {
     try {
       const stationNamesArray = values.stationNames.split(',').map(s => s.trim()).filter(s => s);
+      const locationsArray = values.locations.split(',').map(s => s.trim()).filter(s => s);
       await addRotation({
           name: values.name,
-          location: values.location,
+          locations: locationsArray,
           stationNames: stationNamesArray
       });
       toast({ title: "Success", description: "New rotation created." });
@@ -238,33 +239,35 @@ export default function AdminAttendanceView() {
       "Sign Out Time",
       "Duration (Minutes)",
       "Practiced Stations",
+      "Selected Location",
     ];
 
     const rows = sessions.flatMap(session => {
-      const rotation = rotations.find(s => s.id === session.stationId);
-      const location = rotation ? rotation.location : "N/A";
+      const rotation = rotations.find(r => r.id === session.stationId);
+      const rotationLocations = rotation ? rotation.locations.join('; ') : "N/A";
       
       if (session.attendance.length === 0) {
         return [[
           session.id,
           session.stationName,
-          location,
+          rotationLocations,
           format(new Date(session.sessionDate), "yyyy-MM-dd"),
           "NO ATTENDANCE",
-          "N/A", "N/A", "N/A", "N/A"
+          "N/A", "N/A", "N/A", "N/A", "N/A"
         ]];
       }
 
       return session.attendance.map(att => [
         session.id,
         session.stationName,
-        location,
+        rotationLocations,
         format(new Date(session.sessionDate), "yyyy-MM-dd"),
         att.userEmail,
         att.signInTime ? format(new Date(att.signInTime), "yyyy-MM-dd HH:mm:ss") : "N/A",
         att.signOutTime ? format(new Date(att.signOutTime), "yyyy-MM-dd HH:mm:ss") : "N/A",
         att.durationMs != null ? (att.durationMs / 60000).toFixed(2) : "N/A",
         att.practicedStations ? `"${att.practicedStations.join(", ")}"` : "N/A",
+        att.location || "N/A",
       ]);
     });
 
@@ -380,8 +383,13 @@ export default function AdminAttendanceView() {
                         <FormMessage />
                     </FormItem>
                 )}/>
-                <FormField control={rotationForm.control} name="location" render={({ field }) => (
-                  <FormItem><FormLabel>Location</FormLabel><FormControl><Input placeholder="e.g. Sim Lab B" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormField control={rotationForm.control} name="locations" render={({ field }) => (
+                  <FormItem><FormLabel>Locations</FormLabel><FormControl><Input placeholder="e.g. Sim Lab B, Ward 5A" {...field} /></FormControl>
+                  <FormDescription>
+                    Enter multiple locations separated by a comma.
+                  </FormDescription>
+                  <FormMessage />
+                  </FormItem>
                 )}/>
                 <DialogFooter><Button type="submit">Create Rotation</Button></DialogFooter>
               </form>
@@ -472,6 +480,7 @@ export default function AdminAttendanceView() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Student Email</TableHead>
+                          <TableHead>Location</TableHead>
                           <TableHead>Sign In</TableHead>
                           <TableHead>Sign Out</TableHead>
                           <TableHead>Practiced Stations</TableHead>
@@ -482,6 +491,14 @@ export default function AdminAttendanceView() {
                         {session.attendance.length > 0 ? session.attendance.map(att => (
                           <TableRow key={att.id}>
                             <TableCell>{att.userEmail}</TableCell>
+                            <TableCell>
+                                {att.location ? (
+                                    <span className="flex items-center gap-2">
+                                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                                        {att.location}
+                                    </span>
+                                ) : "N/A"}
+                            </TableCell>
                             <TableCell>{att.signInTime ? formatDistanceToNow(new Date(att.signInTime), { addSuffix: true }) : "N/A"}</TableCell>
                             <TableCell>{att.signOutTime ? formatDistanceToNow(new Date(att.signOutTime), { addSuffix: true }) : "N/A"}</TableCell>
                             <TableCell>
@@ -494,7 +511,7 @@ export default function AdminAttendanceView() {
                             <TableCell className="text-right">{att.durationMs != null ? `${(att.durationMs / 60000).toFixed(1)} mins` : "--"}</TableCell>
                           </TableRow>
                         )) : (
-                            <TableRow><TableCell colSpan={5} className="text-center h-24">No attendance records for this session yet.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="text-center h-24">No attendance records for this session yet.</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
@@ -508,5 +525,3 @@ export default function AdminAttendanceView() {
     </div>
   );
 }
-    
-    

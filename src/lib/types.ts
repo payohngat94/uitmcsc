@@ -88,7 +88,7 @@ export type LearningMaterial = {
 export type Rotation = {
   id: string;
   name: string; // This is the Rotation Name, e.g., "Emergency Medicine Year 5"
-  location: string;
+  locations: string[]; // List of possible locations for this rotation
   stationNames: string[]; // List of station names within this rotation
   createdAt: Timestamp | Date;
 };
@@ -127,7 +127,8 @@ export type AttendanceRecord = {
   signInTime: Timestamp | Date | null;
   signOutTime: Timestamp | Date | null;
   durationMs: number | null; // Duration in milliseconds
-  practicedStations?: string[]; // New field for practiced stations
+  practicedStations?: string[]; 
+  location?: string; // New field for selected location
 };
 
 
@@ -178,5 +179,3 @@ export interface AppUser extends Omit<FirebaseUser, 'providerData'> {
   status: UserStatus;
   studentOrStaffId?: string;
 }
-
-    

@@ -271,7 +271,7 @@ export async function getTopics(): Promise<Topic[]> {
       createdAt: (data.createdAt as Timestamp)?.toDate(),
       updatedAt: (data.updatedAt as Timestamp)?.toDate(),
       resourceSummary: data.resourceSummary || { videoCount: 0, documentCount: 0, slidesCount: 0, hasVideo: false, hasDocument: false, hasSlides: false },
-      contentItems: [], // Initialize empty, will be populated on client
+      contentItems: [], // Initialize empty, will be populated on the client
     } as Topic
   });
 }
@@ -654,7 +654,7 @@ export async function getRotationForSession(sessionId: string): Promise<Rotation
     const serializableData = {
         id: rotationSnap.id,
         name: data.name,
-        location: data.location,
+        locations: data.locations,
         stationNames: data.stationNames,
         createdAt: (data.createdAt as Timestamp).toDate(),
     };
@@ -682,5 +682,3 @@ export async function getLearningMaterials(): Promise<LearningMaterial[]> {
     throw new Error(`Failed to fetch learning materials. ${(error as Error).message}`);
   }
 }
-
-    

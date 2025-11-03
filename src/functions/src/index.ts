@@ -203,7 +203,7 @@ export const scanQr = functions
     }
 
     // Input
-    const { token, practicedStations } = data || {}; // <-- practicedStations added
+    const { token, practicedStations, location } = data || {}; 
     if (!token) {
       throw new functions.https.HttpsError(
         "invalid-argument",
@@ -234,57 +234,57 @@ export const scanQr = functions
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
     const txResult = await db.runTransaction(async (transaction) => {
-      // 1. Find and deactivate the QR token to prevent reuse
-      const tokenQuery = db
-        .collection("sessions").doc(sessionId)
+      // 1️⃣ READS FIRST
+
+      // a. Find QR token
+      const tokenQuery = db.collection("sessions").doc(sessionId)
         .collection("qrTokens")
         .where("tokenHash", "==", tokenHash)
         .where("isActive", "==", true);
 
       const tokenSnapshot = await transaction.get(tokenQuery);
-
       if (tokenSnapshot.empty) {
         throw new functions.https.HttpsError("not-found", "QR code is invalid or has already been used.");
       }
 
       const tokenDoc = tokenSnapshot.docs[0];
-      if (tokenDoc.data().expiresAt.toMillis() < Date.now()) {
-        transaction.update(tokenDoc.ref, { isActive: false }); // Deactivate expired token
-        throw new functions.https.HttpsError("deadline-exceeded", "This QR code has expired.");
+      const tokenData = tokenDoc.data();
+      if (tokenData.expiresAt.toMillis() < Date.now()) {
+        // Expiration check is now a read operation, but the write to deactivate it will happen later
+         throw new functions.https.HttpsError("deadline-exceeded", "This QR code has expired.");
       }
-      
-      transaction.update(tokenDoc.ref, { isActive: false });
 
-      // 2. Fetch the session document and its linked rotation name
+      // b. Fetch session document
       const sessionDocRef = db.collection("sessions").doc(sessionId);
       const sessionDoc = await transaction.get(sessionDocRef);
-
       if (!sessionDoc.exists) {
         throw new functions.https.HttpsError("not-found", "Session details could not be found.");
       }
 
-      // sessionDoc must have a rotationId field to link to rotations
-      const rotationId = sessionDoc.data()?.rotationId || sessionDoc.data()?.stationId;
-      const rotationRef = rotationId ? db.collection("rotations").doc(rotationId) : null;
+      // c. Fetch rotation document (if available)
       let rotationName = "Unknown Rotation";
-
-      if (rotationRef) {
+      const rotationId = sessionDoc.data()?.rotationId || sessionDoc.data()?.stationId;
+      if (rotationId) {
+        const rotationRef = db.collection("rotations").doc(rotationId);
         const rotationDoc = await transaction.get(rotationRef);
         if (rotationDoc.exists) {
           rotationName = rotationDoc.data()?.name || "Unknown Rotation";
         }
       }
 
-      // These will now be stored into attendanceLogs
-      const stationId = rotationId || sessionDoc.id;
-      const stationName = rotationName;
-
-
-      // 3. Get reference to the user's attendance log for this session
+      // d. Fetch attendance log
       const attendanceRef = db.collection("attendanceLogs").doc(`${sessionId}_${uid}`);
       const attendanceDoc = await transaction.get(attendanceRef);
+      
+      // 2️⃣ NOW DO WRITES
 
-      // --- SIGN IN LOGIC ---
+      // a. Deactivate QR token
+      transaction.update(tokenDoc.ref, { isActive: false });
+      
+      const stationId = rotationId || sessionDoc.id;
+      const stationName = rotationName;
+      
+      // b. Handle sign-in / sign-out logic
       if (type === "signIn") {
         if (attendanceDoc.exists && attendanceDoc.data()?.signInTime) {
           throw new functions.https.HttpsError("already-exists", "You have already signed in for this session.");
@@ -300,38 +300,25 @@ export const scanQr = functions
           signOutTime: null,
           durationMs: null,
           practicedStations: [],
+          location: null,
         }, { merge: true });
 
-        return {
-          message: "Sign-in successful.",
-          sessionId, stationId, stationName, type: "signIn",
-        };
-      } 
-      // --- SIGN OUT LOGIC ---
-      else {
+        return { message: "Sign-in successful.", sessionId, stationId, stationName, type: "signIn" };
+      } else {
         if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
-          throw new functions.https.HttpsError(
-            "failed-precondition",
-            "You must sign in before you can sign out."
-          );
+          throw new functions.https.HttpsError("failed-precondition", "You must sign in before you can sign out.");
         }
         if (attendanceDoc.data()?.signOutTime) {
-          throw new functions.https.HttpsError(
-            "already-exists",
-            "You have already signed out for this session."
-          );
+          throw new functions.https.HttpsError("already-exists", "You have already signed out for this session.");
         }
 
         const signInTimestamp = attendanceDoc.data()?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
-
-        // --- FIX #1: ensure practicedStations is an array ---
         const finalPracticedStations = Array.isArray(practicedStations)
           ? practicedStations.filter((s) => typeof s === "string")
           : [];
 
-        // --- FIX #2: reinclude station metadata in update ---
-        const updateData = {
+        transaction.set(attendanceRef, {
           sessionId,
           stationId,
           stationName,
@@ -340,10 +327,8 @@ export const scanQr = functions
           signOutTime: admin.firestore.FieldValue.serverTimestamp(),
           durationMs,
           practicedStations: finalPracticedStations,
-        };
-
-        // --- FIX #3: always merge for resilience ---
-        transaction.set(attendanceRef, updateData, { merge: true });
+          location: location || null,
+        }, { merge: true });
 
         return {
           message: "Sign-out successful.",
@@ -352,16 +337,10 @@ export const scanQr = functions
           stationName,
           type: "signOut",
           practicedStations: finalPracticedStations,
+          location: location || null,
         };
       }
     });
 
     return txResult;
   });
-    
-
-
-
-
-
-
