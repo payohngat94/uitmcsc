@@ -233,99 +233,82 @@ export const scanQr = functions
     const { sessionId, type } = decoded;
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
-    const tx = db.runTransaction(async (transaction) => {
-      // Find active token
+    const txResult = await db.runTransaction(async (transaction) => {
+      // 1. Find and deactivate the QR token to prevent reuse
       const tokenQuery = db
-        .collection("sessions")
-        .doc(sessionId)
+        .collection("sessions").doc(sessionId)
         .collection("qrTokens")
         .where("tokenHash", "==", tokenHash)
         .where("isActive", "==", true);
 
       const tokenSnapshot = await transaction.get(tokenQuery);
+
       if (tokenSnapshot.empty) {
-        throw new functions.https.HttpsError(
-          "not-found",
-          "QR code is invalid or has already been used."
-        );
+        throw new functions.https.HttpsError("not-found", "QR code is invalid or has already been used.");
       }
 
       const tokenDoc = tokenSnapshot.docs[0];
-      transaction.update(tokenDoc.ref, { isActive: false }); // prevent reuse
-
       if (tokenDoc.data().expiresAt.toMillis() < Date.now()) {
-        throw new functions.https.HttpsError(
-          "deadline-exceeded",
-          "This QR code has expired."
-        );
+        transaction.update(tokenDoc.ref, { isActive: false }); // Deactivate expired token
+        throw new functions.https.HttpsError("deadline-exceeded", "This QR code has expired.");
       }
-
-      // Record attendance
-      const attendanceRef = db
-        .collection("attendanceLogs")
-        .doc(`${sessionId}_${uid}`);
-      const attendanceDoc = await transaction.get(attendanceRef);
-      const serverTime = admin.firestore.FieldValue.serverTimestamp();
       
-      const stationDocRef = db.collection("sessions").doc(sessionId);
-      const stationDoc = await transaction.get(stationDocRef); // Use transaction.get
-      const stationData = stationDoc.data();
-      const stationName = stationData?.stationName || "Unknown Station";
-      const stationId = stationDoc.id;
+      transaction.update(tokenDoc.ref, { isActive: false });
 
+      // 2. Fetch the session document to get the stationName (Rotation Name)
+      const sessionDocRef = db.collection("sessions").doc(sessionId);
+      const sessionDoc = await transaction.get(sessionDocRef);
+      if (!sessionDoc.exists) {
+          throw new functions.https.HttpsError("not-found", "Session details could not be found.");
+      }
+      const stationName = sessionDoc.data()?.stationName || "Unknown Station";
+      const stationId = sessionDoc.id;
+
+      // 3. Get reference to the user's attendance log for this session
+      const attendanceRef = db.collection("attendanceLogs").doc(`${sessionId}_${uid}`);
+      const attendanceDoc = await transaction.get(attendanceRef);
+
+      // --- SIGN IN LOGIC ---
       if (type === "signIn") {
         if (attendanceDoc.exists && attendanceDoc.data()?.signInTime) {
-          throw new functions.https.HttpsError(
-            "already-exists",
-            "You have already signed in for this session."
-          );
+          throw new functions.https.HttpsError("already-exists", "You have already signed in for this session.");
         }
-        transaction.set(
-          attendanceRef,
-          {
-            sessionId,
-            stationId,
-            stationName, // Ensure stationName is saved here
-            userId: uid,
-            userEmail,
-            signInTime: serverTime,
-            signOutTime: null,
-            durationMs: null,
-            practicedStations: [], // Initialize as empty array on sign-in
-          },
-          { merge: true }
-        );
-        return {
-          message: "Sign-in successful.",
+        
+        transaction.set(attendanceRef, {
           sessionId,
           stationId,
           stationName,
-          type: "signIn",
+          userId: uid,
+          userEmail,
+          signInTime: admin.firestore.FieldValue.serverTimestamp(),
+          signOutTime: null,
+          durationMs: null,
+          practicedStations: [],
+        }, { merge: true });
+
+        return {
+          message: "Sign-in successful.",
+          sessionId, stationId, stationName, type: "signIn",
         };
-      } else { // type === 'signOut'
+      } 
+      // --- SIGN OUT LOGIC ---
+      else {
         if (!attendanceDoc.exists || !attendanceDoc.data()?.signInTime) {
-          throw new functions.https.HttpsError(
-            "failed-precondition",
-            "You must sign in before you can sign out."
-          );
+          throw new functions.https.HttpsError("failed-precondition", "You must sign in before you can sign out.");
         }
         if (attendanceDoc.data()?.signOutTime) {
-          throw new functions.https.HttpsError(
-            "already-exists",
-            "You have already signed out for this session."
-          );
+          throw new functions.https.HttpsError("already-exists", "You have already signed out for this session.");
         }
 
-        const signInTimestamp = attendanceDoc.data()
-          ?.signInTime as admin.firestore.Timestamp;
+        const signInTimestamp = attendanceDoc.data()?.signInTime as admin.firestore.Timestamp;
         const durationMs = Date.now() - signInTimestamp.toMillis();
         
-        // ** THE DEFINITIVE FIX **
+        const finalPracticedStations = Array.isArray(practicedStations) ? practicedStations : [];
+        
         const updateData = {
-            signOutTime: serverTime,
-            durationMs,
-            stationName, // Also update on sign-out just in case
-            practicedStations: Array.isArray(practicedStations) ? practicedStations : [],
+          signOutTime: admin.firestore.FieldValue.serverTimestamp(),
+          durationMs,
+          practicedStations: finalPracticedStations,
         };
         
         transaction.update(attendanceRef, updateData);
@@ -336,13 +319,14 @@ export const scanQr = functions
           stationId,
           stationName,
           type: "signOut",
-          // Return the same array to the client for immediate UI feedback.
-          practicedStations: Array.isArray(practicedStations) ? practicedStations : [], 
+          practicedStations: finalPracticedStations,
         };
       }
     });
 
-    return tx;
+    return txResult;
   });
     
+
+
 
