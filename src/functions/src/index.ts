@@ -255,14 +255,30 @@ export const scanQr = functions
       
       transaction.update(tokenDoc.ref, { isActive: false });
 
-      // 2. Fetch the session document to get the stationName (Rotation Name)
+      // 2. Fetch the session document and its linked rotation name
       const sessionDocRef = db.collection("sessions").doc(sessionId);
       const sessionDoc = await transaction.get(sessionDocRef);
+
       if (!sessionDoc.exists) {
-          throw new functions.https.HttpsError("not-found", "Session details could not be found.");
+        throw new functions.https.HttpsError("not-found", "Session details could not be found.");
       }
-      const stationName = sessionDoc.data()?.stationName || "Unknown Station";
-      const stationId = sessionDoc.id;
+
+      // sessionDoc must have a rotationId field to link to rotations
+      const rotationId = sessionDoc.data()?.rotationId || sessionDoc.data()?.stationId;
+      const rotationRef = rotationId ? db.collection("rotations").doc(rotationId) : null;
+      let rotationName = "Unknown Rotation";
+
+      if (rotationRef) {
+        const rotationDoc = await transaction.get(rotationRef);
+        if (rotationDoc.exists) {
+          rotationName = rotationDoc.data()?.name || "Unknown Rotation";
+        }
+      }
+
+      // These will now be stored into attendanceLogs
+      const stationId = rotationId || sessionDoc.id;
+      const stationName = rotationName;
+
 
       // 3. Get reference to the user's attendance log for this session
       const attendanceRef = db.collection("attendanceLogs").doc(`${sessionId}_${uid}`);
@@ -343,6 +359,7 @@ export const scanQr = functions
     return txResult;
   });
     
+
 
 
 
