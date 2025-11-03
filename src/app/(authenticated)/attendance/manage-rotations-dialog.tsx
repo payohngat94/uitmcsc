@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -38,18 +39,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getRotations, addRotation, updateRotation, deleteRotation } from "@/lib/firebase/firestore-service";
+import { getSpecialties, addRotation, updateRotation, deleteRotation } from "@/lib/firebase/firestore-service";
 import type { Rotation } from "@/lib/types";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
-const rotationSchema = z.object({
-  name: z.string().min(3, "Rotation name is required."),
+const specialtySchema = z.object({
+  name: z.string().min(3, "Specialty name is required."),
   locations: z.string().min(1, "At least one location is required."),
   stationNames: z.string().min(1, "At least one station name is required."),
 });
 
-type RotationFormValues = z.infer<typeof rotationSchema>;
+type SpecialtyFormValues = z.infer<typeof specialtySchema>;
 
 interface ManageRotationsDialogProps {
   isOpen: boolean;
@@ -59,24 +60,24 @@ interface ManageRotationsDialogProps {
 
 export function ManageRotationsDialog({ isOpen, onOpenChange, onRotationsUpdate }: ManageRotationsDialogProps) {
   const { toast } = useToast();
-  const [rotations, setRotations] = useState<Rotation[]>([]);
+  const [specialties, setSpecialties] = useState<Rotation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [rotationToEdit, setRotationToEdit] = useState<Rotation | null>(null);
-  const [rotationToDelete, setRotationToDelete] = useState<Rotation | null>(null);
+  const [specialtyToEdit, setSpecialtyToEdit] = useState<Rotation | null>(null);
+  const [specialtyToDelete, setSpecialtyToDelete] = useState<Rotation | null>(null);
 
-  const form = useForm<RotationFormValues>({
-    resolver: zodResolver(rotationSchema),
+  const form = useForm<SpecialtyFormValues>({
+    resolver: zodResolver(specialtySchema),
     defaultValues: { name: "", locations: "", stationNames: "" },
   });
 
-  const fetchRotations = async () => {
+  const fetchSpecialties = async () => {
     setIsLoading(true);
     try {
-      const fetchedRotations = await getRotations();
-      setRotations(fetchedRotations);
+      const fetchedSpecialties = await getSpecialties();
+      setSpecialties(fetchedSpecialties);
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not fetch rotations." });
+      toast({ variant: "destructive", title: "Error", description: "Could not fetch specialties." });
     } finally {
       setIsLoading(false);
     }
@@ -84,76 +85,76 @@ export function ManageRotationsDialog({ isOpen, onOpenChange, onRotationsUpdate 
 
   useEffect(() => {
     if (isOpen) {
-      fetchRotations();
+      fetchSpecialties();
     }
   }, [isOpen, toast]);
 
   useEffect(() => {
     if (isFormOpen) {
-        if (rotationToEdit) {
+        if (specialtyToEdit) {
             form.reset({
-                name: rotationToEdit.name,
-                locations: rotationToEdit.locations.join(", "),
-                stationNames: rotationToEdit.stationNames.join(", "),
+                name: specialtyToEdit.name,
+                locations: specialtyToEdit.locations.join(", "),
+                stationNames: specialtyToEdit.stationNames.join(", "),
             });
         } else {
             form.reset({ name: "", locations: "", stationNames: "" });
         }
     }
-  }, [isFormOpen, rotationToEdit, form]);
+  }, [isFormOpen, specialtyToEdit, form]);
 
   const handleOpenAddForm = () => {
-    setRotationToEdit(null);
+    setSpecialtyToEdit(null);
     setIsFormOpen(true);
   };
 
-  const handleOpenEditForm = (rotation: Rotation) => {
-    setRotationToEdit(rotation);
+  const handleOpenEditForm = (specialty: Rotation) => {
+    setSpecialtyToEdit(specialty);
     setIsFormOpen(true);
   };
 
-  const handleSaveRotation = async (values: RotationFormValues) => {
+  const handleSaveSpecialty = async (values: SpecialtyFormValues) => {
     try {
       const stationNamesArray = values.stationNames.split(',').map(s => s.trim()).filter(Boolean);
       const locationsArray = values.locations.split(',').map(s => s.trim()).filter(Boolean);
       
-      const rotationData = {
+      const specialtyData = {
           name: values.name,
           locations: locationsArray,
           stationNames: stationNamesArray
       };
 
-      if (rotationToEdit) {
-        await updateRotation(rotationToEdit.id, rotationData);
-        toast({ title: "Success", description: "Rotation updated." });
+      if (specialtyToEdit) {
+        await updateRotation(specialtyToEdit.id, specialtyData);
+        toast({ title: "Success", description: "Specialty updated." });
       } else {
-        await addRotation(rotationData);
-        toast({ title: "Success", description: "New rotation created." });
+        await addRotation(specialtyData);
+        toast({ title: "Success", description: "New specialty created." });
       }
       
-      fetchRotations();
+      fetchSpecialties();
       onRotationsUpdate(); // Notify parent to re-fetch data
       setIsFormOpen(false);
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: `Failed to ${rotationToEdit ? 'update' : 'create'} rotation.` });
+      toast({ variant: "destructive", title: "Error", description: `Failed to ${specialtyToEdit ? 'update' : 'create'} specialty.` });
     }
   };
 
-  const handleDeleteRotation = async () => {
-    if (!rotationToDelete) return;
+  const handleDeleteSpecialty = async () => {
+    if (!specialtyToDelete) return;
     try {
-      await deleteRotation(rotationToDelete.id);
-      toast({ title: "Success", description: `Rotation "${rotationToDelete.name}" deleted.` });
-      fetchRotations();
+      await deleteRotation(specialtyToDelete.id);
+      toast({ title: "Success", description: `Specialty "${specialtyToDelete.name}" deleted.` });
+      fetchSpecialties();
       onRotationsUpdate();
     } catch (error: any) {
         if (error.message.includes("permission-denied")) {
-             toast({ variant: "destructive", title: "Permission Denied", description: "You do not have permission to delete rotations. Please check Firestore rules." });
+             toast({ variant: "destructive", title: "Permission Denied", description: "You do not have permission to delete specialties. Please check Firestore rules." });
         } else {
-            toast({ variant: "destructive", title: "Error", description: "Failed to delete rotation." });
+            toast({ variant: "destructive", title: "Error", description: "Failed to delete specialty." });
         }
     } finally {
-      setRotationToDelete(null);
+      setSpecialtyToDelete(null);
     }
   };
 
@@ -162,13 +163,13 @@ export function ManageRotationsDialog({ isOpen, onOpenChange, onRotationsUpdate 
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Manage Rotations</DialogTitle>
-            <DialogDescription>Add, edit, or remove attendance rotations.</DialogDescription>
+            <DialogTitle>Manage Specialties</DialogTitle>
+            <DialogDescription>Add, edit, or remove attendance specialties.</DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="mb-4">
               <Button onClick={handleOpenAddForm}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Rotation
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Specialty
               </Button>
             </div>
             {isLoading ? (
@@ -178,7 +179,7 @@ export function ManageRotationsDialog({ isOpen, onOpenChange, onRotationsUpdate 
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Rotation Name</TableHead>
+                      <TableHead>Specialty Name</TableHead>
                       <TableHead>Locations</TableHead>
                       <TableHead>Stations</TableHead>
                       <TableHead>Created</TableHead>
@@ -186,25 +187,25 @@ export function ManageRotationsDialog({ isOpen, onOpenChange, onRotationsUpdate 
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rotations.length > 0 ? rotations.map((rotation) => (
-                      <TableRow key={rotation.id}>
-                        <TableCell className="font-medium">{rotation.name}</TableCell>
+                    {specialties.length > 0 ? specialties.map((specialty) => (
+                      <TableRow key={specialty.id}>
+                        <TableCell className="font-medium">{specialty.name}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {rotation.locations.map(loc => <Badge key={loc} variant="outline">{loc}</Badge>)}
+                            {specialty.locations.map(loc => <Badge key={loc} variant="outline">{loc}</Badge>)}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {rotation.stationNames.map(name => <Badge key={name} variant="secondary">{name}</Badge>)}
+                            {specialty.stationNames.map(name => <Badge key={name} variant="secondary">{name}</Badge>)}
                           </div>
                         </TableCell>
-                        <TableCell>{format(new Date(rotation.createdAt), "PP")}</TableCell>
+                        <TableCell>{format(new Date(specialty.createdAt), "PP")}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenEditForm(rotation)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenEditForm(specialty)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setRotationToDelete(rotation)} className="text-destructive hover:text-destructive/80">
+                          <Button variant="ghost" size="icon" onClick={() => setSpecialtyToDelete(specialty)} className="text-destructive hover:text-destructive/80">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -212,7 +213,7 @@ export function ManageRotationsDialog({ isOpen, onOpenChange, onRotationsUpdate 
                     )) : (
                         <TableRow>
                             <TableCell colSpan={5} className="h-24 text-center">
-                                No rotations found. Add one to get started.
+                                No specialties found. Add one to get started.
                             </TableCell>
                         </TableRow>
                     )}
@@ -233,12 +234,12 @@ export function ManageRotationsDialog({ isOpen, onOpenChange, onRotationsUpdate 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
            <DialogHeader>
-                <DialogTitle>{rotationToEdit ? 'Edit Rotation' : 'Create New Rotation'}</DialogTitle>
+                <DialogTitle>{specialtyToEdit ? 'Edit Specialty' : 'Create New Specialty'}</DialogTitle>
            </DialogHeader>
            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSaveRotation)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(handleSaveSpecialty)} className="space-y-4">
                 <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Rotation Name</FormLabel><FormControl><Input placeholder="e.g. Emergency Medicine Year 5" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Specialty Name</FormLabel><FormControl><Input placeholder="e.g. Emergency Medicine Year 5" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
                 <FormField control={form.control} name="stationNames" render={({ field }) => (
                     <FormItem>
@@ -262,7 +263,7 @@ export function ManageRotationsDialog({ isOpen, onOpenChange, onRotationsUpdate 
                 )}/>
                 <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
-                    <Button type="submit">{rotationToEdit ? 'Save Changes' : 'Create Rotation'}</Button>
+                    <Button type="submit">{specialtyToEdit ? 'Save Changes' : 'Create Specialty'}</Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -270,17 +271,17 @@ export function ManageRotationsDialog({ isOpen, onOpenChange, onRotationsUpdate 
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!rotationToDelete} onOpenChange={() => setRotationToDelete(null)}>
+      <AlertDialog open={!!specialtyToDelete} onOpenChange={() => setSpecialtyToDelete(null)}>
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This will permanently delete the rotation "{rotationToDelete?.name}". This action cannot be undone and may affect past attendance records that reference it.
+                    This will permanently delete the specialty "{specialtyToDelete?.name}". This action cannot be undone and may affect past attendance records that reference it.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteRotation} className="bg-destructive hover:bg-destructive/90">
+                <AlertDialogAction onClick={handleDeleteSpecialty} className="bg-destructive hover:bg-destructive/90">
                     Delete
                 </AlertDialogAction>
             </AlertDialogFooter>

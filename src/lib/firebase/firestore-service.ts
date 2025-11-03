@@ -553,7 +553,7 @@ export async function deleteRotation(rotationId: string): Promise<void> {
   await deleteDoc(rotationRef);
 }
 
-export async function getRotations(): Promise<Rotation[]> {
+export async function getSpecialties(): Promise<Rotation[]> {
   const q = query(rotationsCollectionRef, orderBy('name', 'asc'));
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({
@@ -693,3 +693,5 @@ export async function getLearningMaterials(): Promise<LearningMaterial[]> {
     throw new Error(`Failed to fetch learning materials. ${(error as Error).message}`);
   }
 }
+
+    
