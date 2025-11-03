@@ -102,7 +102,7 @@ export default function DashboardPage() {
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">{link.description}</p>
                 <Button variant="outline" asChild className="w-full">
-                  <Link href={link.href}>Go to {link.href === '/bookings' ? 'FSS/SP' : (link.label || link.title.split(" ")[0])}</Link>
+                  <Link href={link.href}>{link.label || `Go to ${link.title.split(" ")[0]}`}</Link>
                 </Button>
               </CardContent>
             </Card>
