@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { BookOpen, CalendarDays, Archive, Megaphone, CheckCircle, AlertTriangle, Pin, Info, MessageSquare, ExternalLink } from "lucide-react";
+import { BookOpen, CalendarDays, Archive, CheckCircle, AlertTriangle, Pin, Info, MessageSquare, ExternalLink, QrCode } from "lucide-react";
 import Image from "next/image";
 import { getAnnouncements } from "@/lib/firebase/firestore-service";
 import type { Announcement } from "@/lib/types";
@@ -17,7 +17,7 @@ const allQuickLinks = [
   { title: "Browse Learning Materials", href: "/learning-materials", icon: BookOpen, description: "Access videos, documents, and slides.", label: "Browse", roles: ['admin', 'student'] },
   { title: "Book a Simulation Session", href: "/bookings", icon: CalendarDays, description: "Reserve your spot in the sim labs.", label: "Book Now", roles: ['admin', 'student'] },
   { title: "Facilities & Manikin", href: "/inventory", icon: Archive, description: "View available equipment and make requests.", label: "View All", roles: ['admin', 'student', 'guest'] },
-  { title: "View Announcements", href: "/announcements", icon: Megaphone, description: "Stay updated with the latest news.", label: "View More", roles: ['admin', 'student'] },
+  { title: "Track Attendance", href: "/attendance", icon: QrCode, description: "Scan QR codes and view your history.", label: "Go to Attendance", roles: ['admin', 'student'] },
 ];
 
 const FEEDBACK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJBYKhEOf7yfTxBAv0MXLqJo0xE0KQ2VkldnQA6BtyKM-soA/viewform";
